@@ -28,7 +28,10 @@ export type MainTabParamList = {
   Alerts: NavigatorScreenParams<AlertsStackParamList>;
   Centers: NavigatorScreenParams<CentersStackParamList>;
   Contacts: undefined;
-  Profile: undefined;
+  Guides: NavigatorScreenParams<GuidesStackParamList>;
+  Incidents: NavigatorScreenParams<IncidentsStackParamList>;
+  Family: NavigatorScreenParams<FamilyStackParamList>;
+  Profile: NavigatorScreenParams<ProfileStackParamList>;
 };
 
 // Alerts Stack Navigator
@@ -42,6 +45,37 @@ export type CentersStackParamList = {
   CentersMap: undefined;
   CentersList: undefined;
   CenterDetails: { centerId: number };
+};
+
+// Guides Stack Navigator
+export type GuidesStackParamList = {
+  GuidesList: undefined;
+  GuideDetails: { guideId: number };
+};
+
+// Incidents Stack Navigator
+export type IncidentsStackParamList = {
+  IncidentsList: undefined;
+  ReportIncident: undefined;
+  IncidentDetails: { incidentId: number };
+};
+
+// Family Stack Navigator
+export type FamilyStackParamList = {
+  GroupsList: undefined;
+  CreateGroup: undefined;
+  JoinGroup: undefined;
+  GroupMap: { groupId: number };
+  GroupDetails: { groupId: number };
+  MemberDetails: { groupId: number; memberId: number };
+};
+
+// Profile Stack Navigator
+export type ProfileStackParamList = {
+  ProfileMain: undefined;
+  EditProfile: undefined;
+  Settings: undefined;
+  About: undefined;
 };
 
 // Type helpers for navigation props

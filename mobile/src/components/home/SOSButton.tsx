@@ -77,27 +77,27 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ onSOSSent }) => {
 
   const sendSOS = async () => {
     try {
+      // Build user name from available data
+      const userName = user?.firstName && user?.lastName 
+        ? `${user.firstName} ${user.lastName}`
+        : user?.email || 'SafeHaven User';
+
       const sosData = {
         latitude: location?.latitude,
         longitude: location?.longitude,
         message: 'Emergency! I need help!',
         userInfo: {
-          name: `${user?.firstName} ${user?.lastName}`,
-          phone: user?.phone,
-          bloodType: user?.bloodType,
-          medicalConditions: user?.medicalConditions,
-          emergencyContact: user?.emergencyContactName,
-          emergencyPhone: user?.emergencyContactPhone,
+          name: userName,
+          phone: user?.phone || 'Not provided',
         },
       };
 
+      console.log('Sending SOS with data:', sosData);
+
       await api.post('/sos', sosData);
 
-      try {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } catch (error) {
-        // Haptics not available
-      }
+      // Success vibration
+      Vibration.vibrate([100, 50, 100, 50, 100]);
 
       setShowConfirm(false);
       setSending(false);
@@ -113,11 +113,8 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ onSOSSent }) => {
     } catch (error) {
       console.error('Error sending SOS:', error);
       
-      try {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      } catch (e) {
-        // Haptics not available
-      }
+      // Error vibration
+      Vibration.vibrate([100, 100, 100]);
 
       setSending(false);
       setCountdown(3);
@@ -185,11 +182,7 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ onSOSSent }) => {
                 <View style={styles.recipientsList}>
                   <Text style={styles.recipientItem}>• Emergency Services (911)</Text>
                   <Text style={styles.recipientItem}>• Local Disaster Response</Text>
-                  {user?.emergencyContactName && (
-                    <Text style={styles.recipientItem}>
-                      • {user.emergencyContactName} ({user.emergencyContactPhone})
-                    </Text>
-                  )}
+                  <Text style={styles.recipientItem}>• Your registered emergency contact</Text>
                 </View>
                 {!location && (
                   <View style={styles.warningBox}>
