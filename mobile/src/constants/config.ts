@@ -7,10 +7,10 @@ const isDev = typeof __DEV__ !== 'undefined' ? __DEV__ : process.env.NODE_ENV !=
 export const API_CONFIG = {
   // Base URL - adjust based on your setup
   BASE_URL: isDev
-    ? 'http://10.83.255.129:3000/api/v1'  // Android emulator
+    ? 'http://192.168.43.25:3000/api/v1'  // Android emulator
     // ? 'http://localhost:3000/api/v1'  // iOS simulator
     // ? 'http://192.168.1.100:3000/api/v1'  // Physical device (use your computer's IP)
-    : 'http://10.83.255.129:3000/api/v1',
+    : 'http://192.168.43.25:3000/api/v1',
   
   TIMEOUT: 10000, // 10 seconds
   

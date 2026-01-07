@@ -1,0 +1,22 @@
+{
+  "cors": [
+    {
+      "origins": [
+        "*"
+      ],
+      "methods": [
+        "GET",
+        "PUT",
+        "POST",
+        "DELETE"
+      ],
+      "allowedHeaders": [
+        "*"
+      ],
+      "exposedHeaders": [
+        "ETag"
+      ],
+      "maxAgeSeconds": 3600
+    }
+  ]
+}

@@ -9,6 +9,8 @@ import { CenterCard } from '../../components/centers/CenterCard';
 import { Loading } from '../../components/common/Loading';
 import { centersService } from '../../services/centers';
 import { useLocation } from '../../store/LocationContext';
+import { useNetwork } from '../../store/NetworkContext';
+import { cacheService, CACHE_KEYS, CACHE_EXPIRY } from '../../services/cache';
 import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { SPACING } from '../../constants/spacing';
@@ -20,13 +22,30 @@ type NavigationProp = NativeStackNavigationProp<CentersStackParamList, 'CentersL
 export const CentersListScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { location } = useLocation();
+  const { isOnline } = useNetwork();
   const [centers, setCenters] = useState<EvacuationCenter[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<string>('');
 
   useEffect(() => {
     loadCenters();
   }, [location]);
+
+  const loadLastUpdate = async () => {
+    const timestamp = await cacheService.getTimestamp(CACHE_KEYS.CENTERS);
+    if (timestamp) {
+      const minutes = Math.floor((Date.now() - timestamp) / 60000);
+      if (minutes < 1) {
+        setLastUpdate('Just now');
+      } else if (minutes < 60) {
+        setLastUpdate(`${minutes}m ago`);
+      } else {
+        const hours = Math.floor(minutes / 60);
+        setLastUpdate(`${hours}h ago`);
+      }
+    }
+  };
 
   useEffect(() => {
     // Add map button to header
@@ -43,6 +62,22 @@ export const CentersListScreen: React.FC = () => {
   }, [navigation]);
 
   const loadCenters = async () => {
+    // Load from cache first
+    const cached = await cacheService.get<EvacuationCenter[]>(CACHE_KEYS.CENTERS);
+    if (cached) {
+      setCenters(cached);
+      await loadLastUpdate();
+    }
+
+    // If offline, use cached data only
+    if (!isOnline) {
+      setIsLoading(false);
+      if (!cached) {
+        setError('No cached data available. Connect to internet to fetch centers.');
+      }
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     
@@ -57,6 +92,12 @@ export const CentersListScreen: React.FC = () => {
       } else {
         const { centers: allCenters } = await centersService.getCenters();
         setCenters(allCenters);
+        
+        // Cache all centers for offline use
+        if (allCenters && allCenters.length > 0) {
+          await cacheService.set(CACHE_KEYS.CENTERS, allCenters, CACHE_EXPIRY.CENTERS);
+          await loadLastUpdate();
+        }
       }
     } catch (err) {
       setError('Failed to load centers');
@@ -83,6 +124,18 @@ export const CentersListScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      {/* Offline/Last Update Indicator */}
+      {!isOnline && (
+        <View style={styles.offlineIndicator}>
+          <Text style={styles.offlineText}>📡 Offline - Showing cached data</Text>
+        </View>
+      )}
+      {isOnline && lastUpdate && (
+        <View style={styles.updateIndicator}>
+          <Text style={styles.updateText}>🕐 Last updated {lastUpdate}</Text>
+        </View>
+      )}
+
       <FlatList
         data={centers}
         keyExtractor={(item) => item.id.toString()}
@@ -121,5 +174,28 @@ const styles = StyleSheet.create({
     fontSize: TYPOGRAPHY.sizes.lg,
     fontWeight: TYPOGRAPHY.weights.bold,
     color: COLORS.text,
+  },
+  offlineIndicator: {
+    backgroundColor: COLORS.warning,
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.md,
+    alignItems: 'center',
+  },
+  offlineText: {
+    color: '#fff',
+    fontSize: TYPOGRAPHY.sizes.xs,
+    fontWeight: TYPOGRAPHY.weights.medium,
+  },
+  updateIndicator: {
+    backgroundColor: COLORS.background,
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.md,
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  updateText: {
+    color: COLORS.textSecondary,
+    fontSize: TYPOGRAPHY.sizes.xs,
   },
 });

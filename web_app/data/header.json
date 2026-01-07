@@ -1,0 +1,185 @@
+{
+  "activePreset": "reversed",
+  "description": "Header configuration - switch between different header layouts and logo styles",
+  "presets": {
+    "default": {
+      "name": "Default Layout",
+      "description": "Logo left, menu right, optimized for horizontal logo",
+      "logo": {
+        "src": "assets/img/version_2/dubaifilmmaker.svg",
+        "alt": "DubaiFilmMaker"
+      },
+      "mobile": {
+        "headerNav": {
+          "alignItems": "center",
+          "padding": "10px 0",
+          "minHeight": "0px",
+          "flexDirection": "row"
+        },
+        "logoLink": {
+          "maxWidth": "calc(100% - 100px)",
+          "flex": "1"
+        },
+        "logo": {
+          "maxHeight": "80px",
+          "maxWidth": "100%",
+          "width": "auto"
+        }
+      },
+      "desktop": {
+        "logo": {
+          "maxHeight": "80px",
+          "width": "100%"
+        }
+      },
+      "extraLarge": {
+        "logo": {
+          "maxHeight": "100px"
+        }
+      }
+    },
+    "reversed": {
+      "name": "Reversed Layout",
+      "description": "Logo right, menu left - comprehensive layout with navigation positioning",
+      "logo": {
+        "src": "assets/img/version_1/dubaifilmmaker.svg",
+        "alt": "DubaiFilmMaker"
+      },
+      "mobile": {
+        "headerNav": {
+          "alignItems": "center",
+          "padding": "0px",
+          "minHeight": "50px",
+          "flexDirection": "row-reverse",
+          "justifyContent": "space-between",
+          "gap": "24px",
+          "width": "100%"
+        },
+        "logoLink": {
+          "maxWidth": "180px",
+          "flexShrink": "0",
+          "paddingRight": "0px",
+          "width": "auto",
+          "margin": "0"
+        },
+        "logo": {
+          "maxHeight": "80px",
+          "maxWidth": "100%",
+          "width": "auto",
+          "margin": "0"
+        },
+        "menuButton": {
+          "width": "auto",
+          "flexShrink": "0",
+          "margin": "0",
+          "position": "relative"
+        },
+        "navigationWrapper": {
+          "left": "0",
+          "right": "auto"
+        },
+        "subNav": {
+          "left": "0",
+          "right": "auto",
+          "textAlign": "left"
+        },
+        "subNavUl": {
+          "alignItems": "flex-start",
+          "paddingLeft": "20px",
+          "paddingRight": "20px"
+        },
+        "subNavLi": {
+          "textAlign": "left"
+        },
+        "subNavLink": {
+          "justifyContent": "flex-start",
+          "textAlign": "left"
+        },
+        "menuButtonOpen": {
+          "clipPath": "inset(0 calc(100% - 34px) 0 0 round 20px)"
+        },
+        "menuButtonOpenBefore": {
+          "left": "0",
+          "right": "auto"
+        }
+      },
+      "desktop": {
+        "headerNav": {
+          "flexDirection": "row-reverse",
+          "justifyContent": "space-between",
+          "gap": "24px",
+          "alignItems": "center",
+          "width": "100%",
+          "minHeight": "50px"
+        },
+        "logoLink": {
+          "width": "auto",
+          "flexShrink": "0",
+          "margin": "0"
+        },
+        "logo": {
+          "maxHeight": "80px",
+          "width": "auto",
+          "margin": "0"
+        },
+        "navigationWrapper": {
+          "left": "0",
+          "right": "auto"
+        },
+        "subNav": {
+          "left": "0",
+          "right": "auto"
+        },
+        "subNavUl": {
+          "alignItems": "flex-start",
+          "paddingLeft": "30px"
+        },
+        "subNavLink": {
+          "justifyContent": "flex-start",
+          "textAlign": "left"
+        }
+      },
+      "extraLarge": {
+        "logo": {
+          "maxHeight": "100px"
+        }
+      }
+    },
+    "stackedLogo": {
+      "name": "Stacked Logo",
+      "description": "Optimized for tall stacked logo (DUBAI FILM MAKER)",
+      "logo": {
+        "src": "assets/img/dubaifilmmaker123.svg",
+        "alt": "DubaiFilmMaker"
+      },
+      "mobile": {
+        "headerNav": {
+          "alignItems": "center",
+          "padding": "0px 0",
+          "minHeight": "40px",
+          "flexDirection": "row"
+        },
+        "logoLink": {
+          "maxWidth": "calc(100% - 100px)",
+          "flex": "1"
+        },
+        "logo": {
+          "maxHeight": "100px",
+          "maxWidth": "100%",
+          "width": "auto"
+        }
+      },
+      "desktop": {
+        "logo": {
+          "maxHeight": "80px",
+          "width": "100%"
+        }
+      },
+      "extraLarge": {
+        "logo": {
+          "maxHeight": "120px"
+        }
+      }
+    }
+  }
+}

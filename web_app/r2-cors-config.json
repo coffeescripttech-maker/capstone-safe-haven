@@ -1,0 +1,25 @@
+{
+  "rules": [
+    {
+      "AllowedOrigins": [
+        "http://localhost:3000",
+        "https://dubail-film-maker-website-portfolio.vercel.app",
+        "https://*.vercel.app"
+      ],
+      "AllowedMethods": [
+        "GET",
+        "PUT",
+        "POST",
+        "DELETE",
+        "HEAD"
+      ],
+      "AllowedHeaders": [
+        "*"
+      ],
+      "ExposeHeaders": [
+        "ETag"
+      ],
+      "MaxAgeSeconds": 3600
+    }
+  ]
+}

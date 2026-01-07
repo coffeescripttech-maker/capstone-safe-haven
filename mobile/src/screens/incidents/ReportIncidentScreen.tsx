@@ -14,7 +14,9 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import { useLocation } from '../../store/LocationContext';
+import { useNetwork } from '../../store/NetworkContext';
 import { incidentService } from '../../services/incidents';
+import { offlineQueue } from '../../services/offlineQueue';
 import { IncidentType, IncidentSeverity } from '../../types/incident';
 import { COLORS } from '../../constants/colors';
 import { SPACING } from '../../constants/spacing';
@@ -24,6 +26,7 @@ import { Button } from '../../components/common/Button';
 export const ReportIncidentScreen: React.FC = () => {
   const navigation = useNavigation();
   const { location } = useLocation();
+  const { isOnline } = useNetwork();
 
   const [incidentType, setIncidentType] = useState<IncidentType>('damage');
   const [severity, setSeverity] = useState<IncidentSeverity>('moderate');
@@ -91,29 +94,49 @@ export const ReportIncidentScreen: React.FC = () => {
       return;
     }
 
+    const reportData = {
+      incidentType,
+      title: title.trim(),
+      description: description.trim(),
+      latitude: location.latitude,
+      longitude: location.longitude,
+      address: address.trim() || undefined,
+      severity,
+      photos: photos.length > 0 ? photos : undefined,
+    };
+
     try {
       setLoading(true);
-      await incidentService.createIncident({
-        incidentType,
-        title: title.trim(),
-        description: description.trim(),
-        latitude: location.latitude,
-        longitude: location.longitude,
-        address: address.trim() || undefined,
-        severity,
-        photos: photos.length > 0 ? photos : undefined,
-      });
 
-      Alert.alert(
-        'Report Submitted',
-        'Your incident report has been submitted successfully. Authorities will be notified.',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack(),
-          },
-        ]
-      );
+      if (isOnline) {
+        // Submit immediately if online
+        await incidentService.createIncident(reportData);
+
+        Alert.alert(
+          'Report Submitted',
+          'Your incident report has been submitted successfully. Authorities will be notified.',
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.goBack(),
+            },
+          ]
+        );
+      } else {
+        // Queue for later if offline
+        await offlineQueue.addToQueue('incident', reportData);
+
+        Alert.alert(
+          'Report Saved',
+          'You are offline. Your report has been saved and will be submitted automatically when you reconnect.',
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.goBack(),
+            },
+          ]
+        );
+      }
     } catch (error: any) {
       console.error('Error submitting incident:', error);
       Alert.alert('Error', error.message || 'Failed to submit incident report');

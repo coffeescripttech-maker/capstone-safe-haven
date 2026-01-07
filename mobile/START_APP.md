@@ -12,7 +12,7 @@ Backend should be running on `http://localhost:3000`
 ### Step 2: Start Mobile App
 ```bash
 cd mobile
-npm start -- --offline
+npx expo start
 ```
 
 ### Step 3: Open on Device

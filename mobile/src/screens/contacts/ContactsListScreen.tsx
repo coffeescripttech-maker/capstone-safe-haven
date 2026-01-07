@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, SectionList, RefreshControl, Linking, TouchableOpacity } from 'react-native';
 import { Loading } from '../../components/common/Loading';
 import { contactsService } from '../../services/contacts';
+import { useNetwork } from '../../store/NetworkContext';
+import { cacheService, CACHE_KEYS, CACHE_EXPIRY } from '../../services/cache';
 import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { SPACING } from '../../constants/spacing';
@@ -15,21 +17,58 @@ import { formatPhoneNumber } from '../../utils/formatting';
 type Props = BottomTabScreenProps<MainTabParamList, 'Contacts'>;
 
 export const ContactsListScreen: React.FC<Props> = ({ navigation }) => {
+  const { isOnline } = useNetwork();
   const [contacts, setContacts] = useState<GroupedContacts>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<string>('');
 
   useEffect(() => {
     loadContacts();
   }, []);
 
+  const loadLastUpdate = async () => {
+    const timestamp = await cacheService.getTimestamp(CACHE_KEYS.CONTACTS);
+    if (timestamp) {
+      const minutes = Math.floor((Date.now() - timestamp) / 60000);
+      if (minutes < 1) {
+        setLastUpdate('Just now');
+      } else if (minutes < 60) {
+        setLastUpdate(`${minutes}m ago`);
+      } else {
+        const hours = Math.floor(minutes / 60);
+        setLastUpdate(`${hours}h ago`);
+      }
+    }
+  };
+
   const loadContacts = async () => {
+    // Load from cache first
+    const cached = await cacheService.get<GroupedContacts>(CACHE_KEYS.CONTACTS);
+    if (cached) {
+      setContacts(cached);
+      await loadLastUpdate();
+    }
+
+    // If offline, use cached data only
+    if (!isOnline) {
+      setIsLoading(false);
+      if (!cached) {
+        setError('No cached data available. Connect to internet to fetch contacts.');
+      }
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     
     try {
       const data = await contactsService.getContacts();
       setContacts(data);
+      
+      // Cache for offline use
+      await cacheService.set(CACHE_KEYS.CONTACTS, data, CACHE_EXPIRY.CONTACTS);
+      await loadLastUpdate();
     } catch (err) {
       setError('Failed to load contacts');
       console.error(err);
@@ -96,6 +135,18 @@ export const ContactsListScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+      {/* Offline/Last Update Indicator */}
+      {!isOnline && (
+        <View style={styles.offlineIndicator}>
+          <Text style={styles.offlineText}>📡 Offline - Showing cached data</Text>
+        </View>
+      )}
+      {isOnline && lastUpdate && (
+        <View style={styles.updateIndicator}>
+          <Text style={styles.updateText}>🕐 Last updated {lastUpdate}</Text>
+        </View>
+      )}
+
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id.toString()}
@@ -206,5 +257,28 @@ const styles = StyleSheet.create({
     fontSize: TYPOGRAPHY.sizes.sm,
     color: COLORS.primary,
     fontWeight: TYPOGRAPHY.weights.semibold,
+  },
+  offlineIndicator: {
+    backgroundColor: COLORS.warning,
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.md,
+    alignItems: 'center',
+  },
+  offlineText: {
+    color: '#fff',
+    fontSize: TYPOGRAPHY.sizes.xs,
+    fontWeight: TYPOGRAPHY.weights.medium,
+  },
+  updateIndicator: {
+    backgroundColor: COLORS.background,
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.md,
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  updateText: {
+    color: COLORS.textSecondary,
+    fontSize: TYPOGRAPHY.sizes.xs,
   },
 });

@@ -9,6 +9,8 @@ import { Loading } from '../../components/common/Loading';
 import { useAlerts } from '../../store/AlertContext';
 import { useLocation } from '../../store/LocationContext';
 import { useNotifications } from '../../store/NotificationContext';
+import { useNetwork } from '../../store/NetworkContext';
+import { cacheService, CACHE_KEYS } from '../../services/cache';
 import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { SPACING } from '../../constants/spacing';
@@ -22,14 +24,32 @@ export const AlertsListScreen: React.FC = () => {
   const { alerts, isLoading, error, fetchAlerts, refreshAlerts } = useAlerts();
   const { location } = useLocation();
   const { clearBadge } = useNotifications();
+  const { isOnline } = useNetwork();
   const [selectedType, setSelectedType] = useState<AlertType | 'all'>('all');
   const [selectedSeverity, setSelectedSeverity] = useState<AlertSeverity | 'all'>('all');
+  const [lastUpdate, setLastUpdate] = useState<string>('');
 
   useEffect(() => {
     loadAlerts();
+    loadLastUpdate();
     // Clear badge when screen is focused
     clearBadge();
   }, [location, selectedType, selectedSeverity]);
+
+  const loadLastUpdate = async () => {
+    const timestamp = await cacheService.getTimestamp(CACHE_KEYS.ALERTS);
+    if (timestamp) {
+      const minutes = Math.floor((Date.now() - timestamp) / 60000);
+      if (minutes < 1) {
+        setLastUpdate('Just now');
+      } else if (minutes < 60) {
+        setLastUpdate(`${minutes}m ago`);
+      } else {
+        const hours = Math.floor(minutes / 60);
+        setLastUpdate(`${hours}h ago`);
+      }
+    }
+  };
 
   const loadAlerts = () => {
     const filters: any = {};
@@ -44,8 +64,9 @@ export const AlertsListScreen: React.FC = () => {
     fetchAlerts(filters);
   };
 
-  const handleRefresh = () => {
-    refreshAlerts();
+  const handleRefresh = async () => {
+    await refreshAlerts();
+    await loadLastUpdate();
   };
 
   const handleAlertPress = (alert: DisasterAlert) => {
@@ -92,6 +113,18 @@ export const AlertsListScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      {/* Offline/Last Update Indicator */}
+      {!isOnline && (
+        <View style={styles.offlineIndicator}>
+          <Text style={styles.offlineText}>📡 Offline - Showing cached data</Text>
+        </View>
+      )}
+      {isOnline && lastUpdate && (
+        <View style={styles.updateIndicator}>
+          <Text style={styles.updateText}>🕐 Last updated {lastUpdate}</Text>
+        </View>
+      )}
+
       {/* Type Filters */}
       <View style={styles.filterSection}>
         <FlatList
@@ -264,5 +297,28 @@ const styles = StyleSheet.create({
   retryText: {
     color: COLORS.white,
     fontWeight: TYPOGRAPHY.weights.semibold,
+  },
+  offlineIndicator: {
+    backgroundColor: COLORS.warning,
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.md,
+    alignItems: 'center',
+  },
+  offlineText: {
+    color: '#fff',
+    fontSize: TYPOGRAPHY.sizes.xs,
+    fontWeight: TYPOGRAPHY.weights.medium,
+  },
+  updateIndicator: {
+    backgroundColor: COLORS.background,
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.md,
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  updateText: {
+    color: COLORS.textSecondary,
+    fontSize: TYPOGRAPHY.sizes.xs,
   },
 });

@@ -1,0 +1,19 @@
+name = "dubai-filmmaker-cms"
+compatibility_date = "2024-01-01"
+
+# D1 Database Configuration
+[[d1_databases]]
+binding = "DB"
+database_name = "dubai-filmmaker-cms"
+database_id = "908f42f0-ad4d-4ce0-b3a2-9bb13cf54795"
+
+# R2 Storage Configuration
+[[r2_buckets]]
+binding = "dubailfilmmaker"
+bucket_name = "dubailfilmmaker"
+
+# Environment Variables (for local development)
+# Production values should be set in Cloudflare Pages dashboard
+[vars]
+ENVIRONMENT = "development"
+R2_PUBLIC_URL = "https://assets.dubaifilmmaker.ae"

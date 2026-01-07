@@ -6,6 +6,8 @@ import { alertsService } from '../services/alerts';
 import { STORAGE_KEYS, REFRESH_INTERVALS } from '../constants/config';
 import { storeData, getData } from '../utils/storage';
 import { handleApiError } from '../services/api';
+import { cacheService, CACHE_KEYS, CACHE_EXPIRY } from '../services/cache';
+import { useNetwork } from './NetworkContext';
 
 interface AlertContextData {
   alerts: DisasterAlert[];
@@ -29,6 +31,7 @@ export const AlertProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [alerts, setAlerts] = useState<DisasterAlert[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { isOnline } = useNetwork();
 
   // Load cached alerts on mount
   useEffect(() => {
@@ -44,7 +47,7 @@ export const AlertProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const loadCachedAlerts = async () => {
     try {
-      const cached = await getData<DisasterAlert[]>(STORAGE_KEYS.OFFLINE_ALERTS);
+      const cached = await cacheService.get<DisasterAlert[]>(CACHE_KEYS.ALERTS);
       if (cached) {
         setAlerts(cached);
       }
@@ -60,6 +63,21 @@ export const AlertProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     lng?: number;
     radius?: number;
   }) => {
+    // Load from cache first
+    const cached = await cacheService.get<DisasterAlert[]>(CACHE_KEYS.ALERTS);
+    if (cached) {
+      setAlerts(cached);
+    }
+
+    // If offline, use cached data only
+    if (!isOnline) {
+      setIsLoading(false);
+      if (!cached) {
+        setError('No cached data available. Connect to internet to fetch alerts.');
+      }
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     
@@ -71,9 +89,9 @@ export const AlertProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       
       setAlerts(fetchedAlerts || []);
       
-      // Cache for offline use (only if we have alerts)
+      // Cache for offline use
       if (fetchedAlerts && fetchedAlerts.length > 0) {
-        await storeData(STORAGE_KEYS.OFFLINE_ALERTS, fetchedAlerts);
+        await cacheService.set(CACHE_KEYS.ALERTS, fetchedAlerts, CACHE_EXPIRY.ALERTS);
       }
     } catch (err) {
       const errorMessage = handleApiError(err);
@@ -101,6 +119,11 @@ export const AlertProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   const refreshAlerts = async () => {
+    if (!isOnline) {
+      console.log('Offline - skipping refresh');
+      return;
+    }
+
     try {
       const { alerts: fetchedAlerts } = await alertsService.getAlerts({
         isActive: true,
@@ -108,9 +131,9 @@ export const AlertProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       
       setAlerts(fetchedAlerts || []);
       
-      // Only cache if we have alerts
+      // Cache for offline use
       if (fetchedAlerts && fetchedAlerts.length > 0) {
-        await storeData(STORAGE_KEYS.OFFLINE_ALERTS, fetchedAlerts);
+        await cacheService.set(CACHE_KEYS.ALERTS, fetchedAlerts, CACHE_EXPIRY.ALERTS);
       }
     } catch (err) {
       console.error('Error refreshing alerts:', handleApiError(err));

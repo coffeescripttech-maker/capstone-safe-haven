@@ -1,0 +1,20 @@
+{
+  "build": {
+    "command": "npm run build",
+    "cwd": "/",
+    "watch_paths": [
+      "src/**",
+      "public/**",
+      "package.json",
+      "next.config.ts",
+      "tsconfig.json"
+    ]
+  },
+  "preview": {
+    "command": "npm run build"
+  },
+  "deployment": {
+    "compatibility_date": "2024-01-01",
+    "compatibility_flags": []
+  }
+}
