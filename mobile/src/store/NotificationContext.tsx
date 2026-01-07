@@ -41,11 +41,20 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     }
 
     return () => {
+      // Cleanup listeners - SDK 52+ uses .remove() method
       if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current);
+        try {
+          notificationListener.current.remove();
+        } catch (e) {
+          // Ignore cleanup errors
+        }
       }
       if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
+        try {
+          responseListener.current.remove();
+        } catch (e) {
+          // Ignore cleanup errors
+        }
       }
     };
   }, [isAuthenticated]);

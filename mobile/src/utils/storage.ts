@@ -7,6 +7,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  */
 export const storeData = async <T>(key: string, value: T): Promise<void> => {
   try {
+    // Don't store null or undefined values
+    if (value === null || value === undefined) {
+      console.warn(`Attempted to store null/undefined for key: ${key}`);
+      return;
+    }
     const jsonValue = JSON.stringify(value);
     await AsyncStorage.setItem(key, jsonValue);
   } catch (error) {

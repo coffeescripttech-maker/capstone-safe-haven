@@ -2,6 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { CenterCard } from '../../components/centers/CenterCard';
 import { Loading } from '../../components/common/Loading';
 import { centersService } from '../../services/centers';
@@ -10,12 +13,12 @@ import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { SPACING } from '../../constants/spacing';
 import { EvacuationCenter } from '../../types/models';
-import { MainTabParamList } from '../../types/navigation';
-import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { CentersStackParamList } from '../../types/navigation';
 
-type Props = BottomTabScreenProps<MainTabParamList, 'Centers'>;
+type NavigationProp = NativeStackNavigationProp<CentersStackParamList, 'CentersList'>;
 
-export const CentersListScreen: React.FC<Props> = ({ navigation }) => {
+export const CentersListScreen: React.FC = () => {
+  const navigation = useNavigation<NavigationProp>();
   const { location } = useLocation();
   const [centers, setCenters] = useState<EvacuationCenter[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -24,6 +27,20 @@ export const CentersListScreen: React.FC<Props> = ({ navigation }) => {
   useEffect(() => {
     loadCenters();
   }, [location]);
+
+  useEffect(() => {
+    // Add map button to header
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={() => navigation.navigate('CentersMap')}
+          style={{ marginRight: 16 }}
+        >
+          <Ionicons name="map" size={24} color={COLORS.primary} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
 
   const loadCenters = async () => {
     setIsLoading(true);
@@ -50,7 +67,7 @@ export const CentersListScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const handleCenterPress = (center: EvacuationCenter) => {
-    console.log('Center pressed:', center.id);
+    navigation.navigate('CenterDetails', { centerId: center.id });
   };
 
   const renderEmpty = () => (

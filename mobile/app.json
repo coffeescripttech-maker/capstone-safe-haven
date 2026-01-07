@@ -4,10 +4,8 @@
     "slug": "safehaven-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#0038A8"
     },
@@ -20,12 +18,10 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "SafeHaven needs your location to show nearby evacuation centers and send location-based disaster alerts.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "SafeHaven needs your location to send you relevant disaster alerts even when the app is in the background."
-      },
-      "googleServicesFile": "./GoogleService-Info.plist"
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0038A8"
       },
       "package": "com.safehaven.app",
@@ -37,10 +33,13 @@
         "VIBRATE",
         "POST_NOTIFICATIONS"
       ],
-      "googleServicesFile": "./google-services.json"
+      "config": {
+        "googleMaps": {
+          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY_HERE"
+        }
+      }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-location",

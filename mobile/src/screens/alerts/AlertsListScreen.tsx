@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AlertCard } from '../../components/alerts/AlertCard';
 import { Loading } from '../../components/common/Loading';
 import { useAlerts } from '../../store/AlertContext';
@@ -11,12 +13,12 @@ import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { SPACING } from '../../constants/spacing';
 import { DisasterAlert, AlertType, AlertSeverity } from '../../types/models';
-import { MainTabParamList } from '../../types/navigation';
-import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { AlertsStackParamList } from '../../types/navigation';
 
-type Props = BottomTabScreenProps<MainTabParamList, 'Alerts'>;
+type NavigationProp = NativeStackNavigationProp<AlertsStackParamList, 'AlertsList'>;
 
-export const AlertsListScreen: React.FC<Props> = ({ navigation }) => {
+export const AlertsListScreen: React.FC = () => {
+  const navigation = useNavigation<NavigationProp>();
   const { alerts, isLoading, error, fetchAlerts, refreshAlerts } = useAlerts();
   const { location } = useLocation();
   const { clearBadge } = useNotifications();
@@ -47,8 +49,7 @@ export const AlertsListScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const handleAlertPress = (alert: DisasterAlert) => {
-    // Navigate to alert details (to be implemented)
-    console.log('Alert pressed:', alert.id);
+    navigation.navigate('AlertDetails', { alertId: alert.id });
   };
 
   const renderEmpty = () => (

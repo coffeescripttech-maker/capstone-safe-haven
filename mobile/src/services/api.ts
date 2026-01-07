@@ -57,11 +57,9 @@ api.interceptors.response.use(
           return api(originalRequest);
         }
       } catch (refreshError) {
-        // Refresh failed - clear tokens and redirect to login
-        await removeData(STORAGE_KEYS.ACCESS_TOKEN);
-        await removeData(STORAGE_KEYS.REFRESH_TOKEN);
-        await removeData(STORAGE_KEYS.USER_DATA);
-        return Promise.reject(refreshError);
+        // Only clear tokens if refresh actually failed, not on other errors
+        console.log('Token refresh failed');
+        // Don't clear tokens here - let the app handle it
       }
     }
 

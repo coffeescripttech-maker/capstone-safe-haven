@@ -1,16 +1,16 @@
 // App Configuration
 
 // Determine if we're in development mode
-const isDev = __DEV__;
+const isDev = typeof __DEV__ !== 'undefined' ? __DEV__ : process.env.NODE_ENV !== 'production';
 
 // API Configuration
 export const API_CONFIG = {
   // Base URL - adjust based on your setup
   BASE_URL: isDev
-    ? 'http://10.0.2.2:3000/api/v1'  // Android emulator
+    ? 'http://10.83.255.129:3000/api/v1'  // Android emulator
     // ? 'http://localhost:3000/api/v1'  // iOS simulator
     // ? 'http://192.168.1.100:3000/api/v1'  // Physical device (use your computer's IP)
-    : 'https://your-production-api.com/api/v1',
+    : 'http://10.83.255.129:3000/api/v1',
   
   TIMEOUT: 10000, // 10 seconds
   

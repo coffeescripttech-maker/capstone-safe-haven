@@ -8,6 +8,7 @@ import { useLocation } from '../../store/LocationContext';
 import { useNotifications } from '../../store/NotificationContext';
 import { alertsService } from '../../services/alerts';
 import { centersService } from '../../services/centers';
+import { SOSButton } from '../../components/home/SOSButton';
 import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { SPACING } from '../../constants/spacing';
@@ -116,6 +117,15 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
           ))}
         </View>
       )}
+
+      {/* SOS Button */}
+      <View style={styles.sosSection}>
+        <Text style={styles.sectionTitle}>Emergency Alert</Text>
+        <SOSButton onSOSSent={() => handleRefresh()} />
+        <Text style={styles.sosHint}>
+          Press to send emergency alert to authorities and your emergency contacts
+        </Text>
+      </View>
 
       {/* Quick Stats */}
       <View style={styles.statsGrid}>
@@ -430,5 +440,23 @@ const styles = StyleSheet.create({
     fontWeight: TYPOGRAPHY.weights.semibold,
     color: COLORS.text,
     textAlign: 'center',
+  },
+  sosSection: {
+    padding: SPACING.xl,
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    marginHorizontal: SPACING.md,
+    marginVertical: SPACING.lg,
+    borderRadius: SPACING.borderRadius,
+    borderWidth: 2,
+    borderColor: '#FEE2E2',
+  },
+  sosHint: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginTop: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    lineHeight: 18,
   },
 });

@@ -3,7 +3,6 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
-import Constants from 'expo-constants';
 
 /**
  * Configure notification handler
@@ -61,9 +60,8 @@ export const getExpoPushToken = async (): Promise<string | null> => {
       return null;
     }
 
-    const token = await Notifications.getExpoPushTokenAsync({
-      projectId: Constants.expoConfig?.extra?.eas?.projectId,
-    });
+    // For SDK 52+, projectId is optional
+    const token = await Notifications.getExpoPushTokenAsync();
 
     return token.data;
   } catch (error) {

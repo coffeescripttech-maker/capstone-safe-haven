@@ -26,19 +26,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   // Load user from storage on mount
   useEffect(() => {
-    loadStoredUser();
-  }, []);
+    if (!hasLoadedOnce) {
+      loadStoredUser();
+      setHasLoadedOnce(true);
+    }
+  }, [hasLoadedOnce]);
 
   const loadStoredUser = async () => {
     try {
       const storedUser = await getData<User>(STORAGE_KEYS.USER_DATA);
+      console.log('Loaded stored user:', storedUser ? 'Found' : 'Not found');
       if (storedUser) {
         setUser(storedUser);
         // Fetch fresh profile data
-        await refreshProfile();
+        try {
+          await refreshProfile();
+        } catch (error) {
+          console.log('Profile refresh failed on load, but user is set');
+        }
       }
     } catch (error) {
       console.error('Error loading stored user:', error);
@@ -49,18 +58,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (data: LoginRequest) => {
     try {
+      console.log('Login attempt...');
       const response = await authService.login(data);
+      console.log('Login successful, user:', response.user.email);
       
       // Store tokens
       await storeData(STORAGE_KEYS.ACCESS_TOKEN, response.accessToken);
       await storeData(STORAGE_KEYS.REFRESH_TOKEN, response.refreshToken);
       await storeData(STORAGE_KEYS.USER_DATA, response.user);
+      console.log('Tokens and user data stored');
       
       setUser(response.user);
+      console.log('User state set, isAuthenticated should be true');
       
-      // Fetch profile
-      await refreshProfile();
+      // Try to fetch profile, but don't fail if it errors
+      try {
+        await refreshProfile();
+      } catch (profileError) {
+        console.log('Profile fetch failed, but login succeeded');
+      }
     } catch (error) {
+      console.error('Login error:', error);
       throw new Error(handleApiError(error));
     }
   };
@@ -76,8 +94,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       setUser(response.user);
       
-      // Fetch profile
-      await refreshProfile();
+      // Try to fetch profile, but don't fail if it errors
+      try {
+        await refreshProfile();
+      } catch (profileError) {
+        console.log('Profile fetch failed, but registration succeeded');
+      }
     } catch (error) {
       throw new Error(handleApiError(error));
     }
@@ -113,14 +135,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const refreshProfile = async () => {
     try {
+      console.log('refreshProfile - Starting...');
       const response = await authService.getProfile();
-      setUser(response.user);
-      setProfile(response.profile);
+      console.log('refreshProfile - Got response:', response.user?.email);
       
-      // Update stored user data
-      await storeData(STORAGE_KEYS.USER_DATA, response.user);
+      // Only update if we got valid data
+      if (response && response.user) {
+        setUser(response.user);
+        setProfile(response.profile);
+        await storeData(STORAGE_KEYS.USER_DATA, response.user);
+        console.log('refreshProfile - User data updated');
+      } else {
+        console.log('refreshProfile - Invalid response, keeping current user');
+      }
     } catch (error) {
-      console.error('Error refreshing profile:', error);
+      console.error('refreshProfile - Error:', error);
+      // Don't clear user on profile fetch error!
+      // The user is still logged in even if profile fetch fails
     }
   };
 

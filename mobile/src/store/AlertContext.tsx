@@ -69,10 +69,12 @@ export const AlertProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         isActive: true,
       });
       
-      setAlerts(fetchedAlerts);
+      setAlerts(fetchedAlerts || []);
       
-      // Cache for offline use
-      await storeData(STORAGE_KEYS.OFFLINE_ALERTS, fetchedAlerts);
+      // Cache for offline use (only if we have alerts)
+      if (fetchedAlerts && fetchedAlerts.length > 0) {
+        await storeData(STORAGE_KEYS.OFFLINE_ALERTS, fetchedAlerts);
+      }
     } catch (err) {
       const errorMessage = handleApiError(err);
       setError(errorMessage);
@@ -104,8 +106,12 @@ export const AlertProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         isActive: true,
       });
       
-      setAlerts(fetchedAlerts);
-      await storeData(STORAGE_KEYS.OFFLINE_ALERTS, fetchedAlerts);
+      setAlerts(fetchedAlerts || []);
+      
+      // Only cache if we have alerts
+      if (fetchedAlerts && fetchedAlerts.length > 0) {
+        await storeData(STORAGE_KEYS.OFFLINE_ALERTS, fetchedAlerts);
+      }
     } catch (err) {
       console.error('Error refreshing alerts:', handleApiError(err));
     }
