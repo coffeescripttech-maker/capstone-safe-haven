@@ -152,6 +152,34 @@ const FamilyNavigator: React.FC = () => {
   );
 };
 
+// Profile Stack Navigator
+const ProfileNavigator: React.FC = () => {
+  return (
+    <ProfileStack.Navigator>
+      <ProfileStack.Screen
+        name="ProfileMain"
+        component={ProfileScreen}
+        options={{ title: 'Profile' }}
+      />
+      <ProfileStack.Screen
+        name="EditProfile"
+        component={EditProfileScreen}
+        options={{ title: 'Edit Profile' }}
+      />
+      <ProfileStack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ title: 'Settings' }}
+      />
+      <ProfileStack.Screen
+        name="About"
+        component={AboutScreen}
+        options={{ title: 'About SafeHaven' }}
+      />
+    </ProfileStack.Navigator>
+  );
+};
+
 export const MainNavigator: React.FC = () => {
   const { unreadCount } = useNotifications();
 
@@ -225,12 +253,10 @@ export const MainNavigator: React.FC = () => {
       />
       <Tab.Screen
         name="Profile"
-        component={ProfileScreen}
+        component={ProfileNavigator}
         options={{
           tabBarLabel: 'Profile',
           tabBarIcon: () => <Text>👤</Text>,
-          title: 'My Profile',
-          headerShown: true,
         }}
       />
     </Tab.Navigator>

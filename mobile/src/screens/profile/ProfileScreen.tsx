@@ -141,19 +141,19 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
 
       {/* Actions */}
       <View style={styles.section}>
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => (navigation as any).navigate('EditProfile')}>
           <Text style={styles.menuIcon}>✏️</Text>
           <Text style={styles.menuText}>Edit Profile</Text>
           <Text style={styles.menuArrow}>→</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => (navigation as any).navigate('Settings')}>
           <Text style={styles.menuIcon}>⚙️</Text>
           <Text style={styles.menuText}>Settings</Text>
           <Text style={styles.menuArrow}>→</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => (navigation as any).navigate('About')}>
           <Text style={styles.menuIcon}>ℹ️</Text>
           <Text style={styles.menuText}>About SafeHaven</Text>
           <Text style={styles.menuArrow}>→</Text>

@@ -28,7 +28,7 @@ export const EditProfileScreen: React.FC = ({ navigation }: any) => {
   const handleUpdate = async () => {
     try {
       setLoading(true);
-      await api.put('/users/profile', formData);
+      await api.put('/auth/profile', formData);
       await refreshUser();
       Alert.alert('Success', 'Profile updated successfully');
       navigation.goBack();

@@ -18,6 +18,7 @@ interface AuthContextData {
   logout: () => Promise<void>;
   updateProfile: (data: UpdateProfileRequest) => Promise<void>;
   refreshProfile: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -150,9 +151,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     } catch (error) {
       console.error('refreshProfile - Error:', error);
-      // Don't clear user on profile fetch error!
-      // The user is still logged in even if profile fetch fails
+      throw new Error(handleApiError(error));
     }
+  };
+
+  const refreshUser = async () => {
+    await refreshProfile();
   };
 
   return (
@@ -167,6 +171,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         logout,
         updateProfile,
         refreshProfile,
+        refreshUser,
       }}
     >
       {children}

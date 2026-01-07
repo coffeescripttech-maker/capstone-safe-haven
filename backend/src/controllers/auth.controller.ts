@@ -56,10 +56,32 @@ export class AuthController {
 
   async getProfile(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const profile = await authService.getProfile(req.user!.id);
+      const data = await authService.getProfile(req.user!.id) as any;
+      
+      // Split into user and profile objects
+      const user = {
+        id: data.id,
+        email: data.email,
+        phone: data.phone,
+        firstName: data.first_name,
+        lastName: data.last_name,
+        role: data.role
+      };
+      
+      const profile = {
+        address: data.address,
+        city: data.city,
+        province: data.province,
+        barangay: data.barangay,
+        bloodType: data.blood_type,
+        medicalConditions: data.medical_conditions,
+        emergencyContactName: data.emergency_contact_name,
+        emergencyContactPhone: data.emergency_contact_phone
+      };
+      
       res.json({
         status: 'success',
-        data: profile
+        data: { user, profile }
       });
     } catch (error) {
       next(error);
@@ -68,10 +90,32 @@ export class AuthController {
 
   async updateProfile(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const profile = await authService.updateProfile(req.user!.id, req.body);
+      const data = await authService.updateProfile(req.user!.id, req.body) as any;
+      
+      // Split into user and profile objects
+      const user = {
+        id: data.id,
+        email: data.email,
+        phone: data.phone,
+        firstName: data.first_name,
+        lastName: data.last_name,
+        role: data.role
+      };
+      
+      const profile = {
+        address: data.address,
+        city: data.city,
+        province: data.province,
+        barangay: data.barangay,
+        bloodType: data.blood_type,
+        medicalConditions: data.medical_conditions,
+        emergencyContactName: data.emergency_contact_name,
+        emergencyContactPhone: data.emergency_contact_phone
+      };
+      
       res.json({
         status: 'success',
-        data: profile
+        data: { user, profile }
       });
     } catch (error) {
       next(error);
