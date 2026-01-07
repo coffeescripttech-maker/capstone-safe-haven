@@ -1,0 +1,78 @@
+// Navigation Types
+
+import { NavigatorScreenParams } from '@react-navigation/native';
+import { DisasterAlert, EvacuationCenter, EmergencyContact } from './models';
+
+// Root Stack Navigator
+export type RootStackParamList = {
+  Auth: NavigatorScreenParams<AuthStackParamList>;
+  Main: NavigatorScreenParams<MainTabParamList>;
+  AlertDetails: { alert: DisasterAlert };
+  CenterDetails: { center: EvacuationCenter };
+  ContactDetails: { contact: EmergencyContact };
+  Notifications: undefined;
+  Settings: undefined;
+};
+
+// Auth Stack Navigator
+export type AuthStackParamList = {
+  Welcome: undefined;
+  Login: undefined;
+  Register: undefined;
+  ForgotPassword: undefined;
+};
+
+// Main Tab Navigator
+export type MainTabParamList = {
+  Home: undefined;
+  Alerts: NavigatorScreenParams<AlertsStackParamList>;
+  Centers: NavigatorScreenParams<CentersStackParamList>;
+  Contacts: undefined;
+  Profile: undefined;
+};
+
+// Alerts Stack Navigator
+export type AlertsStackParamList = {
+  AlertsList: undefined;
+  AlertDetails: { alertId: number };
+};
+
+// Centers Stack Navigator
+export type CentersStackParamList = {
+  CentersMap: undefined;
+  CentersList: undefined;
+  CenterDetails: { centerId: number };
+};
+
+// Type helpers for navigation props
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { RouteProp } from '@react-navigation/native';
+
+// Root Stack Navigation Props
+export type RootStackNavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+// Auth Stack Navigation Props
+export type AuthStackNavigationProp = NativeStackNavigationProp<AuthStackParamList>;
+
+// Main Tab Navigation Props
+export type MainTabNavigationProp = BottomTabNavigationProp<MainTabParamList>;
+
+// Screen-specific navigation props
+export type AlertDetailsNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'AlertDetails'
+>;
+export type AlertDetailsRouteProp = RouteProp<RootStackParamList, 'AlertDetails'>;
+
+export type CenterDetailsNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'CenterDetails'
+>;
+export type CenterDetailsRouteProp = RouteProp<RootStackParamList, 'CenterDetails'>;
+
+export type ContactDetailsNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'ContactDetails'
+>;
+export type ContactDetailsRouteProp = RouteProp<RootStackParamList, 'ContactDetails'>;
