@@ -43,15 +43,19 @@ export const ContactsListScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const loadContacts = async () => {
-    // Load from cache first
+    console.log('🔄 loadContacts called');
+    
+    // Load from cache first (for instant display)
     const cached = await cacheService.get<GroupedContacts>(CACHE_KEYS.CONTACTS);
     if (cached) {
+      console.log('💾 Loaded from cache:', Object.keys(cached));
       setContacts(cached);
       await loadLastUpdate();
     }
 
     // If offline, use cached data only
     if (!isOnline) {
+      console.log('📡 Offline - using cached data only');
       setIsLoading(false);
       if (!cached) {
         setError('No cached data available. Connect to internet to fetch contacts.');
@@ -59,19 +63,35 @@ export const ContactsListScreen: React.FC<Props> = ({ navigation }) => {
       return;
     }
 
+    console.log('🌐 Online - fetching fresh data from API');
     setIsLoading(true);
     setError(null);
     
     try {
+      // Clear old cache before fetching to ensure fresh data
+      await cacheService.remove(CACHE_KEYS.CONTACTS);
+      console.log('🗑️ Cleared old cache');
+      
       const data = await contactsService.getContacts();
+      console.log('✅ Received contacts data:', Object.keys(data));
+      console.log('📊 Total categories:', Object.keys(data).length);
+      Object.entries(data).forEach(([category, items]) => {
+        console.log(`  - ${category}: ${items.length} contacts`);
+        if (items.length > 0) {
+          console.log(`    First contact phone: ${items[0].phone}`);
+        }
+      });
+      
+      // Update state with fresh data (this will trigger re-render)
       setContacts(data);
       
-      // Cache for offline use
+      // Cache the fresh data for offline use
       await cacheService.set(CACHE_KEYS.CONTACTS, data, CACHE_EXPIRY.CONTACTS);
+      console.log('💾 Cached fresh contacts for offline use');
       await loadLastUpdate();
     } catch (err) {
+      console.error('❌ Error loading contacts:', err);
       setError('Failed to load contacts');
-      console.error(err);
     } finally {
       setIsLoading(false);
     }
@@ -129,8 +149,37 @@ export const ContactsListScreen: React.FC<Props> = ({ navigation }) => {
     data: items,
   }));
 
+  console.log('📱 Rendering sections:', sections.length);
+  sections.forEach(section => {
+    console.log(`  - ${section.title}: ${section.data.length} items`);
+  });
+
   if (isLoading && sections.length === 0) {
     return <Loading fullScreen message="Loading contacts..." />;
+  }
+
+  if (error && sections.length === 0) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity onPress={loadContacts} style={styles.retryButton}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  if (!isLoading && sections.length === 0) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>📞 No emergency contacts available</Text>
+          <Text style={styles.emptySubtext}>Pull down to refresh</Text>
+        </View>
+      </View>
+    );
   }
 
   return (
@@ -280,5 +329,45 @@ const styles = StyleSheet.create({
   updateText: {
     color: COLORS.textSecondary,
     fontSize: TYPOGRAPHY.sizes.xs,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.lg,
+  },
+  errorText: {
+    fontSize: TYPOGRAPHY.sizes.md,
+    color: COLORS.error,
+    textAlign: 'center',
+    marginBottom: SPACING.md,
+  },
+  retryButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    borderRadius: SPACING.borderRadius,
+  },
+  retryText: {
+    color: COLORS.white,
+    fontSize: TYPOGRAPHY.sizes.md,
+    fontWeight: TYPOGRAPHY.weights.semibold,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.lg,
+  },
+  emptyText: {
+    fontSize: TYPOGRAPHY.sizes.lg,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginBottom: SPACING.sm,
+  },
+  emptySubtext: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
   },
 });

@@ -16,9 +16,11 @@ export const authenticate = (
   next: NextFunction
 ) => {
   try {
+    console.log('🔍 Auth header:', req.headers.authorization?.substring(0, 50) + '...');
     const token = req.headers.authorization?.split(' ')[1];
 
     if (!token) {
+      console.log('❌ No token found');
       throw new AppError('Authentication required', 401);
     }
 
@@ -29,8 +31,10 @@ export const authenticate = (
       role: decoded.role
     };
 
+    console.log('✅ Token decoded:', { id: decoded.id, email: decoded.email, role: decoded.role });
     next();
   } catch (error) {
+    console.log('❌ Token verification failed:', error instanceof Error ? error.message : error);
     next(new AppError('Invalid or expired token', 401));
   }
 };
@@ -41,10 +45,21 @@ export const authorize = (...roles: string[]) => {
       return next(new AppError('Authentication required', 401));
     }
 
+    console.log('🔐 Authorization check:', {
+      path: req.path,
+      method: req.method,
+      userRole: req.user.role,
+      userRoleType: typeof req.user.role,
+      allowedRoles: roles,
+      hasPermission: roles.includes(req.user.role)
+    });
+
     if (!roles.includes(req.user.role)) {
+      console.log('❌ Authorization FAILED - role mismatch');
       return next(new AppError('Insufficient permissions', 403));
     }
 
+    console.log('✅ Authorization SUCCESS');
     next();
   };
 };

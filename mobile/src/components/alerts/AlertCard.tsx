@@ -46,10 +46,10 @@ export const AlertCard: React.FC<AlertCardProps> = ({ alert, onPress }) => {
           <Text style={styles.icon}>{getAlertIcon()}</Text>
           <View style={styles.headerText}>
             <Text style={styles.title} numberOfLines={2}>{alert.title}</Text>
-            <Text style={styles.type}>{alert.alertType.toUpperCase()}</Text>
+            <Text style={styles.type}>{alert.alertType?.toUpperCase() || 'ALERT'}</Text>
           </View>
           <View style={[styles.severityBadge, { backgroundColor: getSeverityColor() }]}>
-            <Text style={styles.severityText}>{alert.severity.toUpperCase()}</Text>
+            <Text style={styles.severityText}>{alert.severity?.toUpperCase() || 'UNKNOWN'}</Text>
           </View>
         </View>
 

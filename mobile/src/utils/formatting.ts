@@ -43,6 +43,11 @@ export const formatRelativeTime = (date: string | Date): string => {
 };
 
 /**
+ * Alias for formatRelativeTime
+ */
+export const formatTimeAgo = formatRelativeTime;
+
+/**
  * Format phone number for display
  */
 export const formatPhoneNumber = (phone: string): string => {
@@ -120,6 +125,7 @@ export default {
   formatDateTime,
   formatTime,
   formatRelativeTime,
+  formatTimeAgo,
   formatPhoneNumber,
   formatDistance,
   formatCapacity,

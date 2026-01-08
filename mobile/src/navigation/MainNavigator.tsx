@@ -3,7 +3,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 import { MainTabParamList, AlertsStackParamList, CentersStackParamList, GuidesStackParamList, IncidentsStackParamList, FamilyStackParamList, ProfileStackParamList } from '../types/navigation';
 import { COLORS } from '../constants/colors';
 import { HomeScreen } from '../screens/home/HomeScreen';
@@ -28,6 +28,7 @@ import { EditProfileScreen } from '../screens/profile/EditProfileScreen';
 import { SettingsScreen } from '../screens/profile/SettingsScreen';
 import { AboutScreen } from '../screens/profile/AboutScreen';
 import { useNotifications } from '../store/NotificationContext';
+import { CustomTabBar } from '../components/navigation/CustomTabBar';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const AlertsStack = createNativeStackNavigator<AlertsStackParamList>();
@@ -159,7 +160,7 @@ const ProfileNavigator: React.FC = () => {
       <ProfileStack.Screen
         name="ProfileMain"
         component={ProfileScreen}
-        options={{ title: 'Profile' }}
+        options={{ title: 'More' }}
       />
       <ProfileStack.Screen
         name="EditProfile"
@@ -180,11 +181,17 @@ const ProfileNavigator: React.FC = () => {
   );
 };
 
+// Dummy screen for center tab (SOS button handles the action)
+const SOSPlaceholder: React.FC = () => {
+  return <View style={{ flex: 1, backgroundColor: COLORS.background }} />;
+};
+
 export const MainNavigator: React.FC = () => {
   const { unreadCount } = useNotifications();
 
   return (
     <Tab.Navigator
+      tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textSecondary,
@@ -196,8 +203,8 @@ export const MainNavigator: React.FC = () => {
         component={HomeScreen}
         options={{
           tabBarLabel: 'Home',
-          tabBarIcon: () => <Text>🏠</Text>,
           headerShown: true,
+          title: 'SafeHaven',
         }}
       />
       <Tab.Screen
@@ -205,8 +212,15 @@ export const MainNavigator: React.FC = () => {
         component={AlertsNavigator}
         options={{
           tabBarLabel: 'Alerts',
-          tabBarIcon: () => <Text>🚨</Text>,
           tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+        }}
+      />
+      <Tab.Screen
+        name="SOS"
+        component={SOSPlaceholder}
+        options={{
+          tabBarLabel: 'SOS',
+          tabBarButton: () => null, // Hide the tab button, we'll use custom SOS button
         }}
       />
       <Tab.Screen
@@ -214,49 +228,13 @@ export const MainNavigator: React.FC = () => {
         component={CentersNavigator}
         options={{
           tabBarLabel: 'Centers',
-          tabBarIcon: () => <Text>🏢</Text>,
-        }}
-      />
-      <Tab.Screen
-        name="Contacts"
-        component={ContactsListScreen}
-        options={{
-          tabBarLabel: 'Contacts',
-          tabBarIcon: () => <Text>📞</Text>,
-          title: 'Emergency Contacts',
-          headerShown: true,
-        }}
-      />
-      <Tab.Screen
-        name="Guides"
-        component={GuidesNavigator}
-        options={{
-          tabBarLabel: 'Guides',
-          tabBarIcon: () => <Text>📚</Text>,
-        }}
-      />
-      <Tab.Screen
-        name="Incidents"
-        component={IncidentsNavigator}
-        options={{
-          tabBarLabel: 'Reports',
-          tabBarIcon: () => <Text>📋</Text>,
-        }}
-      />
-      <Tab.Screen
-        name="Family"
-        component={FamilyNavigator}
-        options={{
-          tabBarLabel: 'Family',
-          tabBarIcon: () => <Text>👨‍👩‍👧</Text>,
         }}
       />
       <Tab.Screen
         name="Profile"
         component={ProfileNavigator}
         options={{
-          tabBarLabel: 'Profile',
-          tabBarIcon: () => <Text>👤</Text>,
+          tabBarLabel: 'More',
         }}
       />
     </Tab.Navigator>

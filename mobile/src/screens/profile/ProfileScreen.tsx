@@ -141,21 +141,61 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
 
       {/* Actions */}
       <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Features</Text>
+        
+        <TouchableOpacity style={styles.menuItem} onPress={() => (navigation as any).navigate('Guides')}>
+          <Text style={styles.menuIcon}>📚</Text>
+          <View style={styles.menuTextContainer}>
+            <Text style={styles.menuText}>Preparedness Guides</Text>
+            <Text style={styles.menuSubtext}>Learn disaster preparedness</Text>
+          </View>
+          <Text style={styles.menuArrow}>→</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.menuItem} onPress={() => (navigation as any).navigate('Incidents')}>
+          <Text style={styles.menuIcon}>📋</Text>
+          <View style={styles.menuTextContainer}>
+            <Text style={styles.menuText}>Report Incident</Text>
+            <Text style={styles.menuSubtext}>Report disasters in your area</Text>
+          </View>
+          <Text style={styles.menuArrow}>→</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.menuItem} onPress={() => (navigation as any).navigate('Family')}>
+          <Text style={styles.menuIcon}>👨‍👩‍👧</Text>
+          <View style={styles.menuTextContainer}>
+            <Text style={styles.menuText}>Family Locator</Text>
+            <Text style={styles.menuSubtext}>Track your family members</Text>
+          </View>
+          <Text style={styles.menuArrow}>→</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Account Settings */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Account</Text>
+        
         <TouchableOpacity style={styles.menuItem} onPress={() => (navigation as any).navigate('EditProfile')}>
           <Text style={styles.menuIcon}>✏️</Text>
-          <Text style={styles.menuText}>Edit Profile</Text>
+          <View style={styles.menuTextContainer}>
+            <Text style={styles.menuText}>Edit Profile</Text>
+          </View>
           <Text style={styles.menuArrow}>→</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuItem} onPress={() => (navigation as any).navigate('Settings')}>
           <Text style={styles.menuIcon}>⚙️</Text>
-          <Text style={styles.menuText}>Settings</Text>
+          <View style={styles.menuTextContainer}>
+            <Text style={styles.menuText}>Settings</Text>
+          </View>
           <Text style={styles.menuArrow}>→</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuItem} onPress={() => (navigation as any).navigate('About')}>
           <Text style={styles.menuIcon}>ℹ️</Text>
-          <Text style={styles.menuText}>About SafeHaven</Text>
+          <View style={styles.menuTextContainer}>
+            <Text style={styles.menuText}>About SafeHaven</Text>
+          </View>
           <Text style={styles.menuArrow}>→</Text>
         </TouchableOpacity>
       </View>
@@ -276,14 +316,21 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   menuIcon: {
-    fontSize: 24,
+    fontSize: 28,
     marginRight: SPACING.md,
   },
-  menuText: {
+  menuTextContainer: {
     flex: 1,
+  },
+  menuText: {
     fontSize: TYPOGRAPHY.sizes.md,
     color: COLORS.text,
-    fontWeight: TYPOGRAPHY.weights.medium,
+    fontWeight: TYPOGRAPHY.weights.semibold,
+  },
+  menuSubtext: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    color: COLORS.textSecondary,
+    marginTop: 2,
   },
   menuArrow: {
     fontSize: 20,

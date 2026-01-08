@@ -44,8 +44,8 @@ const navItems: NavItem[] = [
   },
   {
     icon: <CalenderIcon />,
-    name: "Centers",
-    path: "/centers",
+    name: "Evacuation Centers",
+    path: "/evacuation-centers",
   },
   {
     icon: <UserCircleIcon />,
@@ -55,7 +55,12 @@ const navItems: NavItem[] = [
   {
     icon: <PieChartIcon />,
     name: "SOS Alerts",
-    path: "/sos",
+    path: "/sos-alerts",
+  },
+  {
+    icon: <PageIcon />,
+    name: "Emergency Contacts",
+    path: "/emergency-contacts",
   },
   {
     icon: <TableIcon />,

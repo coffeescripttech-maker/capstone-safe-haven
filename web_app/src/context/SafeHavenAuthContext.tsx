@@ -47,9 +47,13 @@ export const SafeHavenAuthProvider: React.FC<{ children: ReactNode }> = ({ child
             localStorage.setItem('safehaven_user', JSON.stringify(userData));
           }
         } catch (error) {
-          // Token invalid, clear auth
+          // Token invalid, clear auth silently (no toast)
           console.error('Token validation failed:', error);
-          logout();
+          localStorage.removeItem('safehaven_token');
+          localStorage.removeItem('safehaven_user');
+          localStorage.removeItem('safehaven_token_time');
+          setUser(null);
+          router.push('/auth/login');
         }
       } else {
         setIsLoading(false);

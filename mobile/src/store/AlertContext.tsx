@@ -35,7 +35,8 @@ export const AlertProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   // Load cached alerts on mount
   useEffect(() => {
-    loadCachedAlerts();
+    // Clear old cache on mount to ensure fresh structure
+    cacheService.remove(CACHE_KEYS.ALERTS);
     
     // Auto-refresh alerts
     const interval = setInterval(() => {
@@ -63,18 +64,13 @@ export const AlertProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     lng?: number;
     radius?: number;
   }) => {
-    // Load from cache first
-    const cached = await cacheService.get<DisasterAlert[]>(CACHE_KEYS.ALERTS);
-    if (cached) {
-      setAlerts(cached);
-    }
-
-    // If offline, use cached data only
+    // Clear old cache to force fresh data with correct structure
+    await cacheService.remove(CACHE_KEYS.ALERTS);
+    
+    // If offline, show error
     if (!isOnline) {
       setIsLoading(false);
-      if (!cached) {
-        setError('No cached data available. Connect to internet to fetch alerts.');
-      }
+      setError('No internet connection. Please connect to fetch alerts.');
       return;
     }
 
@@ -87,6 +83,7 @@ export const AlertProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         isActive: true,
       });
       
+      console.log('✅ Fetched alerts in context:', fetchedAlerts.length);
       setAlerts(fetchedAlerts || []);
       
       // Cache for offline use
@@ -124,11 +121,15 @@ export const AlertProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       return;
     }
 
+    // Clear cache to force fresh data
+    await cacheService.remove(CACHE_KEYS.ALERTS);
+
     try {
       const { alerts: fetchedAlerts } = await alertsService.getAlerts({
         isActive: true,
       });
       
+      console.log('✅ Refreshed alerts:', fetchedAlerts.length);
       setAlerts(fetchedAlerts || []);
       
       // Cache for offline use

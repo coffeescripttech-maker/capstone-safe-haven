@@ -123,12 +123,12 @@ export const authApi = {
   },
   
   getProfile: async () => {
-    const response = await api.get('/auth/profile');
+    const response = await api.get('/auth/me');
     return response.data;
   },
   
   updateProfile: async (data: any) => {
-    const response = await api.put('/auth/profile', data);
+    const response = await api.put('/auth/profile');
     return response.data;
   },
 };
@@ -282,17 +282,49 @@ export const alertsApi = {
 // Incidents API
 export const incidentsApi = {
   getAll: async (params?: any) => {
+    console.log('📡 Fetching incidents with params:', params);
     const response = await api.get('/incidents', { params });
+    console.log('📦 Raw incidents response:', response.data);
+    
+    // Backend returns: { status: 'success', data: { data: [...], total, page, limit } }
+    // Transform to match frontend expectations
+    if (response.data.status === 'success' && response.data.data) {
+      const paginatedData = response.data.data;
+      
+      // If data has nested data array (paginated response)
+      if (paginatedData.data && Array.isArray(paginatedData.data)) {
+        console.log('✅ Found paginated data:', paginatedData.data.length, 'incidents');
+        return {
+          status: 'success',
+          data: paginatedData, // Keep the full pagination structure
+        };
+      }
+      
+      // If data is already an array
+      if (Array.isArray(paginatedData)) {
+        console.log('✅ Found array data:', paginatedData.length, 'incidents');
+        return {
+          status: 'success',
+          data: { data: paginatedData, total: paginatedData.length, page: 1, limit: paginatedData.length },
+        };
+      }
+    }
+    
+    console.warn('⚠️ Unexpected response structure:', response.data);
     return response.data;
   },
   
   getById: async (id: number) => {
+    console.log('📡 Fetching incident:', id);
     const response = await api.get(`/incidents/${id}`);
+    console.log('📦 Incident response:', response.data);
     return response.data;
   },
   
   updateStatus: async (id: number, status: string) => {
-    const response = await api.put(`/incidents/${id}`, { status });
+    console.log('📡 Updating incident status:', id, status);
+    const response = await api.patch(`/incidents/${id}/status`, { status });
+    console.log('📦 Update response:', response.data);
     return response.data;
   },
 };
@@ -300,50 +332,37 @@ export const incidentsApi = {
 // Centers API
 export const centersApi = {
   getAll: async (params?: any) => {
-    const response = await api.get('/centers', { params });
+    console.log('📡 Fetching evacuation centers with params:', params);
+    const response = await api.get('/evacuation-centers', { params });
+    console.log('📦 Raw centers response:', response.data);
     return response.data;
   },
   
   getById: async (id: number) => {
-    const response = await api.get(`/centers/${id}`);
+    console.log('📡 Fetching evacuation center:', id);
+    const response = await api.get(`/evacuation-centers/${id}`);
+    console.log('📦 Center response:', response.data);
     return response.data;
   },
   
   create: async (data: any) => {
-    const response = await api.post('/centers', data);
+    console.log('📡 Creating evacuation center:', data);
+    const response = await api.post('/evacuation-centers', data);
+    console.log('📦 Create response:', response.data);
     return response.data;
   },
   
   update: async (id: number, data: any) => {
-    const response = await api.put(`/centers/${id}`, data);
+    console.log('📡 Updating evacuation center:', id, data);
+    const response = await api.put(`/evacuation-centers/${id}`, data);
+    console.log('📦 Update response:', response.data);
     return response.data;
   },
   
   delete: async (id: number) => {
-    const response = await api.delete(`/centers/${id}`);
-    return response.data;
-  },
-};
-
-// Users API
-export const usersApi = {
-  getAll: async (params?: any) => {
-    const response = await api.get('/users', { params });
-    return response.data;
-  },
-  
-  getById: async (id: number) => {
-    const response = await api.get(`/users/${id}`);
-    return response.data;
-  },
-  
-  update: async (id: number, data: any) => {
-    const response = await api.put(`/users/${id}`, data);
-    return response.data;
-  },
-  
-  delete: async (id: number) => {
-    const response = await api.delete(`/users/${id}`);
+    console.log('📡 Deleting evacuation center:', id);
+    const response = await api.delete(`/evacuation-centers/${id}`);
+    console.log('📦 Delete response:', response.data);
     return response.data;
   },
 };
@@ -371,20 +390,123 @@ export const contactsApi = {
   },
 };
 
-// SOS API
-export const sosApi = {
+// Users API
+export const usersApi = {
   getAll: async (params?: any) => {
-    const response = await api.get('/sos', { params });
+    console.log('📡 Fetching users with params:', params);
+    const response = await api.get('/users', { params });
+    console.log('📦 Raw users response:', response.data);
     return response.data;
   },
   
   getById: async (id: number) => {
-    const response = await api.get(`/sos/${id}`);
+    console.log('📡 Fetching user:', id);
+    const response = await api.get(`/users/${id}`);
+    console.log('📦 User response:', response.data);
     return response.data;
   },
   
-  updateStatus: async (id: number, status: string) => {
-    const response = await api.put(`/sos/${id}/status`, { status });
+  update: async (id: number, data: any) => {
+    console.log('📡 Updating user:', id, data);
+    const response = await api.put(`/users/${id}`, data);
+    console.log('📦 Update response:', response.data);
+    return response.data;
+  },
+  
+  delete: async (id: number) => {
+    console.log('📡 Deleting user:', id);
+    const response = await api.delete(`/users/${id}`);
+    console.log('📦 Delete response:', response.data);
+    return response.data;
+  },
+
+  getStatistics: async () => {
+    console.log('📡 Fetching user statistics');
+    const response = await api.get('/users/statistics');
+    console.log('📦 Statistics response:', response.data);
+    return response.data;
+  },
+
+  resetPassword: async (id: number, password: string) => {
+    console.log('📡 Resetting password for user:', id);
+    const response = await api.post(`/users/${id}/reset-password`, { password });
+    console.log('📦 Reset password response:', response.data);
+    return response.data;
+  },
+};
+
+// SOS API
+export const sosApi = {
+  getAll: async (params?: any) => {
+    console.log('📡 Fetching SOS alerts with params:', params);
+    const response = await api.get('/sos', { params });
+    console.log('📦 Raw SOS response:', response.data);
+    return response.data;
+  },
+  
+  getById: async (id: number) => {
+    console.log('📡 Fetching SOS alert:', id);
+    const response = await api.get(`/sos/${id}`);
+    console.log('📦 SOS alert response:', response.data);
+    return response.data;
+  },
+  
+  updateStatus: async (id: number, status: string, notes?: string) => {
+    console.log('📡 Updating SOS status:', id, status);
+    const response = await api.patch(`/sos/${id}/status`, { status, notes });
+    console.log('📦 Update status response:', response.data);
+    return response.data;
+  },
+
+  getStatistics: async () => {
+    console.log('📡 Fetching SOS statistics');
+    const response = await api.get('/sos/statistics');
+    console.log('📦 Statistics response:', response.data);
+    return response.data;
+  },
+};
+
+// Emergency Contacts API
+export const emergencyContactsApi = {
+  getAll: async (params?: any) => {
+    console.log('📡 Fetching emergency contacts with params:', params);
+    const response = await api.get('/emergency-contacts', { params });
+    console.log('📦 Contacts response:', response.data);
+    return response.data;
+  },
+  
+  getById: async (id: number) => {
+    console.log('📡 Fetching contact:', id);
+    const response = await api.get(`/emergency-contacts/${id}`);
+    console.log('📦 Contact response:', response.data);
+    return response.data;
+  },
+  
+  getCategories: async () => {
+    console.log('📡 Fetching contact categories');
+    const response = await api.get('/emergency-contacts/categories');
+    console.log('📦 Categories response:', response.data);
+    return response.data;
+  },
+  
+  create: async (data: any) => {
+    console.log('📡 Creating contact:', data);
+    const response = await api.post('/emergency-contacts', data);
+    console.log('📦 Create response:', response.data);
+    return response.data;
+  },
+  
+  update: async (id: number, data: any) => {
+    console.log('📡 Updating contact:', id, data);
+    const response = await api.put(`/emergency-contacts/${id}`, data);
+    console.log('📦 Update response:', response.data);
+    return response.data;
+  },
+  
+  delete: async (id: number) => {
+    console.log('📡 Deleting contact:', id);
+    const response = await api.delete(`/emergency-contacts/${id}`);
+    console.log('📦 Delete response:', response.data);
     return response.data;
   },
 };

@@ -5,7 +5,7 @@ export type AlertSeverity = 'low' | 'moderate' | 'high' | 'critical';
 export type IncidentType = 'damage' | 'injury' | 'missing_person' | 'hazard' | 'other';
 export type IncidentSeverity = 'low' | 'moderate' | 'high' | 'critical';
 export type IncidentStatus = 'pending' | 'in_progress' | 'resolved' | 'closed';
-export type UserRole = 'user' | 'admin' | 'lgu' | 'moderator';
+export type UserRole = 'user' | 'admin' | 'lgu_officer' | 'moderator';
 
 export interface User {
   id: number;
