@@ -3,8 +3,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { Home, Bell, Building2, Menu } from 'lucide-react-native';
 import { COLORS } from '../../constants/colors';
-import { SPACING } from '../../constants/spacing';
 import { SOSButton } from '../home/SOSButton';
 
 export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation }) => {
@@ -33,14 +33,23 @@ export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
             }
           };
 
-          // Get icon based on route name - using outline style
-          const getIcon = () => {
+          // Get icon component based on route name
+          const IconComponent = () => {
+            const iconColor = isFocused ? COLORS.primary : COLORS.textSecondary;
+            const iconSize = 24;
+            const strokeWidth = isFocused ? 2.5 : 2;
+
             switch (route.name) {
-              case 'Home': return isFocused ? '🏠' : '🏘️';
-              case 'Alerts': return isFocused ? '🚨' : '⚠️';
-              case 'Centers': return isFocused ? '🏢' : '🏛️';
-              case 'Profile': return isFocused ? '☰' : '≡';
-              default: return '•';
+              case 'Home':
+                return <Home color={iconColor} size={iconSize} strokeWidth={strokeWidth} />;
+              case 'Alerts':
+                return <Bell color={iconColor} size={iconSize} strokeWidth={strokeWidth} />;
+              case 'Centers':
+                return <Building2 color={iconColor} size={iconSize} strokeWidth={strokeWidth} />;
+              case 'Profile':
+                return <Menu color={iconColor} size={iconSize} strokeWidth={strokeWidth} />;
+              default:
+                return <Home color={iconColor} size={iconSize} strokeWidth={strokeWidth} />;
             }
           };
 
@@ -56,9 +65,7 @@ export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
               activeOpacity={0.7}
             >
               <View style={styles.iconContainer}>
-                <Text style={[styles.icon, isFocused && styles.iconFocused]}>
-                  {getIcon()}
-                </Text>
+                <IconComponent />
               </View>
               <Text style={[styles.label, isFocused && styles.labelFocused]}>
                 {typeof label === 'string' ? label : route.name}
@@ -81,20 +88,23 @@ export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
 const styles = StyleSheet.create({
   container: {
     position: 'relative',
+    backgroundColor: 'transparent',
   },
   tabBar: {
     flexDirection: 'row',
     backgroundColor: COLORS.white,
     height: 65,
-    borderTopWidth: 0.5,
-    borderTopColor: '#E5E5E5',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     paddingBottom: Platform.OS === 'ios' ? 20 : 5,
     paddingTop: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 8,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 16,
+    borderTopWidth: 0,
+    overflow: 'visible',
   },
   tab: {
     flex: 1,
@@ -106,14 +116,8 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     marginBottom: 4,
-  },
-  icon: {
-    fontSize: 26,
-    color: COLORS.textSecondary,
-  },
-  iconFocused: {
-    color: COLORS.primary,
-    transform: [{ scale: 1.05 }],
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   label: {
     fontSize: 10,
@@ -127,22 +131,24 @@ const styles = StyleSheet.create({
   },
   sosButtonContainer: {
     position: 'absolute',
-    top: -28,
+    top: -20,
     left: '50%',
-    marginLeft: -35,
+    marginLeft: -28,
     zIndex: 10,
   },
   sosButtonWrapper: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: COLORS.white,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: COLORS.error,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: COLORS.error,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 12,
+    borderWidth: 3,
+    borderColor: COLORS.white,
   },
 });

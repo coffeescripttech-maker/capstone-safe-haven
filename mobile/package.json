@@ -27,6 +27,7 @@
     "expo-location": "~19.0.8",
     "expo-notifications": "~0.32.16",
     "expo-status-bar": "~3.0.9",
+    "lucide-react-native": "^0.562.0",
     "react": "19.1.0",
     "react-hook-form": "^7.48.2",
     "react-native": "0.81.5",

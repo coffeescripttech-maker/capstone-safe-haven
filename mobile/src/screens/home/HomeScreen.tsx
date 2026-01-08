@@ -6,16 +6,26 @@ import { useAuth } from '../../store/AuthContext';
 import { useAlerts } from '../../store/AlertContext';
 import { useLocation } from '../../store/LocationContext';
 import { useNotifications } from '../../store/NotificationContext';
-import { alertsService } from '../../services/alerts';
 import { centersService } from '../../services/centers';
-import { SOSButton } from '../../components/home/SOSButton';
 import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { SPACING } from '../../constants/spacing';
-import { DisasterAlert, EvacuationCenter } from '../../types/models';
+import { EvacuationCenter } from '../../types/models';
 import { MainTabParamList } from '../../types/navigation';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { formatDistance } from '../../utils/formatting';
+import { 
+  MapPin, 
+  Bell, 
+  AlertTriangle, 
+  Building2, 
+  Phone, 
+  User, 
+  ChevronRight,
+  BookOpen,
+  FileText,
+  Users
+} from 'lucide-react-native';
 
 type Props = BottomTabScreenProps<MainTabParamList, 'Home'>;
 
@@ -74,25 +84,29 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
 
       {/* Location Permission */}
       {!hasPermission && (
-        <TouchableOpacity style={styles.locationCard} onPress={requestPermission}>
-          <Text style={styles.locationIcon}>📍</Text>
-          <View style={styles.locationText}>
-            <Text style={styles.locationTitle}>Enable Location</Text>
-            <Text style={styles.locationSubtitle}>Get alerts and centers near you</Text>
+        <TouchableOpacity style={styles.permissionCard} onPress={requestPermission}>
+          <View style={styles.permissionIconContainer}>
+            <MapPin color={COLORS.primary} size={24} strokeWidth={2} />
           </View>
-          <Text style={styles.locationArrow}>→</Text>
+          <View style={styles.permissionText}>
+            <Text style={styles.permissionTitle}>Enable Location</Text>
+            <Text style={styles.permissionSubtitle}>Get alerts and centers near you</Text>
+          </View>
+          <ChevronRight color={COLORS.textSecondary} size={20} />
         </TouchableOpacity>
       )}
 
       {/* Notification Permission */}
       {!hasNotificationPermission && (
-        <TouchableOpacity style={styles.notificationCard} onPress={requestNotificationPermission}>
-          <Text style={styles.locationIcon}>🔔</Text>
-          <View style={styles.locationText}>
-            <Text style={styles.locationTitle}>Enable Notifications</Text>
-            <Text style={styles.locationSubtitle}>Get instant disaster alerts</Text>
+        <TouchableOpacity style={styles.permissionCard} onPress={requestNotificationPermission}>
+          <View style={styles.permissionIconContainer}>
+            <Bell color={COLORS.primary} size={24} strokeWidth={2} />
           </View>
-          <Text style={styles.locationArrow}>→</Text>
+          <View style={styles.permissionText}>
+            <Text style={styles.permissionTitle}>Enable Notifications</Text>
+            <Text style={styles.permissionSubtitle}>Get instant disaster alerts</Text>
+          </View>
+          <ChevronRight color={COLORS.textSecondary} size={20} />
         </TouchableOpacity>
       )}
 
@@ -100,7 +114,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
       {criticalAlerts.length > 0 && (
         <View style={styles.criticalSection}>
           <View style={styles.criticalHeader}>
-            <Text style={styles.criticalIcon}>🚨</Text>
+            <AlertTriangle color={COLORS.white} size={24} strokeWidth={2.5} />
             <Text style={styles.criticalTitle}>CRITICAL ALERTS</Text>
           </View>
           {criticalAlerts.slice(0, 2).map((alert) => (
@@ -112,35 +126,32 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
               <Text style={styles.criticalAlertTitle} numberOfLines={2}>
                 {alert.title}
               </Text>
-              <Text style={styles.criticalAlertType}>{alert.alertType.toUpperCase()}</Text>
+              <Text style={styles.criticalAlertType}>{alert.alertType?.toUpperCase()}</Text>
             </TouchableOpacity>
           ))}
         </View>
       )}
 
-      {/* SOS Button */}
-      <View style={styles.sosSection}>
-        <Text style={styles.sectionTitle}>Emergency Alert</Text>
-        <SOSButton onSOSSent={() => handleRefresh()} />
-        <Text style={styles.sosHint}>
-          Press to send emergency alert to authorities and your emergency contacts
-        </Text>
-      </View>
-
       {/* Quick Stats */}
       <View style={styles.statsGrid}>
         <TouchableOpacity
-          style={[styles.statCard, { backgroundColor: COLORS.error }]}
+          style={[styles.statCard, styles.statCardAlert]}
           onPress={() => navigation.navigate('Alerts')}
         >
+          <View style={styles.statIconContainer}>
+            <AlertTriangle color={COLORS.white} size={28} strokeWidth={2.5} />
+          </View>
           <Text style={styles.statNumber}>{activeAlerts.length}</Text>
           <Text style={styles.statLabel}>Active Alerts</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.statCard, { backgroundColor: COLORS.primary }]}
+          style={[styles.statCard, styles.statCardCenter]}
           onPress={() => navigation.navigate('Centers')}
         >
+          <View style={styles.statIconContainer}>
+            <Building2 color={COLORS.white} size={28} strokeWidth={2.5} />
+          </View>
           <Text style={styles.statNumber}>{nearestCenter ? '1' : '0'}</Text>
           <Text style={styles.statLabel}>Nearest Center</Text>
         </TouchableOpacity>
@@ -155,7 +166,9 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
             onPress={() => navigation.navigate('Centers')}
           >
             <View style={styles.centerHeader}>
-              <Text style={styles.centerIcon}>🏢</Text>
+              <View style={styles.centerIconContainer}>
+                <Building2 color={COLORS.primary} size={24} strokeWidth={2} />
+              </View>
               <View style={styles.centerInfo}>
                 <Text style={styles.centerName} numberOfLines={1}>
                   {nearestCenter.name}
@@ -195,7 +208,9 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
             style={styles.actionCard}
             onPress={() => navigation.navigate('Alerts')}
           >
-            <Text style={styles.actionIcon}>🚨</Text>
+            <View style={styles.actionIconContainer}>
+              <AlertTriangle color={COLORS.primary} size={28} strokeWidth={2} />
+            </View>
             <Text style={styles.actionLabel}>View Alerts</Text>
           </TouchableOpacity>
 
@@ -203,24 +218,50 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
             style={styles.actionCard}
             onPress={() => navigation.navigate('Centers')}
           >
-            <Text style={styles.actionIcon}>🏢</Text>
+            <View style={styles.actionIconContainer}>
+              <Building2 color={COLORS.primary} size={28} strokeWidth={2} />
+            </View>
             <Text style={styles.actionLabel}>Find Centers</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => navigation.navigate('Contacts')}
+            onPress={() => navigation.navigate('Profile', { screen: 'ProfileMain' })}
           >
-            <Text style={styles.actionIcon}>📞</Text>
-            <Text style={styles.actionLabel}>Emergency Contacts</Text>
+            <View style={styles.actionIconContainer}>
+              <BookOpen color={COLORS.primary} size={28} strokeWidth={2} />
+            </View>
+            <Text style={styles.actionLabel}>Guides</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => navigation.navigate('Profile')}
+            onPress={() => navigation.navigate('Profile', { screen: 'ProfileMain' })}
           >
-            <Text style={styles.actionIcon}>👤</Text>
-            <Text style={styles.actionLabel}>My Profile</Text>
+            <View style={styles.actionIconContainer}>
+              <FileText color={COLORS.primary} size={28} strokeWidth={2} />
+            </View>
+            <Text style={styles.actionLabel}>Report Incident</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => navigation.navigate('Profile', { screen: 'ProfileMain' })}
+          >
+            <View style={styles.actionIconContainer}>
+              <Phone color={COLORS.primary} size={28} strokeWidth={2} />
+            </View>
+            <Text style={styles.actionLabel}>Contacts</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => navigation.navigate('Profile', { screen: 'ProfileMain' })}
+          >
+            <View style={styles.actionIconContainer}>
+              <Users color={COLORS.primary} size={28} strokeWidth={2} />
+            </View>
+            <Text style={styles.actionLabel}>Family Locator</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -248,56 +289,60 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     opacity: 0.9,
   },
-  locationCard: {
+  permissionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.accent,
-    margin: SPACING.md,
+    backgroundColor: COLORS.white,
+    marginHorizontal: SPACING.md,
+    marginTop: SPACING.md,
     padding: SPACING.md,
-    borderRadius: SPACING.borderRadius,
+    borderRadius: 16,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
-  locationIcon: {
-    fontSize: 32,
+  permissionIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F0F9FF',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: SPACING.md,
   },
-  locationText: {
+  permissionText: {
     flex: 1,
   },
-  locationTitle: {
+  permissionTitle: {
     fontSize: TYPOGRAPHY.sizes.md,
-    fontWeight: TYPOGRAPHY.weights.bold,
+    fontWeight: TYPOGRAPHY.weights.semibold,
     color: COLORS.text,
+    marginBottom: 2,
   },
-  locationSubtitle: {
+  permissionSubtitle: {
     fontSize: TYPOGRAPHY.sizes.sm,
-    color: COLORS.text,
-  },
-  locationArrow: {
-    fontSize: 24,
-    color: COLORS.text,
-  },
-  notificationCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.secondary,
-    margin: SPACING.md,
-    padding: SPACING.md,
-    borderRadius: SPACING.borderRadius,
+    color: COLORS.textSecondary,
   },
   criticalSection: {
     margin: SPACING.md,
     backgroundColor: COLORS.error,
-    borderRadius: SPACING.borderRadius,
+    borderRadius: 16,
     padding: SPACING.md,
+    shadowColor: COLORS.error,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
   },
   criticalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: SPACING.sm,
-  },
-  criticalIcon: {
-    fontSize: 24,
-    marginRight: SPACING.sm,
+    gap: SPACING.sm,
   },
   criticalTitle: {
     fontSize: TYPOGRAPHY.sizes.md,
@@ -329,8 +374,22 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     padding: SPACING.lg,
-    borderRadius: SPACING.borderRadius,
+    borderRadius: 16,
     alignItems: 'center',
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  statCardAlert: {
+    backgroundColor: COLORS.error,
+  },
+  statCardCenter: {
+    backgroundColor: COLORS.primary,
+  },
+  statIconContainer: {
+    marginBottom: SPACING.sm,
   },
   statNumber: {
     fontSize: 32,
@@ -342,6 +401,7 @@ const styles = StyleSheet.create({
     fontSize: TYPOGRAPHY.sizes.sm,
     color: COLORS.white,
     textAlign: 'center',
+    fontWeight: TYPOGRAPHY.weights.medium,
   },
   section: {
     padding: SPACING.md,
@@ -354,21 +414,29 @@ const styles = StyleSheet.create({
   },
   centerCard: {
     backgroundColor: COLORS.white,
-    borderRadius: SPACING.borderRadius,
+    borderRadius: 16,
     padding: SPACING.md,
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 3,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
   centerHeader: {
     flexDirection: 'row',
     marginBottom: SPACING.sm,
+    alignItems: 'center',
   },
-  centerIcon: {
-    fontSize: 32,
-    marginRight: SPACING.sm,
+  centerIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F0F9FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.md,
   },
   centerInfo: {
     flex: 1,
@@ -420,43 +488,33 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
   },
   actionCard: {
-    width: '47%',
+    width: '30%',
     backgroundColor: COLORS.white,
-    borderRadius: SPACING.borderRadius,
-    padding: SPACING.lg,
+    borderRadius: 16,
+    padding: SPACING.md,
     alignItems: 'center',
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 3,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
-  actionIcon: {
-    fontSize: 40,
+  actionIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#F0F9FF',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: SPACING.sm,
   },
   actionLabel: {
-    fontSize: TYPOGRAPHY.sizes.sm,
+    fontSize: TYPOGRAPHY.sizes.xs,
     fontWeight: TYPOGRAPHY.weights.semibold,
     color: COLORS.text,
     textAlign: 'center',
-  },
-  sosSection: {
-    padding: SPACING.xl,
-    alignItems: 'center',
-    backgroundColor: '#FEF2F2',
-    marginHorizontal: SPACING.md,
-    marginVertical: SPACING.lg,
-    borderRadius: SPACING.borderRadius,
-    borderWidth: 2,
-    borderColor: '#FEE2E2',
-  },
-  sosHint: {
-    fontSize: TYPOGRAPHY.sizes.xs,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    marginTop: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    lineHeight: 18,
+    lineHeight: 16,
   },
 });

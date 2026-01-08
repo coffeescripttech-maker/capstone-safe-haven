@@ -10,6 +10,7 @@ import {
   Vibration,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { AlertTriangle } from 'lucide-react-native';
 import { COLORS } from '../../constants/colors';
 import { SPACING } from '../../constants/spacing';
 import { useAuth } from '../../store/AuthContext';
@@ -142,9 +143,8 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ onSOSSent }) => {
           activeOpacity={0.8}
         >
           <View style={styles.sosInner}>
-            <Ionicons name="warning" size={48} color="#FFFFFF" />
+            <AlertTriangle color="#FFFFFF" size={20} strokeWidth={3} />
             <Text style={styles.sosText}>SOS</Text>
-            <Text style={styles.sosSubtext}>Emergency</Text>
           </View>
         </TouchableOpacity>
       </Animated.View>
@@ -221,34 +221,35 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sosButton: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#DC2626',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#DC2626',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
   sosInner: {
     alignItems: 'center',
     justifyContent: 'center',
   },
   sosText: {
-    fontSize: 32,
+    fontSize: 11,
     fontWeight: '900',
     color: '#FFFFFF',
-    marginTop: 4,
-    letterSpacing: 2,
+    marginTop: 1,
+    letterSpacing: 1,
   },
   sosSubtext: {
-    fontSize: 14,
+    fontSize: 0,
     fontWeight: '600',
     color: '#FFFFFF',
-    opacity: 0.9,
+    opacity: 0,
+    height: 0,
   },
   modalOverlay: {
     flex: 1,
