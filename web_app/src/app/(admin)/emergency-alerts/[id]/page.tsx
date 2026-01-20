@@ -10,6 +10,27 @@ import { AlertType, AlertSeverity } from '@/types/safehaven';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import dynamic from 'next/dynamic';
+import { 
+  ArrowLeft, 
+  Edit, 
+  Trash2, 
+  Radio, 
+  MapPin, 
+  Calendar,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Send,
+  Users,
+  MessageSquare,
+  TrendingUp,
+  X,
+  Cloud,
+  Flame,
+  Waves,
+  Mountain,
+  Zap
+} from 'lucide-react';
 
 // Dynamically import MapViewer to avoid SSR issues
 const MapViewer = dynamic(() => import('@/components/MapViewer'), {
@@ -99,30 +120,41 @@ export default function AlertDetailsPage() {
 
   const getSeverityColor = (severity: AlertSeverity) => {
     switch (severity) {
-      case 'critical': return 'bg-red-100 text-red-800 border-red-200';
-      case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'moderate': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low': return 'bg-blue-100 text-blue-800 border-blue-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'critical': return 'bg-gradient-to-r from-error-500 to-error-600 text-white';
+      case 'high': return 'bg-gradient-to-r from-fire-500 to-fire-600 text-white';
+      case 'moderate': return 'bg-gradient-to-r from-warning-500 to-warning-600 text-white';
+      case 'low': return 'bg-gradient-to-r from-success-500 to-success-600 text-white';
+      default: return 'bg-gradient-to-r from-gray-500 to-gray-600 text-white';
     }
   };
 
   const getTypeColor = (type: AlertType) => {
     switch (type) {
-      case 'typhoon': return 'bg-blue-100 text-blue-800';
-      case 'earthquake': return 'bg-orange-100 text-orange-800';
-      case 'flood': return 'bg-cyan-100 text-cyan-800';
-      case 'fire': return 'bg-red-100 text-red-800';
-      case 'landslide': return 'bg-yellow-100 text-yellow-800';
-      case 'tsunami': return 'bg-indigo-100 text-indigo-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'typhoon': return 'bg-gradient-to-r from-storm-500 to-storm-600 text-white';
+      case 'earthquake': return 'bg-gradient-to-r from-fire-500 to-fire-600 text-white';
+      case 'flood': return 'bg-gradient-to-r from-info-500 to-info-600 text-white';
+      case 'fire': return 'bg-gradient-to-r from-error-500 to-error-600 text-white';
+      case 'landslide': return 'bg-gradient-to-r from-warning-500 to-warning-600 text-white';
+      case 'tsunami': return 'bg-gradient-to-r from-brand-500 to-brand-600 text-white';
+      default: return 'bg-gradient-to-r from-gray-500 to-gray-600 text-white';
+    }
+  };
+
+  const getAlertTypeIcon = (type: AlertType) => {
+    switch (type) {
+      case 'typhoon': return <Cloud className="w-5 h-5" />;
+      case 'fire': return <Flame className="w-5 h-5" />;
+      case 'flood': return <Waves className="w-5 h-5" />;
+      case 'earthquake': return <Mountain className="w-5 h-5" />;
+      default: return <AlertTriangle className="w-5 h-5" />;
     }
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-brand-200 border-t-brand-600"></div>
+        <p className="text-gray-600 font-medium">Loading alert details...</p>
       </div>
     );
   }
@@ -130,7 +162,10 @@ export default function AlertDetailsPage() {
   if (!alert) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">Alert not found</p>
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+          <AlertTriangle className="w-8 h-8 text-gray-400" />
+        </div>
+        <p className="text-gray-500 text-lg">Alert not found</p>
       </div>
     );
   }
@@ -141,35 +176,54 @@ export default function AlertDetailsPage() {
       <div>
         <button
           onClick={() => router.back()}
-          className="text-blue-600 hover:text-blue-700 mb-4"
+          className="inline-flex items-center gap-2 text-brand-600 hover:text-brand-700 mb-4 transition-colors"
         >
-          ← Back to Alerts
+          <ArrowLeft className="w-4 h-4" />
+          Back to Alerts
         </button>
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{alert.title}</h1>
-            <p className="text-gray-600 mt-1">
-              Created {format(new Date(alert.createdAt), 'MMM d, yyyy h:mm a')}
-            </p>
+        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
+          <div className="flex items-start gap-4">
+            <div className={`p-3 rounded-xl shadow-lg ${getTypeColor(alert.type)}`}>
+              {getAlertTypeIcon(alert.type)}
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{alert.title}</h1>
+              <p className="text-gray-600 mt-1 flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Created {format(new Date(alert.createdAt), 'MMM d, yyyy h:mm a')}
+              </p>
+            </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => router.push(`/emergency-alerts/${id}/edit`)}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-success-600 to-success-700 text-white rounded-lg hover:from-success-700 hover:to-success-800 transition-all shadow-md hover:shadow-lg"
             >
+              <Edit className="w-4 h-4" />
               Edit
             </button>
             <button
               onClick={handleBroadcast}
               disabled={isBroadcasting}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-brand-600 to-brand-700 text-white rounded-lg hover:from-brand-700 hover:to-brand-800 transition-all shadow-md hover:shadow-lg disabled:opacity-50"
             >
-              {isBroadcasting ? 'Broadcasting...' : 'Broadcast'}
+              {isBroadcasting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                  Broadcasting...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4" />
+                  Broadcast
+                </>
+              )}
             </button>
             <button
               onClick={handleDelete}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-error-600 to-error-700 text-white rounded-lg hover:from-error-700 hover:to-error-800 transition-all shadow-md hover:shadow-lg"
             >
+              <Trash2 className="w-4 h-4" />
               Delete
             </button>
           </div>
@@ -177,81 +231,110 @@ export default function AlertDetailsPage() {
       </div>
 
       {/* Alert Details */}
-      <div className="bg-white rounded-lg shadow p-6 space-y-6">
+      <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 space-y-6">
         {/* Type and Severity */}
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
-            <span className={`px-3 py-1 text-sm font-medium rounded-full ${getTypeColor(alert.type)}`}>
+            <span className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg shadow-md ${getTypeColor(alert.type)}`}>
+              {getAlertTypeIcon(alert.type)}
               {alert.type}
             </span>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Severity</label>
-            <span className={`px-3 py-1 text-sm font-medium rounded-full border ${getSeverityColor(alert.severity)}`}>
+            <span className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg shadow-md ${getSeverityColor(alert.severity)}`}>
+              <AlertTriangle className="w-4 h-4" />
               {alert.severity}
             </span>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-            <span className={`px-3 py-1 text-sm font-medium rounded-full ${
-              alert.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+            <span className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg shadow-md ${
+              alert.isActive 
+                ? 'bg-gradient-to-r from-success-500 to-success-600 text-white' 
+                : 'bg-gradient-to-r from-gray-500 to-gray-600 text-white'
             }`}>
+              {alert.isActive ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
               {alert.isActive ? 'Active' : 'Inactive'}
             </span>
           </div>
         </div>
 
         {/* Description */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-          <p className="text-gray-900 whitespace-pre-wrap">{alert.description}</p>
+        <div className="bg-gradient-to-r from-gray-50 to-brand-50 rounded-lg p-4 border border-gray-200">
+          <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+            <AlertTriangle className="w-4 h-4 text-brand-600" />
+            Description
+          </label>
+          <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">{alert.description}</p>
         </div>
 
         {/* Location */}
         {alert.location && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Affected Areas</label>
-            <p className="text-gray-900">{alert.location}</p>
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+              <MapPin className="w-4 h-4 text-brand-600" />
+              Affected Areas
+            </label>
+            <p className="text-gray-900 bg-gray-50 rounded-lg px-4 py-3 border border-gray-200">{alert.location}</p>
           </div>
         )}
 
         {/* Coordinates */}
         {(alert.latitude || alert.longitude) && (
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Latitude</label>
-              <p className="text-gray-900">{alert.latitude || 'N/A'}</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-gradient-to-br from-brand-50 to-brand-100 rounded-lg p-4 border border-brand-200">
+              <label className="flex items-center gap-2 text-sm font-semibold text-brand-700 mb-1">
+                <MapPin className="w-4 h-4" />
+                Latitude
+              </label>
+              <p className="text-brand-900 font-mono text-lg">{alert.latitude || 'N/A'}</p>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Longitude</label>
-              <p className="text-gray-900">{alert.longitude || 'N/A'}</p>
+            <div className="bg-gradient-to-br from-brand-50 to-brand-100 rounded-lg p-4 border border-brand-200">
+              <label className="flex items-center gap-2 text-sm font-semibold text-brand-700 mb-1">
+                <MapPin className="w-4 h-4" />
+                Longitude
+              </label>
+              <p className="text-brand-900 font-mono text-lg">{alert.longitude || 'N/A'}</p>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Radius (km)</label>
-              <p className="text-gray-900">{alert.radius || 'N/A'}</p>
+            <div className="bg-gradient-to-br from-brand-50 to-brand-100 rounded-lg p-4 border border-brand-200">
+              <label className="flex items-center gap-2 text-sm font-semibold text-brand-700 mb-1">
+                <Radio className="w-4 h-4" />
+                Radius (km)
+              </label>
+              <p className="text-brand-900 font-mono text-lg">{alert.radius || 'N/A'}</p>
             </div>
           </div>
         )}
 
         {/* Timestamps */}
-        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Created At</label>
-            <p className="text-gray-900">{format(new Date(alert.createdAt), 'MMM d, yyyy h:mm a')}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+          <div className="bg-gray-50 rounded-lg p-4">
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-1">
+              <Calendar className="w-4 h-4 text-gray-600" />
+              Created At
+            </label>
+            <p className="text-gray-900 font-medium">{format(new Date(alert.createdAt), 'MMM d, yyyy h:mm a')}</p>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Last Updated</label>
-            <p className="text-gray-900">{format(new Date(alert.updatedAt), 'MMM d, yyyy h:mm a')}</p>
+          <div className="bg-gray-50 rounded-lg p-4">
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-1">
+              <Calendar className="w-4 h-4 text-gray-600" />
+              Last Updated
+            </label>
+            <p className="text-gray-900 font-medium">{format(new Date(alert.updatedAt), 'MMM d, yyyy h:mm a')}</p>
           </div>
         </div>
       </div>
 
       {/* Map Preview (if coordinates available) */}
       {alert.latitude && alert.longitude && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Location Map</h2>
-          <div className="rounded-lg overflow-hidden border border-gray-300">
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-4">
+            <MapPin className="w-5 h-5 text-brand-600" />
+            Location Map
+          </h2>
+          <div className="rounded-lg overflow-hidden border-2 border-gray-300 shadow-md">
             <MapViewer
               latitude={alert.latitude}
               longitude={alert.longitude}
@@ -259,64 +342,99 @@ export default function AlertDetailsPage() {
               title={alert.title}
             />
           </div>
-          <div className="mt-3 text-sm text-gray-600 space-y-1">
-            <div>📍 Coordinates: {Number(alert.latitude).toFixed(6)}, {Number(alert.longitude).toFixed(6)}</div>
-            {alert.radius && <div>🎯 Affected Radius: {alert.radius} km</div>}
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="flex items-center gap-2 text-sm text-gray-700 bg-gray-50 rounded-lg px-4 py-3 border border-gray-200">
+              <MapPin className="w-4 h-4 text-brand-600" />
+              <span className="font-medium">Coordinates:</span>
+              <span className="font-mono">{Number(alert.latitude).toFixed(6)}, {Number(alert.longitude).toFixed(6)}</span>
+            </div>
+            {alert.radius && (
+              <div className="flex items-center gap-2 text-sm text-gray-700 bg-gray-50 rounded-lg px-4 py-3 border border-gray-200">
+                <Radio className="w-4 h-4 text-brand-600" />
+                <span className="font-medium">Affected Radius:</span>
+                <span className="font-mono">{alert.radius} km</span>
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {/* Broadcast Results Modal */}
       {showBroadcastModal && broadcastResult && typeof window !== 'undefined' && createPortal(
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style={{ zIndex: 99999 }} onClick={() => setShowBroadcastModal(false)}>
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Broadcast Results</h3>
-              <button
-                onClick={() => setShowBroadcastModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: 99999 }} onClick={() => setShowBroadcastModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-brand-600 to-brand-700 px-6 py-4">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-lg">
+                    <Send className="w-5 h-5 text-white" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white">Broadcast Results</h3>
+                </div>
+                <button
+                  onClick={() => setShowBroadcastModal(false)}
+                  className="p-1 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
+              </div>
             </div>
 
-            <div className="space-y-4">
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
               {/* Total Recipients */}
-              <div className="bg-blue-50 rounded-lg p-4">
-                <div className="text-sm text-blue-600 font-medium">Total Recipients</div>
-                <div className="text-2xl font-bold text-blue-900">{broadcastResult.total_recipients || 0}</div>
+              <div className="bg-gradient-to-br from-brand-50 to-brand-100 rounded-xl p-5 border-2 border-brand-200 shadow-sm">
+                <div className="flex items-center gap-3 mb-2">
+                  <Users className="w-5 h-5 text-brand-600" />
+                  <div className="text-sm text-brand-700 font-semibold">Total Recipients</div>
+                </div>
+                <div className="text-3xl font-bold text-brand-900">{broadcastResult.total_recipients || 0}</div>
               </div>
 
               {/* Push Notifications */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-green-50 rounded-lg p-4">
-                  <div className="text-sm text-green-600 font-medium">Push Sent</div>
-                  <div className="text-xl font-bold text-green-900">{broadcastResult.push_sent || 0}</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gradient-to-br from-success-50 to-success-100 rounded-xl p-4 border border-success-200 shadow-sm">
+                  <div className="flex items-center gap-2 mb-1">
+                    <CheckCircle className="w-4 h-4 text-success-600" />
+                    <div className="text-xs text-success-700 font-semibold">Push Sent</div>
+                  </div>
+                  <div className="text-2xl font-bold text-success-900">{broadcastResult.push_sent || 0}</div>
                 </div>
-                <div className="bg-red-50 rounded-lg p-4">
-                  <div className="text-sm text-red-600 font-medium">Push Failed</div>
-                  <div className="text-xl font-bold text-red-900">{broadcastResult.push_failed || 0}</div>
+                <div className="bg-gradient-to-br from-error-50 to-error-100 rounded-xl p-4 border border-error-200 shadow-sm">
+                  <div className="flex items-center gap-2 mb-1">
+                    <XCircle className="w-4 h-4 text-error-600" />
+                    <div className="text-xs text-error-700 font-semibold">Push Failed</div>
+                  </div>
+                  <div className="text-2xl font-bold text-error-900">{broadcastResult.push_failed || 0}</div>
                 </div>
               </div>
 
               {/* SMS Notifications */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-green-50 rounded-lg p-4">
-                  <div className="text-sm text-green-600 font-medium">SMS Sent</div>
-                  <div className="text-xl font-bold text-green-900">{broadcastResult.sms_sent || 0}</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gradient-to-br from-success-50 to-success-100 rounded-xl p-4 border border-success-200 shadow-sm">
+                  <div className="flex items-center gap-2 mb-1">
+                    <MessageSquare className="w-4 h-4 text-success-600" />
+                    <div className="text-xs text-success-700 font-semibold">SMS Sent</div>
+                  </div>
+                  <div className="text-2xl font-bold text-success-900">{broadcastResult.sms_sent || 0}</div>
                 </div>
-                <div className="bg-red-50 rounded-lg p-4">
-                  <div className="text-sm text-red-600 font-medium">SMS Failed</div>
-                  <div className="text-xl font-bold text-red-900">{broadcastResult.sms_failed || 0}</div>
+                <div className="bg-gradient-to-br from-error-50 to-error-100 rounded-xl p-4 border border-error-200 shadow-sm">
+                  <div className="flex items-center gap-2 mb-1">
+                    <XCircle className="w-4 h-4 text-error-600" />
+                    <div className="text-xs text-error-700 font-semibold">SMS Failed</div>
+                  </div>
+                  <div className="text-2xl font-bold text-error-900">{broadcastResult.sms_failed || 0}</div>
                 </div>
               </div>
 
               {/* Success Rate */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-sm text-gray-600 font-medium">Success Rate</div>
-                <div className="text-xl font-bold text-gray-900">
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-5 border border-gray-200 shadow-sm">
+                <div className="flex items-center gap-3 mb-2">
+                  <TrendingUp className="w-5 h-5 text-gray-600" />
+                  <div className="text-sm text-gray-700 font-semibold">Success Rate</div>
+                </div>
+                <div className="text-3xl font-bold text-gray-900">
                   {broadcastResult.total_recipients > 0
                     ? Math.round(((broadcastResult.push_sent + broadcastResult.sms_sent) / broadcastResult.total_recipients) * 100)
                     : 0}%
@@ -324,12 +442,15 @@ export default function AlertDetailsPage() {
               </div>
             </div>
 
-            <button
-              onClick={() => setShowBroadcastModal(false)}
-              className="mt-6 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              Close
-            </button>
+            {/* Modal Footer */}
+            <div className="px-6 pb-6">
+              <button
+                onClick={() => setShowBroadcastModal(false)}
+                className="w-full px-4 py-3 bg-gradient-to-r from-brand-600 to-brand-700 text-white rounded-lg hover:from-brand-700 hover:to-brand-800 transition-all shadow-md hover:shadow-lg font-medium"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>,
         document.body

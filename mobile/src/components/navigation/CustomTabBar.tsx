@@ -8,30 +8,59 @@ import { COLORS } from '../../constants/colors';
 import { SOSButton } from '../home/SOSButton';
 
 export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation }) => {
+  // Define which tabs should be visible in the tab bar
+  const visibleTabNames = ['Home', 'Alerts', 'Centers', 'Profile'];
+  
+  // Filter to only show the visible tabs
+  const visibleRoutes = state.routes.filter((route) => visibleTabNames.includes(route.name));
+
   return (
     <View style={styles.container}>
       <View style={styles.tabBar}>
-        {state.routes.map((route, index) => {
+        {visibleRoutes.map((route, index) => {
           const { options } = descriptors[route.key];
           const label = options.tabBarLabel || options.title || route.name;
-          const isFocused = state.index === index;
+          const isFocused = state.index === state.routes.indexOf(route);
 
-          // Skip rendering the middle tab (we'll put SOS button there)
+          // Add space for SOS button between Alerts (index 1) and Centers (index 2)
           if (index === 2) {
-            return <View key={route.key} style={styles.centerSpace} />;
+            return (
+              <React.Fragment key={`sos-space-${route.key}`}>
+                <View style={styles.centerSpace} />
+                <TouchableOpacity
+                  key={route.key}
+                  accessibilityRole="button"
+                  accessibilityState={isFocused ? { selected: true } : {}}
+                  accessibilityLabel={options.tabBarAccessibilityLabel}
+                  testID={options.tabBarTestID}
+                  onPress={() => {
+                    const event = navigation.emit({
+                      type: 'tabPress',
+                      target: route.key,
+                      canPreventDefault: true,
+                    });
+
+                    if (!isFocused && !event.defaultPrevented) {
+                      navigation.navigate(route.name);
+                    }
+                  }}
+                  style={styles.tab}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.iconContainer}>
+                    <Building2 
+                      color={isFocused ? COLORS.primary : COLORS.textSecondary} 
+                      size={24} 
+                      strokeWidth={isFocused ? 2.5 : 2} 
+                    />
+                  </View>
+                  <Text style={[styles.label, isFocused && styles.labelFocused]}>
+                    {typeof label === 'string' ? label : route.name}
+                  </Text>
+                </TouchableOpacity>
+              </React.Fragment>
+            );
           }
-
-          const onPress = () => {
-            const event = navigation.emit({
-              type: 'tabPress',
-              target: route.key,
-              canPreventDefault: true,
-            });
-
-            if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
-            }
-          };
 
           // Get icon component based on route name
           const IconComponent = () => {
@@ -44,8 +73,6 @@ export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
                 return <Home color={iconColor} size={iconSize} strokeWidth={strokeWidth} />;
               case 'Alerts':
                 return <Bell color={iconColor} size={iconSize} strokeWidth={strokeWidth} />;
-              case 'Centers':
-                return <Building2 color={iconColor} size={iconSize} strokeWidth={strokeWidth} />;
               case 'Profile':
                 return <Menu color={iconColor} size={iconSize} strokeWidth={strokeWidth} />;
               default:
@@ -60,7 +87,17 @@ export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
               accessibilityState={isFocused ? { selected: true } : {}}
               accessibilityLabel={options.tabBarAccessibilityLabel}
               testID={options.tabBarTestID}
-              onPress={onPress}
+              onPress={() => {
+                const event = navigation.emit({
+                  type: 'tabPress',
+                  target: route.key,
+                  canPreventDefault: true,
+                });
+
+                if (!isFocused && !event.defaultPrevented) {
+                  navigation.navigate(route.name);
+                }
+              }}
               style={styles.tab}
               activeOpacity={0.7}
             >

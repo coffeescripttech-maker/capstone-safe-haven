@@ -24,7 +24,9 @@ import {
   ChevronRight,
   BookOpen,
   FileText,
-  Users
+  Users,
+  Shield,
+  Sparkles
 } from 'lucide-react-native';
 
 type Props = BottomTabScreenProps<MainTabParamList, 'Home'>;
@@ -76,10 +78,20 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
         <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} colors={[COLORS.primary]} />
       }
     >
-      {/* Welcome Header */}
-      <View style={styles.header}>
-        <Text style={styles.greeting}>Hello, {user?.firstName}! 👋</Text>
-        <Text style={styles.subtitle}>Stay safe and informed</Text>
+      {/* Welcome Section */}
+      <View style={styles.welcomeSection}>
+        <View style={styles.welcomeContent}>
+          <View style={styles.welcomeIconContainer}>
+            <Shield color={COLORS.primary} size={28} strokeWidth={2.5} />
+          </View>
+          <View style={styles.welcomeTextContainer}>
+            <Text style={styles.greeting}>Hello, {user?.firstName}! 👋</Text>
+            <View style={styles.subtitleRow}>
+              <Sparkles color={COLORS.primary} size={16} strokeWidth={2} />
+              <Text style={styles.subtitle}>Stay safe and informed</Text>
+            </View>
+          </View>
+        </View>
       </View>
 
       {/* Location Permission */}
@@ -274,20 +286,55 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  header: {
-    padding: SPACING.xl,
-    backgroundColor: COLORS.primary,
+  welcomeSection: {
+    backgroundColor: '#F0F9FF',
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.xl,
+    marginHorizontal: SPACING.md,
+    marginTop: SPACING.md,
+    marginBottom: SPACING.md,
+    borderRadius: 20,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+  },
+  welcomeContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  welcomeIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.md,
+    borderWidth: 2,
+    borderColor: '#DBEAFE',
+  },
+  welcomeTextContainer: {
+    flex: 1,
   },
   greeting: {
     fontSize: TYPOGRAPHY.sizes.xl,
     fontWeight: TYPOGRAPHY.weights.bold,
-    color: COLORS.white,
+    color: COLORS.text,
     marginBottom: SPACING.xs,
+  },
+  subtitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
   },
   subtitle: {
     fontSize: TYPOGRAPHY.sizes.sm,
-    color: COLORS.white,
-    opacity: 0.9,
+    color: COLORS.textSecondary,
+    fontWeight: TYPOGRAPHY.weights.medium,
   },
   permissionCard: {
     flexDirection: 'row',

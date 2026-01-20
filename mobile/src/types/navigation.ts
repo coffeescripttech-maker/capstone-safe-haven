@@ -26,6 +26,7 @@ export type AuthStackParamList = {
 export type MainTabParamList = {
   Home: undefined;
   Alerts: NavigatorScreenParams<AlertsStackParamList>;
+  SOS: undefined;
   Centers: NavigatorScreenParams<CentersStackParamList>;
   Contacts: undefined;
   Guides: NavigatorScreenParams<GuidesStackParamList>;

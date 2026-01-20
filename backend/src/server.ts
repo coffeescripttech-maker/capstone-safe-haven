@@ -3,10 +3,12 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import dotenv from 'dotenv';
+import cron from 'node-cron';
 import { errorHandler } from './middleware/errorHandler';
 import { logger } from './utils/logger';
 import { generalLimiter } from './middleware/rateLimiter';
 import routes from './routes';
+import { alertAutomationService } from './services/alertAutomation.service';
 
 dotenv.config();
 
@@ -52,6 +54,22 @@ app.use((_req, res) => {
 app.listen(PORT, () => {
   logger.info(`SafeHaven API Server running on port ${PORT}`);
   logger.info(`Environment: ${process.env.NODE_ENV}`);
+  
+  // Start Alert Automation Monitoring
+  // Runs every 5 minutes to check weather and earthquake data
+  logger.info('Starting Alert Automation monitoring...');
+  
+  cron.schedule('*/5 * * * *', async () => {
+    logger.info('[Alert Automation] Running scheduled monitoring cycle');
+    try {
+      const result = await alertAutomationService.monitorAndCreateAlerts();
+      logger.info(`[Alert Automation] Cycle complete. Weather: ${result.weatherAlerts}, Earthquakes: ${result.earthquakeAlerts}`);
+    } catch (error) {
+      logger.error('[Alert Automation] Error in scheduled monitoring:', error);
+    }
+  });
+  
+  logger.info('Alert Automation monitoring scheduled (every 5 minutes)');
 });
 
 export default app;

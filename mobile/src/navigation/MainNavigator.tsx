@@ -3,7 +3,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { MainTabParamList, AlertsStackParamList, CentersStackParamList, GuidesStackParamList, IncidentsStackParamList, FamilyStackParamList, ProfileStackParamList } from '../types/navigation';
 import { COLORS } from '../constants/colors';
 import { HomeScreen } from '../screens/home/HomeScreen';
@@ -29,6 +29,7 @@ import { SettingsScreen } from '../screens/profile/SettingsScreen';
 import { AboutScreen } from '../screens/profile/AboutScreen';
 import { useNotifications } from '../store/NotificationContext';
 import { CustomTabBar } from '../components/navigation/CustomTabBar';
+import { CustomHeader } from '../components/navigation/CustomHeader';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const AlertsStack = createNativeStackNavigator<AlertsStackParamList>();
@@ -195,7 +196,8 @@ export const MainNavigator: React.FC = () => {
       screenOptions={{
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textSecondary,
-        headerShown: false,
+        headerShown: true,
+        header: () => <CustomHeader />,
       }}
     >
       <Tab.Screen
@@ -203,8 +205,6 @@ export const MainNavigator: React.FC = () => {
         component={HomeScreen}
         options={{
           tabBarLabel: 'Home',
-          headerShown: true,
-          title: 'SafeHaven',
         }}
       />
       <Tab.Screen
@@ -235,6 +235,35 @@ export const MainNavigator: React.FC = () => {
         component={ProfileNavigator}
         options={{
           tabBarLabel: 'More',
+        }}
+      />
+      {/* Hidden navigators - accessible via navigation but not shown in tab bar */}
+      <Tab.Screen
+        name="Guides"
+        component={GuidesNavigator}
+        options={{
+          tabBarButton: () => null, // Hide from tab bar
+        }}
+      />
+      <Tab.Screen
+        name="Incidents"
+        component={IncidentsNavigator}
+        options={{
+          tabBarButton: () => null, // Hide from tab bar
+        }}
+      />
+      <Tab.Screen
+        name="Family"
+        component={FamilyNavigator}
+        options={{
+          tabBarButton: () => null, // Hide from tab bar
+        }}
+      />
+      <Tab.Screen
+        name="Contacts"
+        component={ContactsListScreen}
+        options={{
+          tabBarButton: () => null, // Hide from tab bar
         }}
       />
     </Tab.Navigator>

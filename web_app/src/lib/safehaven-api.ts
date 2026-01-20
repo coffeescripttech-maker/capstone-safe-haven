@@ -520,4 +520,151 @@ export const statsApi = {
   },
 };
 
+// Admin API
+export const adminApi = {
+  getStats: async () => {
+    console.log('📡 Fetching admin dashboard stats');
+    const response = await api.get('/admin/stats');
+    console.log('📦 Stats response:', response.data);
+    return response.data;
+  },
+  
+  getAnalytics: async (days: number = 30) => {
+    console.log('📡 Fetching admin analytics for', days, 'days');
+    const response = await api.get('/admin/analytics', { params: { days } });
+    console.log('📦 Analytics response:', response.data);
+    return response.data;
+  },
+  
+  getActivity: async (limit: number = 20, offset: number = 0) => {
+    console.log('📡 Fetching admin activity feed');
+    const response = await api.get('/admin/activity', { params: { limit, offset } });
+    console.log('📦 Activity response:', response.data);
+    return response.data;
+  },
+  
+  getHealth: async () => {
+    console.log('📡 Fetching system health');
+    const response = await api.get('/admin/health');
+    console.log('📦 Health response:', response.data);
+    return response.data;
+  },
+
+  // Weather API
+  weather: {
+    getPhilippines: async () => {
+      console.log('📡 Fetching Philippines weather');
+      const response = await api.get('/admin/weather/philippines');
+      console.log('📦 Weather response:', response.data);
+      return response.data;
+    },
+    
+    getLocation: async (lat: number, lon: number) => {
+      console.log('📡 Fetching weather for location:', lat, lon);
+      const response = await api.get('/admin/weather/location', { params: { lat, lon } });
+      console.log('📦 Location weather response:', response.data);
+      return response.data;
+    },
+  },
+
+  // Earthquake API
+  earthquake: {
+    getRecent: async (days: number = 7, minMagnitude: number = 4) => {
+      console.log('📡 Fetching recent earthquakes:', days, 'days, M', minMagnitude, '+');
+      const response = await api.get('/admin/earthquakes/recent', { 
+        params: { days, minMagnitude } 
+      });
+      console.log('📦 Earthquakes response:', response.data);
+      return response.data;
+    },
+    
+    getStats: async (days: number = 30) => {
+      console.log('📡 Fetching earthquake statistics:', days, 'days');
+      const response = await api.get('/admin/earthquakes/stats', { params: { days } });
+      console.log('📦 Earthquake stats response:', response.data);
+      return response.data;
+    },
+  },
+
+  // Alert Automation API
+  alertAutomation: {
+    getPendingAlerts: async (limit: number = 20) => {
+      console.log('📡 Fetching pending auto-generated alerts');
+      const response = await api.get('/admin/alert-automation/pending', { params: { limit } });
+      console.log('📦 Pending alerts response:', response.data);
+      return response.data;
+    },
+
+    approveAlert: async (alertId: number) => {
+      console.log('📡 Approving alert:', alertId);
+      const response = await api.post(`/admin/alert-automation/alerts/${alertId}/approve`);
+      console.log('📦 Approve response:', response.data);
+      return response.data;
+    },
+
+    rejectAlert: async (alertId: number, reason: string) => {
+      console.log('📡 Rejecting alert:', alertId, reason);
+      const response = await api.post(`/admin/alert-automation/alerts/${alertId}/reject`, { reason });
+      console.log('📦 Reject response:', response.data);
+      return response.data;
+    },
+
+    getLogs: async (limit: number = 50, offset: number = 0) => {
+      console.log('📡 Fetching automation logs');
+      const response = await api.get('/admin/alert-automation/logs', { params: { limit, offset } });
+      console.log('📦 Logs response:', response.data);
+      return response.data;
+    },
+
+    triggerMonitoring: async () => {
+      console.log('📡 Manually triggering monitoring cycle');
+      const response = await api.post('/admin/alert-automation/trigger');
+      console.log('📦 Trigger response:', response.data);
+      return response.data;
+    },
+
+    getRules: async (type?: 'weather' | 'earthquake') => {
+      console.log('📡 Fetching alert rules');
+      const response = await api.get('/admin/alert-automation/rules', { params: { type } });
+      console.log('📦 Rules response:', response.data);
+      return response.data;
+    },
+
+    getRuleById: async (ruleId: number) => {
+      console.log('📡 Fetching rule:', ruleId);
+      const response = await api.get(`/admin/alert-automation/rules/${ruleId}`);
+      console.log('📦 Rule response:', response.data);
+      return response.data;
+    },
+
+    createRule: async (ruleData: any) => {
+      console.log('📡 Creating rule:', ruleData);
+      const response = await api.post('/admin/alert-automation/rules', ruleData);
+      console.log('📦 Create rule response:', response.data);
+      return response.data;
+    },
+
+    updateRule: async (ruleId: number, updates: any) => {
+      console.log('📡 Updating rule:', ruleId, updates);
+      const response = await api.put(`/admin/alert-automation/rules/${ruleId}`, updates);
+      console.log('📦 Update rule response:', response.data);
+      return response.data;
+    },
+
+    toggleRule: async (ruleId: number, isActive: boolean) => {
+      console.log('📡 Toggling rule:', ruleId, isActive);
+      const response = await api.patch(`/admin/alert-automation/rules/${ruleId}/toggle`, { is_active: isActive });
+      console.log('📦 Toggle rule response:', response.data);
+      return response.data;
+    },
+
+    deleteRule: async (ruleId: number) => {
+      console.log('📡 Deleting rule:', ruleId);
+      const response = await api.delete(`/admin/alert-automation/rules/${ruleId}`);
+      console.log('📦 Delete rule response:', response.data);
+      return response.data;
+    },
+  },
+};
+
 export default api;

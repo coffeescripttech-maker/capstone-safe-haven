@@ -8,10 +8,16 @@ import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { SPACING } from '../../constants/spacing';
 import { formatPhoneNumber } from '../../utils/formatting';
-import { MainTabParamList } from '../../types/navigation';
+import { ProfileStackParamList } from '../../types/navigation';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { CompositeScreenProps } from '@react-navigation/native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { MainTabParamList } from '../../types/navigation';
 
-type Props = BottomTabScreenProps<MainTabParamList, 'Profile'>;
+type Props = CompositeScreenProps<
+  NativeStackScreenProps<ProfileStackParamList, 'ProfileMain'>,
+  BottomTabScreenProps<MainTabParamList>
+>;
 
 export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
   const { user, profile, logout } = useAuth();
@@ -143,7 +149,7 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Features</Text>
         
-        <TouchableOpacity style={styles.menuItem} onPress={() => (navigation as any).navigate('Guides')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Guides', { screen: 'GuidesList' })}>
           <Text style={styles.menuIcon}>📚</Text>
           <View style={styles.menuTextContainer}>
             <Text style={styles.menuText}>Preparedness Guides</Text>
@@ -152,7 +158,7 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.menuArrow}>→</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} onPress={() => (navigation as any).navigate('Incidents')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Incidents', { screen: 'IncidentsList' })}>
           <Text style={styles.menuIcon}>📋</Text>
           <View style={styles.menuTextContainer}>
             <Text style={styles.menuText}>Report Incident</Text>
@@ -161,11 +167,20 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.menuArrow}>→</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} onPress={() => (navigation as any).navigate('Family')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Family', { screen: 'GroupsList' })}>
           <Text style={styles.menuIcon}>👨‍👩‍👧</Text>
           <View style={styles.menuTextContainer}>
             <Text style={styles.menuText}>Family Locator</Text>
             <Text style={styles.menuSubtext}>Track your family members</Text>
+          </View>
+          <Text style={styles.menuArrow}>→</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Contacts')}>
+          <Text style={styles.menuIcon}>📞</Text>
+          <View style={styles.menuTextContainer}>
+            <Text style={styles.menuText}>Emergency Contacts</Text>
+            <Text style={styles.menuSubtext}>Important phone numbers</Text>
           </View>
           <Text style={styles.menuArrow}>→</Text>
         </TouchableOpacity>
@@ -175,7 +190,7 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Account</Text>
         
-        <TouchableOpacity style={styles.menuItem} onPress={() => (navigation as any).navigate('EditProfile')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('EditProfile')}>
           <Text style={styles.menuIcon}>✏️</Text>
           <View style={styles.menuTextContainer}>
             <Text style={styles.menuText}>Edit Profile</Text>
@@ -183,7 +198,7 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.menuArrow}>→</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} onPress={() => (navigation as any).navigate('Settings')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Settings')}>
           <Text style={styles.menuIcon}>⚙️</Text>
           <View style={styles.menuTextContainer}>
             <Text style={styles.menuText}>Settings</Text>
@@ -191,7 +206,7 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.menuArrow}>→</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} onPress={() => (navigation as any).navigate('About')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('About')}>
           <Text style={styles.menuIcon}>ℹ️</Text>
           <View style={styles.menuTextContainer}>
             <Text style={styles.menuText}>About SafeHaven</Text>

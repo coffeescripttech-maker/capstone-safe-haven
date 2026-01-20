@@ -38,18 +38,31 @@
   --color-white: #ffffff;
   --color-black: #101828;
 
-  --color-brand-25: #f2f7ff;
-  --color-brand-50: #ecf3ff;
-  --color-brand-100: #dde9ff;
-  --color-brand-200: #c2d6ff;
-  --color-brand-300: #9cb9ff;
-  --color-brand-400: #7592ff;
-  --color-brand-500: #465fff;
-  --color-brand-600: #3641f5;
-  --color-brand-700: #2a31d8;
-  --color-brand-800: #252dae;
-  --color-brand-900: #262e89;
-  --color-brand-950: #161950;
+  /* SafeHaven Brand Colors - Safe Blue Primary */
+  --color-brand-25: #f0f5f9;
+  --color-brand-50: #e1ebf3;
+  --color-brand-100: #c3d7e7;
+  --color-brand-200: #87afd0;
+  --color-brand-300: #4b87b8;
+  --color-brand-400: #2f6fa1;
+  --color-brand-500: #1F4E79;  /* Primary - Safe Blue */
+  --color-brand-600: #193e61;
+  --color-brand-700: #132f49;
+  --color-brand-800: #0d1f30;
+  --color-brand-900: #060f18;
+  --color-brand-950: #03080c;
+  
+  /* SafeHaven Emergency Red */
+  --color-emergency-50: #fef2f2;
+  --color-emergency-100: #fee2e2;
+  --color-emergency-200: #fecaca;
+  --color-emergency-300: #fca5a5;
+  --color-emergency-400: #f87171;
+  --color-emergency-500: #C62828;  /* Emergency Red */
+  --color-emergency-600: #9f2020;
+  --color-emergency-700: #7f1a1a;
+  --color-emergency-800: #5f1313;
+  --color-emergency-900: #3f0d0d;
 
   --color-blue-light-25: #f5fbff;
   --color-blue-light-50: #f0f9ff;
@@ -78,57 +91,103 @@
   --color-gray-950: #0c111d;
   --color-gray-dark: #1a2231;
 
-  --color-orange-25: #fffaf5;
-  --color-orange-50: #fff6ed;
-  --color-orange-100: #ffead5;
-  --color-orange-200: #fddcab;
-  --color-orange-300: #feb273;
-  --color-orange-400: #fd853a;
-  --color-orange-500: #fb6514;
-  --color-orange-600: #ec4a0a;
-  --color-orange-700: #c4320a;
-  --color-orange-800: #9c2a10;
-  --color-orange-900: #7e2410;
-  --color-orange-950: #511c10;
+  /* SafeHaven Fire Orange */
+  --color-orange-25: #fff9f5;
+  --color-orange-50: #fff3eb;
+  --color-orange-100: #ffe7d6;
+  --color-orange-200: #ffcfad;
+  --color-orange-300: #ffb784;
+  --color-orange-400: #ff9f5b;
+  --color-orange-500: #F57C00;  /* Fire Orange */
+  --color-orange-600: #c46300;
+  --color-orange-700: #934a00;
+  --color-orange-800: #623100;
+  --color-orange-900: #311800;
+  --color-orange-950: #190c00;
+  
+  /* SafeHaven Storm Blue */
+  --color-storm-25: #f5f9fd;
+  --color-storm-50: #ebf3fb;
+  --color-storm-100: #d7e7f7;
+  --color-storm-200: #afcfef;
+  --color-storm-300: #87b7e7;
+  --color-storm-400: #5f9fdf;
+  --color-storm-500: #1976D2;  /* Storm Blue */
+  --color-storm-600: #145ea8;
+  --color-storm-700: #0f477e;
+  --color-storm-800: #0a2f54;
+  --color-storm-900: #05182a;
+  --color-storm-950: #020c15;
+  
+  /* SafeHaven Electric Yellow */
+  --color-electric-25: #fffef5;
+  --color-electric-50: #fffceb;
+  --color-electric-100: #fff9d6;
+  --color-electric-200: #fff3ad;
+  --color-electric-300: #ffed84;
+  --color-electric-400: #ffe75b;
+  --color-electric-500: #FBC02D;  /* Electric Yellow */
+  --color-electric-600: #c99a24;
+  --color-electric-700: #97731b;
+  --color-electric-800: #644d12;
+  --color-electric-900: #322609;
+  --color-electric-950: #191304;
 
+  /* SafeHaven Success (Green) */
   --color-success-25: #f6fef9;
   --color-success-50: #ecfdf3;
   --color-success-100: #d1fadf;
   --color-success-200: #a6f4c5;
   --color-success-300: #6ce9a6;
   --color-success-400: #32d583;
-  --color-success-500: #12b76a;
-  --color-success-600: #039855;
-  --color-success-700: #027a48;
-  --color-success-800: #05603a;
-  --color-success-900: #054f31;
-  --color-success-950: #053321;
+  --color-success-500: #2E7D32;  /* SafeHaven Success Green */
+  --color-success-600: #256428;
+  --color-success-700: #1c4b1e;
+  --color-success-800: #133214;
+  --color-success-900: #09190a;
+  --color-success-950: #040c05;
 
+  /* SafeHaven Error (Red) */
   --color-error-25: #fffbfa;
   --color-error-50: #fef3f2;
   --color-error-100: #fee4e2;
   --color-error-200: #fecdca;
   --color-error-300: #fda29b;
   --color-error-400: #f97066;
-  --color-error-500: #f04438;
-  --color-error-600: #d92d20;
-  --color-error-700: #b42318;
-  --color-error-800: #912018;
-  --color-error-900: #7a271a;
-  --color-error-950: #55160c;
+  --color-error-500: #D32F2F;  /* SafeHaven Error Red */
+  --color-error-600: #a92626;
+  --color-error-700: #7f1c1c;
+  --color-error-800: #541313;
+  --color-error-900: #2a0909;
+  --color-error-950: #150505;
 
+  /* SafeHaven Warning (Amber) */
   --color-warning-25: #fffcf5;
   --color-warning-50: #fffaeb;
-  --color-warning-100: #fef0c7;
-  --color-warning-200: #fedf89;
-  --color-warning-300: #fec84b;
-  --color-warning-400: #fdb022;
-  --color-warning-500: #f79009;
-  --color-warning-600: #dc6803;
-  --color-warning-700: #b54708;
-  --color-warning-800: #93370d;
-  --color-warning-900: #7a2e0e;
-  --color-warning-950: #4e1d09;
+  --color-warning-100: #fff5d6;
+  --color-warning-200: #ffebad;
+  --color-warning-300: #ffe184;
+  --color-warning-400: #ffd75b;
+  --color-warning-500: #FFA000;  /* SafeHaven Warning Amber */
+  --color-warning-600: #cc8000;
+  --color-warning-700: #996000;
+  --color-warning-800: #664000;
+  --color-warning-900: #332000;
+  --color-warning-950: #191000;
+  
+  /* SafeHaven Info (Blue) */
+  --color-info-25: #f5f9fd;
+  --color-info-50: #ebf3fb;
+  --color-info-100: #d7e7f7;
+  --color-info-200: #afcfef;
+  --color-info-300: #87b7e7;
+  --color-info-400: #5f9fdf;
+  --color-info-500: #0288D1;  /* SafeHaven Info Blue */
+  --color-info-600: #026da7;
+  --color-info-700: #01527d;
+  --color-info-800: #013754;
+  --color-info-900: #001b2a;
+  --color-info-950: #000e15;
 
   --color-theme-pink-500: #ee46bc;
 
@@ -193,63 +252,63 @@
 }
 
 @utility menu-item {
-  @apply relative flex items-center w-full gap-3 px-3 py-2 font-medium rounded-lg text-theme-sm;
+  @apply relative flex items-center w-full gap-3 px-3 py-2.5 font-medium rounded-lg text-theme-sm transition-all duration-200;
 }
 
 @utility menu-item-active {
-  @apply bg-brand-50 text-brand-500 dark:bg-brand-500/[0.12] dark:text-brand-400;
+  @apply bg-white/95 text-brand-600 shadow-md dark:bg-white/10 dark:text-white;
 }
 
 @utility menu-item-inactive {
-  @apply text-gray-700 hover:bg-gray-100 group-hover:text-gray-700 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-gray-300;
+  @apply text-white/80 hover:bg-white/10 hover:text-white group-hover:text-white dark:text-white/70 dark:hover:bg-white/5 dark:hover:text-white;
 }
 
 @utility menu-item-icon {
-  @apply text-gray-500 group-hover:text-gray-700 dark:text-gray-400;
+  @apply text-white/70 group-hover:text-white dark:text-white/60;
 }
 
 @utility menu-item-icon-active {
-  @apply text-brand-500 dark:text-brand-400;
+  @apply text-brand-600 dark:text-white;
 }
 
 @utility menu-item-icon-inactive {
-  @apply text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300;
+  @apply text-white/70 group-hover:text-white dark:text-white/60 dark:group-hover:text-white;
 }
 
 @utility menu-item-arrow {
-  @apply relative;
+  @apply relative transition-transform duration-200;
 }
 
 @utility menu-item-arrow-active {
-  @apply rotate-180 text-brand-500 dark:text-brand-400;
+  @apply rotate-180 text-white dark:text-white;
 }
 
 @utility menu-item-arrow-inactive {
-  @apply text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300;
+  @apply text-white/70 group-hover:text-white dark:text-white/60 dark:group-hover:text-white;
 }
 
 @utility menu-dropdown-item {
-  @apply relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-theme-sm font-medium;
+  @apply relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-theme-sm font-medium transition-all duration-200;
 }
 
 @utility menu-dropdown-item-active {
-  @apply bg-brand-50 text-brand-500 dark:bg-brand-500/[0.12] dark:text-brand-400;
+  @apply bg-white/90 text-brand-600 shadow-sm dark:bg-white/10 dark:text-white;
 }
 
 @utility menu-dropdown-item-inactive {
-  @apply text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5;
+  @apply text-white/80 hover:bg-white/10 hover:text-white dark:text-white/70 dark:hover:bg-white/5 dark:hover:text-white;
 }
 
 @utility menu-dropdown-badge {
-  @apply block rounded-full px-2.5 py-0.5 text-xs font-medium uppercase text-brand-500 dark:text-brand-400;
+  @apply block rounded-full px-2.5 py-0.5 text-xs font-medium uppercase text-brand-600 dark:text-white;
 }
 
 @utility menu-dropdown-badge-active {
-  @apply bg-brand-100 dark:bg-brand-500/20;
+  @apply bg-brand-100 dark:bg-brand-500/30;
 }
 
 @utility menu-dropdown-badge-inactive {
-  @apply bg-brand-50 group-hover:bg-brand-100 dark:bg-brand-500/15 dark:group-hover:bg-brand-500/20;
+  @apply bg-white/20 group-hover:bg-white/30 dark:bg-white/15 dark:group-hover:bg-white/25;
 }
 
 @utility no-scrollbar {

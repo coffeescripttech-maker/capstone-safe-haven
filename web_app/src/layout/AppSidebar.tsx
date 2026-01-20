@@ -67,6 +67,16 @@ const navItems: NavItem[] = [
     name: "Analytics",
     path: "/analytics",
   },
+  {
+    icon: <PieChartIcon />,
+    name: "Monitoring",
+    path: "/monitoring",
+  },
+  {
+    icon: <PlugInIcon />,
+    name: "Alert Automation",
+    path: "/alert-automation",
+  },
 ];
 
 const othersItems: NavItem[] = [
@@ -141,8 +151,8 @@ const AppSidebar: React.FC = () => {
                   className={`ml-auto w-5 h-5 transition-transform duration-200  ${
                     openSubmenu?.type === menuType &&
                     openSubmenu?.index === index
-                      ? "rotate-180 text-brand-500"
-                      : ""
+                      ? "rotate-180 text-white"
+                      : "text-white/70"
                   }`}
                 />
               )}
@@ -183,7 +193,7 @@ const AppSidebar: React.FC = () => {
                     : "0px",
               }}
             >
-              <ul className="mt-2 space-y-1 ml-9">
+              <ul className="mt-2 space-y-1 ml-9 pl-3 border-l border-white/10">
                 {nav.subItems.map((subItem) => (
                   <li key={subItem.name}>
                     <Link
@@ -296,7 +306,7 @@ const AppSidebar: React.FC = () => {
 
   return (
     <aside
-      className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
+      className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-gradient-to-b from-brand-600 via-brand-700 to-brand-800 dark:from-brand-800 dark:via-brand-900 dark:to-gray-950 border-r border-brand-700/50 dark:border-brand-900/50 text-white h-screen transition-all duration-300 ease-in-out z-50 shadow-xl
         ${
           isExpanded || isMobileOpen
             ? "w-[290px]"
@@ -309,7 +319,7 @@ const AppSidebar: React.FC = () => {
       onMouseEnter={() => !isExpanded && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="py-8 flex items-center justify-center">
+      <div className="py-8 flex items-center justify-center border-b border-white/10">
         {isExpanded || isHovered || isMobileOpen ? (
           <AppLogo variant="full" href="/" />
         ) : (
@@ -321,7 +331,7 @@ const AppSidebar: React.FC = () => {
           <div className="flex flex-col gap-4">
             <div>
               <h2
-                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
+                className={`mb-4 text-xs uppercase flex leading-[20px] text-white/50 font-semibold tracking-wider ${
                   !isExpanded && !isHovered
                     ? "lg:justify-center"
                     : "justify-start"
@@ -338,7 +348,7 @@ const AppSidebar: React.FC = () => {
 
             {/* <div className="">
               <h2
-                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
+                className={`mb-4 text-xs uppercase flex leading-[20px] text-white/50 font-semibold tracking-wider ${
                   !isExpanded && !isHovered
                     ? "lg:justify-center"
                     : "justify-start"

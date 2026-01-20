@@ -21,10 +21,10 @@ export default function AuthLayout({
               <GridShape />
               <div className="flex flex-col items-center max-w-xs">
                 <div className="block mb-4">
-                  <AppLogo variant="full" href="/" forceDark={true} />
+                  <AppLogo variant="full" href="/" />
                 </div>
                 <p className="text-center text-gray-400 dark:text-white/60">
-                  Dubai Filmmaker CMS - Content Management System
+                  SafeHaven - Emergency Response System
                 </p>
               </div>
             </div>
