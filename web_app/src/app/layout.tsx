@@ -1,13 +1,13 @@
-import { Outfit } from 'next/font/google';
 import './globals.css';
 
 import { SidebarProvider } from '@/context/SidebarContext';
 import { SafeHavenAuthProvider } from '@/context/SafeHavenAuthContext';
 import { Toaster } from 'react-hot-toast';
 
-const outfit = Outfit({
-  subsets: ["latin"],
-});
+export const metadata = {
+  title: 'SafeHaven Admin Dashboard',
+  description: 'Disaster Management System',
+};
 
 export default function RootLayout({
   children,
@@ -16,7 +16,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${outfit.className}`}>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap" rel="stylesheet" />
+      </head>
+      <body className="font-outfit">
         <SafeHavenAuthProvider>
           <SidebarProvider>
             {children}
