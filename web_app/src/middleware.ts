@@ -30,7 +30,6 @@ export default withAuth(
           req.nextUrl.pathname.startsWith("/avatars") ||
           req.nextUrl.pathname.startsWith("/badge") ||
           req.nextUrl.pathname.startsWith("/buttons") ||
-          req.nextUrl.pathname.startsWith("/images") ||
           req.nextUrl.pathname.startsWith("/videos") ||
           req.nextUrl.pathname.startsWith("/modals") ||
           req.nextUrl.pathname.startsWith("/blank")
@@ -46,6 +45,6 @@ export default withAuth(
 
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|signin|signup|error-404).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|images|signin|signup|error-404).*)",
   ],
 };
