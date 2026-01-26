@@ -87,7 +87,7 @@ export default function SignInForm() {
         {/* Login Card */}
         <div className="bg-white rounded-xl shadow-md border border-gray-100 p-8">
           {/* Demo Credentials Banner */}
-          <div className="mb-6 p-4 bg-brand-50 border border-brand-200 rounded-lg">
+          {/* <div className="mb-6 p-4 bg-brand-50 border border-brand-200 rounded-lg">
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 bg-brand-100 rounded-lg flex items-center justify-center flex-shrink-0">
                 <CheckCircle2 className="w-5 h-5 text-brand-600" />
@@ -101,7 +101,7 @@ export default function SignInForm() {
                 </p>
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Error Message */}
           {error && (
