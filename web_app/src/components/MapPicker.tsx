@@ -15,11 +15,50 @@ export default function MapPicker({ latitude, longitude, radius, onLocationChang
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const marker = useRef<mapboxgl.Marker | null>(null);
+  const [mapLoaded, setMapLoaded] = useState(false);
   
   const [markerPosition, setMarkerPosition] = useState({
     latitude: latitude || 14.5995, // Default to Manila
     longitude: longitude || 120.9842
   });
+
+  // Update marker position when props change (for geocoding)
+  useEffect(() => {
+    // Only update if map is loaded and coordinates are valid
+    if (!latitude || !longitude || !map.current || !marker.current || !mapLoaded) {
+      return;
+    }
+
+    const newLat = latitude;
+    const newLng = longitude;
+    
+    // Skip if coordinates haven't actually changed significantly
+    if (Math.abs(newLat - markerPosition.latitude) < 0.0001 && 
+        Math.abs(newLng - markerPosition.longitude) < 0.0001) {
+      return;
+    }
+
+    console.log('📍 Updating map to new coordinates:', { newLat, newLng });
+    
+    // Update marker
+    marker.current.setLngLat([newLng, newLat]);
+    
+    // Update circle only if source exists
+    if (map.current.getSource('radius-circle')) {
+      const source = map.current.getSource('radius-circle') as mapboxgl.GeoJSONSource;
+      source.setData(createCircleGeoJSON([newLng, newLat], radius).data);
+    }
+    
+    // Center map on new location
+    map.current.flyTo({
+      center: [newLng, newLat],
+      zoom: 14,
+      duration: 1500
+    });
+    
+    // Update state
+    setMarkerPosition({ latitude: newLat, longitude: newLng });
+  }, [latitude, longitude, mapLoaded, radius]);
 
   // Function to create circle GeoJSON
   const createCircleGeoJSON = (center: [number, number], radiusInKm: number) => {
@@ -58,13 +97,16 @@ export default function MapPicker({ latitude, longitude, radius, onLocationChang
   useEffect(() => {
     if (!mapContainer.current) return;
 
-    // Initialize map
+    // Initialize map with current prop values
     mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
+    
+    const initialLat = latitude || 14.5995;
+    const initialLng = longitude || 120.9842;
     
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/streets-v12',
-      center: [markerPosition.longitude, markerPosition.latitude],
+      center: [initialLng, initialLat],
       zoom: 11
     });
 
@@ -78,18 +120,18 @@ export default function MapPicker({ latitude, longitude, radius, onLocationChang
     `;
     el.style.cursor = 'pointer';
 
-    // Add marker
+    // Add marker with current prop values
     marker.current = new mapboxgl.Marker(el)
-      .setLngLat([markerPosition.longitude, markerPosition.latitude])
+      .setLngLat([initialLng, initialLat])
       .addTo(map.current);
 
     // Wait for map to load before adding layers
     map.current.on('load', () => {
       if (!map.current) return;
 
-      // Add circle source and layer
+      // Add circle source and layer with current prop values
       map.current.addSource('radius-circle', createCircleGeoJSON(
-        [markerPosition.longitude, markerPosition.latitude],
+        [initialLng, initialLat],
         radius
       ));
 
@@ -113,6 +155,9 @@ export default function MapPicker({ latitude, longitude, radius, onLocationChang
           'line-opacity': 0.8
         }
       });
+
+      // Mark map as loaded
+      setMapLoaded(true);
     });
 
     // Handle map clicks

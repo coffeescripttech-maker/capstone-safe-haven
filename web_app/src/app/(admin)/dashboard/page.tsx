@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSafeHavenAuth } from '@/context/SafeHavenAuthContext';
 import { adminApi, alertsApi, incidentsApi } from '@/lib/safehaven-api';
 import toast from 'react-hot-toast';
@@ -14,15 +14,11 @@ import {
   TrendingUp,
   RefreshCw,
   Bell,
-  MapPin,
   Activity,
   Clock,
   CheckCircle2,
-  XCircle,
   Loader2,
   ArrowRight,
-  Flame,
-  CloudRain,
   Zap,
   Shield
 } from 'lucide-react';
@@ -144,7 +140,7 @@ export default function DashboardPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
               <Shield className="w-8 h-8 text-brand-500" />
-              Welcome back, {user?.name || 'Admin'}!
+              Welcome back, {user?.firstName || 'Admin'}!
             </h1>
             <p className="text-gray-600 flex items-center gap-2">
               <Activity className="w-4 h-4" />
@@ -382,7 +378,7 @@ export default function DashboardPage() {
 function StatCard({ title, value, subtitle, icon, gradient, trend, trendUp, href }: any) {
   return (
     <Link href={href} className="block group">
-      <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 group-hover:border-brand-200">
+      <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-200 p-6 border border-gray-100 group-hover:border-brand-300 group-hover:scale-105 cursor-pointer">
         <div className="flex items-center justify-between mb-4">
           <div className={`w-14 h-14 bg-gradient-to-br ${gradient} rounded-xl flex items-center justify-center text-white shadow-lg`}>
             {icon}
@@ -402,7 +398,7 @@ function StatCard({ title, value, subtitle, icon, gradient, trend, trendUp, href
 
 function InfoCard({ title, icon, iconColor, iconBg, children }: any) {
   return (
-    <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
+    <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100 transition-all duration-200 hover:shadow-lg">
       <div className="flex items-center gap-3 mb-4">
         <div className={`w-10 h-10 ${iconBg} rounded-lg flex items-center justify-center ${iconColor}`}>
           {icon}
