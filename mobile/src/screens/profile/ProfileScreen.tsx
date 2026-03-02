@@ -3,6 +3,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useAuth } from '../../store/AuthContext';
+import { useRole } from '../../store/RoleContext';
+import { ProtectedComponent } from '../../components/common/ProtectedComponent';
 import { Button } from '../../components/common/Button';
 import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
@@ -21,6 +23,7 @@ type Props = CompositeScreenProps<
 
 export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
   const { user, profile, logout } = useAuth();
+  const { getRoleDisplayName, jurisdiction } = useRole();
 
   const handleLogout = () => {
     Alert.alert(
@@ -53,8 +56,13 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
         </Text>
         <Text style={styles.email}>{user?.email}</Text>
         <View style={styles.roleBadge}>
-          <Text style={styles.roleText}>{user?.role?.toUpperCase()}</Text>
+          <Text style={styles.roleText}>{getRoleDisplayName()}</Text>
         </View>
+        {jurisdiction && (
+          <View style={styles.jurisdictionBadge}>
+            <Text style={styles.jurisdictionText}>📍 {jurisdiction}</Text>
+          </View>
+        )}
       </View>
 
       {/* Personal Information */}
@@ -158,14 +166,16 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.menuArrow}>→</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Incidents', { screen: 'IncidentsList' })}>
-          <Text style={styles.menuIcon}>📋</Text>
-          <View style={styles.menuTextContainer}>
-            <Text style={styles.menuText}>Report Incident</Text>
-            <Text style={styles.menuSubtext}>Report disasters in your area</Text>
-          </View>
-          <Text style={styles.menuArrow}>→</Text>
-        </TouchableOpacity>
+        <ProtectedComponent requiredPermission={{ resource: 'incidents', action: 'create' }}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Incidents', { screen: 'IncidentsList' })}>
+            <Text style={styles.menuIcon}>📋</Text>
+            <View style={styles.menuTextContainer}>
+              <Text style={styles.menuText}>Report Incident</Text>
+              <Text style={styles.menuSubtext}>Report disasters in your area</Text>
+            </View>
+            <Text style={styles.menuArrow}>→</Text>
+          </TouchableOpacity>
+        </ProtectedComponent>
 
         <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Family', { screen: 'GroupsList' })}>
           <Text style={styles.menuIcon}>👨‍👩‍👧</Text>
@@ -184,6 +194,42 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
           </View>
           <Text style={styles.menuArrow}>→</Text>
         </TouchableOpacity>
+
+        {/* Admin/MDRRMO Only - User Management */}
+        <ProtectedComponent requiredRole={['super_admin', 'admin']}>
+          <TouchableOpacity 
+            style={styles.menuItem} 
+            onPress={() => {
+              // Navigate to user management (placeholder)
+              Alert.alert('User Management', 'This feature is available for administrators.');
+            }}
+          >
+            <Text style={styles.menuIcon}>👥</Text>
+            <View style={styles.menuTextContainer}>
+              <Text style={styles.menuText}>User Management</Text>
+              <Text style={styles.menuSubtext}>Manage system users</Text>
+            </View>
+            <Text style={styles.menuArrow}>→</Text>
+          </TouchableOpacity>
+        </ProtectedComponent>
+
+        {/* MDRRMO/Admin Only - Alert Management */}
+        <ProtectedComponent requiredPermission={{ resource: 'alerts', action: 'create' }}>
+          <TouchableOpacity 
+            style={styles.menuItem} 
+            onPress={() => {
+              // Navigate to alert management (placeholder)
+              Alert.alert('Alert Management', 'Create and manage disaster alerts.');
+            }}
+          >
+            <Text style={styles.menuIcon}>🚨</Text>
+            <View style={styles.menuTextContainer}>
+              <Text style={styles.menuText}>Alert Management</Text>
+              <Text style={styles.menuSubtext}>Create disaster alerts</Text>
+            </View>
+            <Text style={styles.menuArrow}>→</Text>
+          </TouchableOpacity>
+        </ProtectedComponent>
       </View>
 
       {/* Account Settings */}
@@ -273,11 +319,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.xs,
     borderRadius: 12,
+    marginBottom: SPACING.xs,
   },
   roleText: {
     fontSize: TYPOGRAPHY.sizes.xs,
     fontWeight: TYPOGRAPHY.weights.bold,
     color: COLORS.text,
+  },
+  jurisdictionBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderRadius: 12,
+  },
+  jurisdictionText: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    color: COLORS.white,
   },
   section: {
     padding: SPACING.md,

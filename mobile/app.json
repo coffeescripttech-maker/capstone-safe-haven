@@ -5,7 +5,9 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "icon": "./assets/logo.png",
     "splash": {
+      "image": "./assets/logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#0038A8"
     },
@@ -21,7 +23,9 @@
       }
     },
     "android": {
+      "icon": "./assets/logo.png",
       "adaptiveIcon": {
+        "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#0038A8"
       },
       "package": "com.safehaven.app",
@@ -29,21 +33,24 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "ACCESS_BACKGROUND_LOCATION",
-        "RECEIVE_BOOT_COMPLETED",
-        "VIBRATE",
-        "POST_NOTIFICATIONS"
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "CAMERA"
       ],
       "config": {
         "googleMaps": {
-          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY_HERE"
+          "apiKey": "AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao"
         }
       }
     },
-    "web": {
-    },
     "plugins": [
       "expo-location",
-      "expo-notifications"
-    ]
+      "expo-image-picker"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "658ac31a-7930-47e9-9adc-8126ed6a438a"
+      }
+    }
   }
 }

@@ -25,8 +25,9 @@ export default function AdminLayout({
       console.log('🚫 Not authenticated, redirecting to login from:', pathname);
       router.push('/auth/login');
     } else if (!isLoading && isAuthenticated && user) {
-      // Check if user has admin or lgu_officer role
-      if (user.role !== 'admin' && user.role !== 'lgu_officer') {
+      // Check if user has admin, super_admin, or lgu_officer role
+      const allowedRoles = ['super_admin', 'admin', 'lgu_officer', 'mdrrmo', 'pnp', 'bfp'];
+      if (!allowedRoles.includes(user.role)) {
         console.log('🚫 Insufficient permissions, user role:', user.role);
         router.push('/auth/login');
       } else {
@@ -45,7 +46,8 @@ export default function AdminLayout({
   }
 
   // Don't render if user doesn't have permission
-  if (user.role !== 'admin' && user.role !== 'lgu_officer') {
+  const allowedRoles = ['super_admin', 'admin', 'lgu_officer', 'mdrrmo', 'pnp', 'bfp'];
+  if (!allowedRoles.includes(user.role)) {
     return <LoadingSpinner />;
   }
 

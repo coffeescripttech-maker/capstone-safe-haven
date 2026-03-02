@@ -7,11 +7,13 @@ const alertService = new AlertService();
 
 export class AlertController {
   /**
-   * Create new alert (Admin only)
+   * Create new alert
+   * LGU officers create alerts with pending_approval status
+   * Requirements: 6.1, 7.1
    */
   async createAlert(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const alert = await alertService.createAlert(req.body, req.user!.id);
+      const alert = await alertService.createAlert(req.body, req.user!.id, req.user!.role);
       
       res.status(201).json({
         status: 'success',
@@ -24,6 +26,8 @@ export class AlertController {
 
   /**
    * Get all alerts with filtering
+   * Apply visibility filtering for citizens
+   * Requirements: 6.1, 7.1, 8.1
    */
   async getAlerts(req: AuthRequest, res: Response, next: NextFunction) {
     try {
@@ -35,7 +39,8 @@ export class AlertController {
         longitude: req.query.lng ? parseFloat(req.query.lng as string) : undefined,
         radius: req.query.radius ? parseFloat(req.query.radius as string) : undefined,
         page: req.query.page ? parseInt(req.query.page as string) : 1,
-        limit: req.query.limit ? parseInt(req.query.limit as string) : 20
+        limit: req.query.limit ? parseInt(req.query.limit as string) : 20,
+        userRole: req.user?.role
       };
 
       const result = await alertService.getAlerts(filters);
@@ -181,6 +186,25 @@ export class AlertController {
         status: 'success',
         message: `${count} expired alerts deactivated`,
         data: { count }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Approve pending alert
+   * Requirements: 7.1
+   */
+  async approveAlert(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const id = parseInt(req.params.id);
+      const alert = await alertService.approveAlert(id, req.user!.id);
+      
+      res.json({
+        status: 'success',
+        message: 'Alert approved and broadcasted successfully',
+        data: alert
       });
     } catch (error) {
       next(error);

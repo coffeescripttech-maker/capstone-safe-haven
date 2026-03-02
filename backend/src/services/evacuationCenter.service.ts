@@ -1,5 +1,6 @@
 import db from '../config/database';
 import { AppError } from '../middleware/errorHandler';
+import { dataFilterService } from './dataFilter.service';
 
 interface CreateCenterDto {
   name: string;
@@ -22,6 +23,8 @@ interface CenterFilters {
   is_active?: boolean;
   page?: number;
   limit?: number;
+  userRole?: string;
+  userJurisdiction?: string | null;
 }
 
 interface EvacuationCenter {
@@ -116,6 +119,8 @@ export class EvacuationCenterService {
 
   /**
    * Get centers with filtering and pagination
+   * Apply jurisdiction-based filtering
+   * Requirements: 6.2, 7.3, 8.4, 11.3
    */
   async getCenters(filters: CenterFilters): Promise<{ centers: EvacuationCenter[]; total: number; page: number; limit: number }> {
     const {
@@ -124,7 +129,9 @@ export class EvacuationCenterService {
       barangay,
       is_active = true,
       page = 1,
-      limit = 20
+      limit = 20,
+      userRole,
+      userJurisdiction
     } = filters;
 
     let query = `
@@ -136,6 +143,16 @@ export class EvacuationCenterService {
       WHERE 1=1
     `;
     const params: any[] = [];
+
+    // Apply jurisdiction-based filtering using DataFilterService
+    // Requirements: 6.2, 7.3, 11.3
+    if (userRole && userJurisdiction !== undefined) {
+      const filterConditions = dataFilterService.applyEvacuationCenterFilter(userRole, userJurisdiction);
+      if (filterConditions.whereClause) {
+        query += ` AND ${filterConditions.whereClause}`;
+        params.push(...filterConditions.params);
+      }
+    }
 
     if (city) {
       query += ` AND city = ?`;
@@ -169,6 +186,15 @@ export class EvacuationCenterService {
       // Get total count
       let countQuery = `SELECT COUNT(*) as total FROM evacuation_centers WHERE 1=1`;
       const countParams: any[] = [];
+      
+      // Apply same filtering to count
+      if (userRole && userJurisdiction !== undefined) {
+        const filterConditions = dataFilterService.applyEvacuationCenterFilter(userRole, userJurisdiction);
+        if (filterConditions.whereClause) {
+          countQuery += ` AND ${filterConditions.whereClause}`;
+          countParams.push(...filterConditions.params);
+        }
+      }
       
       if (city) {
         countQuery += ` AND city = ?`;

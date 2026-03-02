@@ -11,7 +11,6 @@ import {
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import { useLocation } from '../../store/LocationContext';
 import { useNetwork } from '../../store/NetworkContext';
@@ -22,6 +21,15 @@ import { COLORS } from '../../constants/colors';
 import { SPACING } from '../../constants/spacing';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { Button } from '../../components/common/Button';
+
+// Try to load ImagePicker, but don't crash if it's not available
+let ImagePicker: any = null;
+try {
+  ImagePicker = require('expo-image-picker');
+  console.log('✅ ImagePicker loaded');
+} catch (error) {
+  console.log('⚠️ ImagePicker not available');
+}
 
 export const ReportIncidentScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -52,12 +60,17 @@ export const ReportIncidentScreen: React.FC = () => {
   ];
 
   const pickImage = async () => {
+    if (!ImagePicker) {
+      Alert.alert('Not Available', 'Photo upload is not available in this build');
+      return;
+    }
+
     if (photos.length >= 5) {
       Alert.alert('Limit Reached', 'You can upload up to 5 photos');
       return;
     }
 
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const { status} = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission Required', 'Please grant camera roll permissions');
       return;

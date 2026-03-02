@@ -15,6 +15,7 @@ interface AlertCardProps {
 
 export const AlertCard: React.FC<AlertCardProps> = ({ alert, onPress }) => {
   const getSeverityColor = () => {
+    if (!alert?.severity) return COLORS.textSecondary;
     switch (alert.severity) {
       case 'critical': return COLORS.error;
       case 'high': return COLORS.warning;
@@ -25,6 +26,7 @@ export const AlertCard: React.FC<AlertCardProps> = ({ alert, onPress }) => {
   };
 
   const getAlertIcon = () => {
+    if (!alert?.alertType) return '⚠️';
     switch (alert.alertType) {
       case 'typhoon': return '🌀';
       case 'earthquake': return '🌍';
@@ -37,6 +39,11 @@ export const AlertCard: React.FC<AlertCardProps> = ({ alert, onPress }) => {
     }
   };
 
+  // Safety check
+  if (!alert) {
+    return null;
+  }
+
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
       <View style={[styles.severityBar, { backgroundColor: getSeverityColor() }]} />
@@ -45,7 +52,7 @@ export const AlertCard: React.FC<AlertCardProps> = ({ alert, onPress }) => {
         <View style={styles.header}>
           <Text style={styles.icon}>{getAlertIcon()}</Text>
           <View style={styles.headerText}>
-            <Text style={styles.title} numberOfLines={2}>{alert.title}</Text>
+            <Text style={styles.title} numberOfLines={2}>{alert.title || 'Untitled Alert'}</Text>
             <Text style={styles.type}>{alert.alertType?.toUpperCase() || 'ALERT'}</Text>
           </View>
           <View style={[styles.severityBadge, { backgroundColor: getSeverityColor() }]}>
@@ -54,12 +61,12 @@ export const AlertCard: React.FC<AlertCardProps> = ({ alert, onPress }) => {
         </View>
 
         <Text style={styles.description} numberOfLines={2}>
-          {alert.description}
+          {alert.description || 'No description available'}
         </Text>
 
         <View style={styles.footer}>
-          <Text style={styles.source}>📡 {alert.source}</Text>
-          <Text style={styles.time}>{formatTimeAgo(alert.createdAt)}</Text>
+          <Text style={styles.source}>📡 {alert.source || 'Unknown'}</Text>
+          <Text style={styles.time}>{alert.createdAt ? formatTimeAgo(alert.createdAt) : 'Unknown time'}</Text>
         </View>
 
         {alert.affectedAreas && alert.affectedAreas.length > 0 && (

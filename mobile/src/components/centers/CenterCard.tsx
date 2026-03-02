@@ -14,9 +14,15 @@ interface CenterCardProps {
 }
 
 export const CenterCard: React.FC<CenterCardProps> = ({ center, onPress }) => {
+  // Safety check
+  if (!center) {
+    return null;
+  }
+
   const getCapacityColor = () => {
-    if (center.occupancyPercentage >= 90) return COLORS.error;
-    if (center.occupancyPercentage >= 70) return COLORS.warning;
+    const occupancy = center.occupancyPercentage || 0;
+    if (occupancy >= 90) return COLORS.error;
+    if (occupancy >= 70) return COLORS.warning;
     return COLORS.success;
   };
 
@@ -27,8 +33,10 @@ export const CenterCard: React.FC<CenterCardProps> = ({ center, onPress }) => {
   };
 
   const handleDirections = () => {
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${center.latitude},${center.longitude}`;
-    Linking.openURL(url);
+    if (center.latitude && center.longitude) {
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${center.latitude},${center.longitude}`;
+      Linking.openURL(url);
+    }
   };
 
   return (
@@ -37,9 +45,9 @@ export const CenterCard: React.FC<CenterCardProps> = ({ center, onPress }) => {
         <View style={styles.headerLeft}>
           <Text style={styles.icon}>🏢</Text>
           <View style={styles.headerText}>
-            <Text style={styles.name} numberOfLines={2}>{center.name}</Text>
+            <Text style={styles.name} numberOfLines={2}>{center.name || 'Unnamed Center'}</Text>
             <Text style={styles.address} numberOfLines={1}>
-              📍 {center.city}, {center.province}
+              📍 {center.city || 'Unknown'}, {center.province || 'Unknown'}
             </Text>
           </View>
         </View>
@@ -55,7 +63,7 @@ export const CenterCard: React.FC<CenterCardProps> = ({ center, onPress }) => {
         <View style={styles.capacityHeader}>
           <Text style={styles.capacityLabel}>Capacity</Text>
           <Text style={styles.capacityValue}>
-            {center.currentOccupancy} / {center.capacity}
+            {center.currentOccupancy || 0} / {center.capacity || 0}
           </Text>
         </View>
         <View style={styles.capacityBarContainer}>
@@ -63,24 +71,24 @@ export const CenterCard: React.FC<CenterCardProps> = ({ center, onPress }) => {
             style={[
               styles.capacityBarFill,
               {
-                width: `${center.occupancyPercentage}%`,
+                width: `${center.occupancyPercentage || 0}%`,
                 backgroundColor: getCapacityColor(),
               },
             ]}
           />
         </View>
         <Text style={[styles.capacityPercent, { color: getCapacityColor() }]}>
-          {center.occupancyPercentage}% occupied
+          {center.occupancyPercentage || 0}% occupied
           {center.isFull && ' • FULL'}
         </Text>
       </View>
 
       {/* Facilities */}
-      {center.facilities && center.facilities.length > 0 && (
+      {center.facilities && Array.isArray(center.facilities) && center.facilities.length > 0 && (
         <View style={styles.facilities}>
           {center.facilities.slice(0, 4).map((facility, index) => (
-            <View key={index} style={styles.facilityChip}>
-              <Text style={styles.facilityText}>{facility}</Text>
+            <View key={`${facility}-${index}`} style={styles.facilityChip}>
+              <Text style={styles.facilityText}>{facility || 'Unknown'}</Text>
             </View>
           ))}
           {center.facilities.length > 4 && (

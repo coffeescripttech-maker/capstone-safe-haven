@@ -117,7 +117,7 @@ export const CentersMapScreen: React.FC = () => {
         showsUserLocation={true}
         showsMyLocationButton={false}
       >
-        {centers.map((center) => (
+        {centers && centers.length > 0 && centers.map((center) => (
           center.latitude && center.longitude && (
             <Marker
               key={center.id}

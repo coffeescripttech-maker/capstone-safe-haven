@@ -65,7 +65,9 @@ export const CentersListScreen: React.FC = () => {
     // Load from cache first
     const cached = await cacheService.get<EvacuationCenter[]>(CACHE_KEYS.CENTERS);
     if (cached) {
-      setCenters(cached);
+      // Filter out invalid centers
+      const validCached = cached.filter(c => c && c.id && c.name);
+      setCenters(validCached);
       await loadLastUpdate();
     }
 
@@ -82,22 +84,34 @@ export const CentersListScreen: React.FC = () => {
     setError(null);
     
     try {
+      let fetchedCenters: EvacuationCenter[] = [];
+      
       if (location) {
-        const nearby = await centersService.getNearby({
+        fetchedCenters = await centersService.getNearby({
           lat: location.latitude,
           lng: location.longitude,
           radius: 50,
         });
-        setCenters(nearby);
       } else {
         const { centers: allCenters } = await centersService.getCenters();
-        setCenters(allCenters);
-        
-        // Cache all centers for offline use
-        if (allCenters && allCenters.length > 0) {
-          await cacheService.set(CACHE_KEYS.CENTERS, allCenters, CACHE_EXPIRY.CENTERS);
-          await loadLastUpdate();
-        }
+        fetchedCenters = allCenters;
+      }
+      
+      // Filter out invalid centers (those with missing required fields)
+      const validCenters = (fetchedCenters || []).filter(center => 
+        center && 
+        center.id && 
+        center.name && 
+        center.city
+      );
+      
+      console.log('✅ Valid centers after filtering:', validCenters.length);
+      setCenters(validCenters);
+      
+      // Cache for offline use
+      if (validCenters && validCenters.length > 0) {
+        await cacheService.set(CACHE_KEYS.CENTERS, validCenters, CACHE_EXPIRY.CENTERS);
+        await loadLastUpdate();
       }
     } catch (err) {
       setError('Failed to load centers');
@@ -108,6 +122,12 @@ export const CentersListScreen: React.FC = () => {
   };
 
   const handleCenterPress = (center: EvacuationCenter) => {
+    // Safety check
+    if (!center || !center.id) {
+      console.error('Invalid center:', center);
+      return;
+    }
+    console.log('Navigating to center:', center.id);
     navigation.navigate('CenterDetails', { centerId: center.id });
   };
 
@@ -138,7 +158,7 @@ export const CentersListScreen: React.FC = () => {
 
       <FlatList
         data={centers}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item, index) => `${item.id}-${item.name}-${index}`}
         renderItem={({ item }) => (
           <CenterCard center={item} onPress={() => handleCenterPress(item)} />
         )}

@@ -272,5 +272,143 @@ export const adminService = {
     } finally {
       connection.release();
     }
+  },
+
+  // Get reports with role-based filtering
+  // Requirements: 2.4, 6.5
+  async getReports(options: {
+    type?: string;
+    startDate?: string;
+    endDate?: string;
+    format?: string;
+    userRole?: string;
+    userJurisdiction?: string | null;
+  }) {
+    const connection = await pool.getConnection();
+    
+    try {
+      const { type, startDate, endDate, userRole, userJurisdiction } = options;
+
+      // Default date range: last 30 days
+      const start = startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const end = endDate || new Date().toISOString().split('T')[0];
+
+      let reports: any = {};
+
+      // Alerts report
+      if (!type || type === 'alerts') {
+        let alertQuery = `
+          SELECT 
+            DATE(created_at) as date,
+            alert_type,
+            severity,
+            COUNT(*) as count
+          FROM disaster_alerts
+          WHERE created_at BETWEEN ? AND ?
+        `;
+        const alertParams: any[] = [start, end];
+
+        // Apply role-based filtering
+        if (userRole === 'lgu_officer' && userJurisdiction) {
+          alertQuery += ` AND JSON_CONTAINS(affected_areas, ?)`;
+          alertParams.push(JSON.stringify(userJurisdiction));
+        }
+
+        alertQuery += ` GROUP BY DATE(created_at), alert_type, severity ORDER BY date DESC`;
+
+        const [alertData] = await connection.query<RowDataPacket[]>(alertQuery, alertParams);
+        reports.alerts = alertData;
+      }
+
+      // Incidents report
+      if (!type || type === 'incidents') {
+        let incidentQuery = `
+          SELECT 
+            DATE(created_at) as date,
+            incident_type,
+            severity,
+            status,
+            COUNT(*) as count
+          FROM incident_reports
+          WHERE created_at BETWEEN ? AND ?
+        `;
+        const incidentParams: any[] = [start, end];
+
+        // Apply role-based filtering
+        if (userRole === 'lgu_officer' && userJurisdiction) {
+          incidentQuery += ` AND jurisdiction = ?`;
+          incidentParams.push(userJurisdiction);
+        }
+
+        incidentQuery += ` GROUP BY DATE(created_at), incident_type, severity, status ORDER BY date DESC`;
+
+        const [incidentData] = await connection.query<RowDataPacket[]>(incidentQuery, incidentParams);
+        reports.incidents = incidentData;
+      }
+
+      // SOS alerts report
+      if (!type || type === 'sos') {
+        let sosQuery = `
+          SELECT 
+            DATE(created_at) as date,
+            status,
+            priority,
+            COUNT(*) as count
+          FROM sos_alerts
+          WHERE created_at BETWEEN ? AND ?
+        `;
+        const sosParams: any[] = [start, end];
+
+        // Apply role-based filtering
+        if (userRole === 'lgu_officer' && userJurisdiction) {
+          sosQuery += ` AND jurisdiction = ?`;
+          sosParams.push(userJurisdiction);
+        }
+
+        sosQuery += ` GROUP BY DATE(created_at), status, priority ORDER BY date DESC`;
+
+        const [sosData] = await connection.query<RowDataPacket[]>(sosQuery, sosParams);
+        reports.sos = sosData;
+      }
+
+      // Evacuation centers report
+      if (!type || type === 'centers') {
+        let centerQuery = `
+          SELECT 
+            city,
+            province,
+            COUNT(*) as total_centers,
+            SUM(capacity) as total_capacity,
+            SUM(current_occupancy) as total_occupancy,
+            AVG(current_occupancy / capacity * 100) as avg_occupancy_percentage
+          FROM evacuation_centers
+          WHERE is_active = TRUE
+        `;
+        const centerParams: any[] = [];
+
+        // Apply role-based filtering
+        if (userRole === 'lgu_officer' && userJurisdiction) {
+          centerQuery += ` AND (city = ? OR province = ? OR barangay = ?)`;
+          centerParams.push(userJurisdiction, userJurisdiction, userJurisdiction);
+        }
+
+        centerQuery += ` GROUP BY city, province ORDER BY city, province`;
+
+        const [centerData] = await connection.query<RowDataPacket[]>(centerQuery, centerParams);
+        reports.centers = centerData;
+      }
+
+      // Summary statistics
+      reports.summary = {
+        period: { start, end },
+        generated_at: new Date().toISOString(),
+        generated_by_role: userRole,
+        jurisdiction: userJurisdiction
+      };
+
+      return reports;
+    } finally {
+      connection.release();
+    }
   }
 };

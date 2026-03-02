@@ -10,6 +10,7 @@ const authController = new AuthController();
 router.post('/register', authController.register);
 router.post('/login', authController.login);
 router.post('/refresh-token', authController.refreshToken);
+router.post('/logout', authenticate, authController.logout);
 router.get('/me', authenticate, authController.getProfile);
 router.put('/profile', authenticate, authController.updateProfile);
 router.post('/device-token', authenticate, authController.registerDeviceToken);

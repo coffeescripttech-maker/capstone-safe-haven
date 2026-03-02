@@ -5,6 +5,17 @@ export type AlertSeverity = 'low' | 'moderate' | 'high' | 'critical';
 export type IncidentType = 'damage' | 'injury' | 'missing_person' | 'hazard' | 'other';
 export type IncidentSeverity = 'low' | 'moderate' | 'high' | 'critical';
 export type IncidentStatus = 'pending' | 'in_progress' | 'resolved' | 'closed';
+
+export type Role = 
+  | 'super_admin'
+  | 'admin'
+  | 'pnp'
+  | 'bfp'
+  | 'mdrrmo'
+  | 'lgu_officer'
+  | 'citizen';
+
+// Legacy type for backward compatibility
 export type UserRole = 'user' | 'admin' | 'lgu_officer' | 'moderator';
 
 export interface User {
@@ -13,7 +24,8 @@ export interface User {
   firstName: string;
   lastName: string;
   phone?: string;
-  role: UserRole;
+  role: Role;
+  jurisdiction?: string;
   isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;

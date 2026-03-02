@@ -1,12 +1,22 @@
 // Data Models matching backend API
 
+export type Role = 
+  | 'super_admin'
+  | 'admin'
+  | 'pnp'
+  | 'bfp'
+  | 'mdrrmo'
+  | 'lgu_officer'
+  | 'citizen';
+
 export interface User {
   id: number;
   email: string;
   phone: string;
   firstName: string;
   lastName: string;
-  role: 'user' | 'admin' | 'lgu_officer';
+  role: Role;
+  jurisdiction?: string;
   isVerified: boolean;
   isActive: boolean;
   createdAt: string;

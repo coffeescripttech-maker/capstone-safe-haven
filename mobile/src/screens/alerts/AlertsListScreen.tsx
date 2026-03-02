@@ -70,6 +70,12 @@ export const AlertsListScreen: React.FC = () => {
   };
 
   const handleAlertPress = (alert: DisasterAlert) => {
+    // Safety check
+    if (!alert || !alert.id) {
+      console.error('Invalid alert:', alert);
+      return;
+    }
+    console.log('Navigating to alert:', alert.id);
     navigation.navigate('AlertDetails', { alertId: alert.id });
   };
 
@@ -185,7 +191,7 @@ export const AlertsListScreen: React.FC = () => {
       {/* Alerts List */}
       <FlatList
         data={alerts}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item, index) => `${item.id}-${item.alertType}-${index}`}
         renderItem={({ item }) => (
           <AlertCard alert={item} onPress={() => handleAlertPress(item)} />
         )}

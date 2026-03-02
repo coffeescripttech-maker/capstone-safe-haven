@@ -3,6 +3,8 @@ import React, { useEffect, useRef, useState,useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
+import { useRole } from "../context/RoleContext";
+import { ProtectedComponent } from "../components/common/ProtectedComponent";
 import {
   BoxCubeIcon,
   CalenderIcon,
@@ -18,12 +20,14 @@ import {
 } from "../icons/index";
 import SidebarWidget from "./SidebarWidget";
 import AppLogo from "@/components/common/AppLogo";
+import { Role } from "@/types/safehaven";
 
 type NavItem = {
   name: string;
   icon: React.ReactNode;
   path?: string;
   subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
+  requiredRoles?: Role[]; // Add role-based access control
 };
 
 const navItems: NavItem[] = [
@@ -36,46 +40,67 @@ const navItems: NavItem[] = [
     icon: <BoxCubeIcon />,
     name: "Emergency Alerts",
     path: "/emergency-alerts",
+    requiredRoles: ['super_admin', 'admin', 'mdrrmo', 'lgu_officer'], // Alert management
   },
   {
     icon: <ListIcon />,
     name: "Incidents",
     path: "/incidents",
+    requiredRoles: ['super_admin', 'admin', 'mdrrmo', 'pnp', 'bfp', 'lgu_officer'], // Incident management
   },
   {
     icon: <CalenderIcon />,
     name: "Evacuation Centers",
     path: "/evacuation-centers",
+    requiredRoles: ['super_admin', 'admin', 'mdrrmo', 'lgu_officer'], // Center management
   },
   {
     icon: <UserCircleIcon />,
     name: "Users",
     path: "/users",
+    requiredRoles: ['super_admin', 'admin'], // User management - admin only
   },
   {
     icon: <PieChartIcon />,
     name: "SOS Alerts",
     path: "/sos-alerts",
+    requiredRoles: ['super_admin', 'admin', 'mdrrmo', 'pnp', 'bfp', 'lgu_officer'], // SOS response
   },
   {
     icon: <PageIcon />,
     name: "Emergency Contacts",
     path: "/emergency-contacts",
+    requiredRoles: ['super_admin', 'admin', 'mdrrmo'], // Contact management
   },
   {
     icon: <TableIcon />,
     name: "Analytics",
     path: "/analytics",
+    requiredRoles: ['super_admin', 'admin', 'mdrrmo'], // Analytics access
   },
   {
     icon: <PieChartIcon />,
     name: "Monitoring",
     path: "/monitoring",
+    requiredRoles: ['super_admin', 'admin', 'mdrrmo'], // System monitoring
   },
   {
     icon: <PlugInIcon />,
     name: "Alert Automation",
     path: "/alert-automation",
+    requiredRoles: ['super_admin', 'admin', 'mdrrmo'], // Automation management
+  },
+  {
+    icon: <UserCircleIcon />,
+    name: "Permissions",
+    path: "/permissions",
+    requiredRoles: ['super_admin'], // Permission management - super admin only
+  },
+  {
+    icon: <PageIcon />,
+    name: "Audit Logs",
+    path: "/audit-logs",
+    requiredRoles: ['super_admin', 'admin'], // Audit log viewer
   },
 ];
 
@@ -119,55 +144,26 @@ const AppSidebar: React.FC = () => {
     menuType: "main" | "others"
   ) => (
     <ul className="flex flex-col gap-4">
-      {navItems.map((nav, index) => (
-        <li key={nav.name}>
-          {nav.subItems ? (
-            <button
-              onClick={() => handleSubmenuToggle(index, menuType)}
-              className={`menu-item group  ${
-                openSubmenu?.type === menuType && openSubmenu?.index === index
-                  ? "menu-item-active"
-                  : "menu-item-inactive"
-              } cursor-pointer ${
-                !isExpanded && !isHovered
-                  ? "lg:justify-center"
-                  : "lg:justify-start"
-              }`}
-            >
-              <span
-                className={` ${
+      {navItems.map((nav, index) => {
+        // Wrap menu item with ProtectedComponent if requiredRoles is specified
+        const menuContent = (
+          <li key={nav.name}>
+            {nav.subItems ? (
+              <button
+                onClick={() => handleSubmenuToggle(index, menuType)}
+                className={`menu-item group  ${
                   openSubmenu?.type === menuType && openSubmenu?.index === index
-                    ? "menu-item-icon-active"
-                    : "menu-item-icon-inactive"
-                }`}
-              >
-                {nav.icon}
-              </span>
-              {(isExpanded || isHovered || isMobileOpen) && (
-                <span className={`menu-item-text`}>{nav.name}</span>
-              )}
-              {(isExpanded || isHovered || isMobileOpen) && (
-                <ChevronDownIcon
-                  className={`ml-auto w-5 h-5 transition-transform duration-200  ${
-                    openSubmenu?.type === menuType &&
-                    openSubmenu?.index === index
-                      ? "rotate-180 text-white"
-                      : "text-white/70"
-                  }`}
-                />
-              )}
-            </button>
-          ) : (
-            nav.path && (
-              <Link
-                href={nav.path}
-                className={`menu-item group ${
-                  isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
+                    ? "menu-item-active"
+                    : "menu-item-inactive"
+                } cursor-pointer ${
+                  !isExpanded && !isHovered
+                    ? "lg:justify-center"
+                    : "lg:justify-start"
                 }`}
               >
                 <span
-                  className={`${
-                    isActive(nav.path)
+                  className={` ${
+                    openSubmenu?.type === menuType && openSubmenu?.index === index
                       ? "menu-item-icon-active"
                       : "menu-item-icon-inactive"
                   }`}
@@ -177,66 +173,110 @@ const AppSidebar: React.FC = () => {
                 {(isExpanded || isHovered || isMobileOpen) && (
                   <span className={`menu-item-text`}>{nav.name}</span>
                 )}
-              </Link>
-            )
-          )}
-          {nav.subItems && (isExpanded || isHovered || isMobileOpen) && (
-            <div
-              ref={(el) => {
-                subMenuRefs.current[`${menuType}-${index}`] = el;
-              }}
-              className="overflow-hidden transition-all duration-300"
-              style={{
-                height:
-                  openSubmenu?.type === menuType && openSubmenu?.index === index
-                    ? `${subMenuHeight[`${menuType}-${index}`]}px`
-                    : "0px",
-              }}
-            >
-              <ul className="mt-2 space-y-1 ml-9 pl-3 border-l border-white/10">
-                {nav.subItems.map((subItem) => (
-                  <li key={subItem.name}>
-                    <Link
-                      href={subItem.path}
-                      className={`menu-dropdown-item ${
-                        isActive(subItem.path)
-                          ? "menu-dropdown-item-active"
-                          : "menu-dropdown-item-inactive"
-                      }`}
-                    >
-                      {subItem.name}
-                      <span className="flex items-center gap-1 ml-auto">
-                        {subItem.new && (
-                          <span
-                            className={`ml-auto ${
-                              isActive(subItem.path)
-                                ? "menu-dropdown-badge-active"
-                                : "menu-dropdown-badge-inactive"
-                            } menu-dropdown-badge `}
-                          >
-                            new
-                          </span>
-                        )}
-                        {subItem.pro && (
-                          <span
-                            className={`ml-auto ${
-                              isActive(subItem.path)
-                                ? "menu-dropdown-badge-active"
-                                : "menu-dropdown-badge-inactive"
-                            } menu-dropdown-badge `}
-                          >
-                            pro
-                          </span>
-                        )}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </li>
-      ))}
+                {(isExpanded || isHovered || isMobileOpen) && (
+                  <ChevronDownIcon
+                    className={`ml-auto w-5 h-5 transition-transform duration-200  ${
+                      openSubmenu?.type === menuType &&
+                      openSubmenu?.index === index
+                        ? "rotate-180 text-white"
+                        : "text-white/70"
+                    }`}
+                  />
+                )}
+              </button>
+            ) : (
+              nav.path && (
+                <Link
+                  href={nav.path}
+                  className={`menu-item group ${
+                    isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
+                  }`}
+                >
+                  <span
+                    className={`${
+                      isActive(nav.path)
+                        ? "menu-item-icon-active"
+                        : "menu-item-icon-inactive"
+                    }`}
+                  >
+                    {nav.icon}
+                  </span>
+                  {(isExpanded || isHovered || isMobileOpen) && (
+                    <span className={`menu-item-text`}>{nav.name}</span>
+                  )}
+                </Link>
+              )
+            )}
+            {nav.subItems && (isExpanded || isHovered || isMobileOpen) && (
+              <div
+                ref={(el) => {
+                  subMenuRefs.current[`${menuType}-${index}`] = el;
+                }}
+                className="overflow-hidden transition-all duration-300"
+                style={{
+                  height:
+                    openSubmenu?.type === menuType && openSubmenu?.index === index
+                      ? `${subMenuHeight[`${menuType}-${index}`]}px`
+                      : "0px",
+                }}
+              >
+                <ul className="mt-2 space-y-1 ml-9 pl-3 border-l border-white/10">
+                  {nav.subItems.map((subItem) => (
+                    <li key={subItem.name}>
+                      <Link
+                        href={subItem.path}
+                        className={`menu-dropdown-item ${
+                          isActive(subItem.path)
+                            ? "menu-dropdown-item-active"
+                            : "menu-dropdown-item-inactive"
+                        }`}
+                      >
+                        {subItem.name}
+                        <span className="flex items-center gap-1 ml-auto">
+                          {subItem.new && (
+                            <span
+                              className={`ml-auto ${
+                                isActive(subItem.path)
+                                  ? "menu-dropdown-badge-active"
+                                  : "menu-dropdown-badge-inactive"
+                              } menu-dropdown-badge `}
+                            >
+                              new
+                            </span>
+                          )}
+                          {subItem.pro && (
+                            <span
+                              className={`ml-auto ${
+                                isActive(subItem.path)
+                                  ? "menu-dropdown-badge-active"
+                                  : "menu-dropdown-badge-inactive"
+                              } menu-dropdown-badge `}
+                            >
+                              pro
+                            </span>
+                          )}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </li>
+        );
+
+        // If requiredRoles is specified, wrap with ProtectedComponent
+        if (nav.requiredRoles) {
+          return (
+            <ProtectedComponent key={nav.name} requiredRole={nav.requiredRoles}>
+              {menuContent}
+            </ProtectedComponent>
+          );
+        }
+
+        // Otherwise, render without protection
+        return menuContent;
+      })}
     </ul>
   );
 

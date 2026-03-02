@@ -35,12 +35,37 @@ export const AlertDetailsScreen: React.FC = () => {
   const loadAlert = async () => {
     try {
       setLoading(true);
+      console.log('Loading alert with ID:', alertId);
+      
+      if (!alertId || alertId === 0) {
+        throw new Error('Invalid alert ID');
+      }
+      
       const data = await alertsService.getAlertById(alertId);
+      console.log('Loaded alert data:', data);
+      
+      if (!data) {
+        throw new Error('Alert not found or invalid data received');
+      }
+      
+      // Additional validation
+      if (!data.title || !data.alertType) {
+        throw new Error('Alert data is incomplete');
+      }
+      
       setAlert(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading alert:', error);
-      RNAlert.alert('Error', 'Failed to load alert details');
-      navigation.goBack();
+      RNAlert.alert(
+        'Error', 
+        error.message || 'Failed to load alert details. The alert may have been deleted or is unavailable.',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.goBack()
+          }
+        ]
+      );
     } finally {
       setLoading(false);
     }
@@ -51,75 +76,133 @@ export const AlertDetailsScreen: React.FC = () => {
   }
 
   if (!alert) {
-    return null;
+    console.error('Alert is null or undefined');
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <Text style={{ fontSize: 18, marginBottom: 10 }}>⚠️</Text>
+        <Text style={{ fontSize: 16, textAlign: 'center' }}>
+          Unable to load alert details
+        </Text>
+      </View>
+    );
   }
 
-  const getSeverityColor = (severity: string): string => {
-    switch (severity.toLowerCase()) {
-      case 'critical':
-        return '#DC2626';
-      case 'high':
-        return '#F59E0B';
-      case 'moderate':
-        return '#3B82F6';
-      case 'low':
-        return '#10B981';
-      default:
-        return '#6B7280';
+  // Validate critical fields
+  if (!alert.title || !alert.alertType) {
+    console.error('Alert missing critical fields:', alert);
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <Text style={{ fontSize: 18, marginBottom: 10 }}>⚠️</Text>
+        <Text style={{ fontSize: 16, textAlign: 'center' }}>
+          Alert data is incomplete
+        </Text>
+      </View>
+    );
+  }
+
+  console.log('Rendering alert:', {
+    id: alert.id,
+    title: alert.title,
+    alertType: alert.alertType,
+    severity: alert.severity,
+    hasLatitude: !!alert.latitude,
+    hasLongitude: !!alert.longitude,
+  });
+
+  const getSeverityColor = (severity?: string): string => {
+    try {
+      if (!severity) return '#6B7280';
+      switch (severity.toLowerCase()) {
+        case 'critical':
+          return '#DC2626';
+        case 'high':
+          return '#F59E0B';
+        case 'moderate':
+          return '#3B82F6';
+        case 'low':
+          return '#10B981';
+        default:
+          return '#6B7280';
+      }
+    } catch (error) {
+      console.error('Error in getSeverityColor:', error);
+      return '#6B7280';
     }
   };
 
-  const getAlertIcon = (type: string): string => {
-    switch (type.toLowerCase()) {
-      case 'typhoon':
-        return 'thunderstorm';
-      case 'earthquake':
-        return 'pulse';
-      case 'flood':
-        return 'water';
-      case 'fire':
-        return 'flame';
-      case 'tsunami':
-        return 'boat';
-      case 'landslide':
-        return 'warning';
-      default:
-        return 'alert-circle';
+  const getAlertIcon = (type?: string): string => {
+    try {
+      if (!type) return 'alert-circle';
+      switch (type.toLowerCase()) {
+        case 'typhoon':
+          return 'thunderstorm';
+        case 'earthquake':
+          return 'pulse';
+        case 'flood':
+          return 'water';
+        case 'fire':
+          return 'flame';
+        case 'tsunami':
+          return 'boat';
+        case 'landslide':
+          return 'warning';
+        default:
+          return 'alert-circle';
+      }
+    } catch (error) {
+      console.error('Error in getAlertIcon:', error);
+      return 'alert-circle';
     }
   };
 
-  const severityColor = getSeverityColor(alert.severity);
+  let severityColor = '#6B7280';
+  try {
+    severityColor = getSeverityColor(alert.severity);
+    console.log('✅ Severity color:', severityColor);
+  } catch (error) {
+    console.error('❌ Error getting severity color:', error);
+  }
 
-  return (
-    <ScrollView style={styles.container}>
+  try {
+    return (
+      <ScrollView style={styles.container}>
       {/* Map with Affected Area */}
-      {alert.latitude && alert.longitude && (
+      {alert.latitude && alert.longitude && !isNaN(alert.latitude) && !isNaN(alert.longitude) && (
         <View style={styles.mapContainer}>
-          <MapView
-            style={styles.map}
-            provider={PROVIDER_GOOGLE}
-            initialRegion={{
-              latitude: alert.latitude,
-              longitude: alert.longitude,
-              latitudeDelta: alert.radiusKm ? alert.radiusKm / 50 : 0.5,
-              longitudeDelta: alert.radiusKm ? alert.radiusKm / 50 : 0.5,
-            }}
-            scrollEnabled={false}
-            zoomEnabled={false}
-          >
-            {alert.radiusKm && (
-              <Circle
-                center={{
-                  latitude: alert.latitude,
-                  longitude: alert.longitude,
-                }}
-                radius={alert.radiusKm * 1000}
-                strokeColor={`${severityColor}80`}
-                fillColor={`${severityColor}20`}
-                strokeWidth={2}
-              />
-            )}
-          </MapView>
+          {(() => {
+            try {
+              return (
+                <MapView
+                  style={styles.map}
+                  provider={PROVIDER_GOOGLE}
+                  initialRegion={{
+                    latitude: Number(alert.latitude),
+                    longitude: Number(alert.longitude),
+                    latitudeDelta: alert.radiusKm ? alert.radiusKm / 50 : 0.5,
+                    longitudeDelta: alert.radiusKm ? alert.radiusKm / 50 : 0.5,
+                  }}
+                  scrollEnabled={false}
+                  zoomEnabled={false}
+                >
+                  {alert.radiusKm && alert.radiusKm > 0 && (
+                    <Circle
+                      center={{
+                        latitude: Number(alert.latitude),
+                        longitude: Number(alert.longitude),
+                      }}
+                      radius={alert.radiusKm * 1000}
+                      strokeColor={`${severityColor}80`}
+                      fillColor={`${severityColor}20`}
+                      strokeWidth={2}
+                    />
+                  )}
+                </MapView>
+              );
+            } catch (error) {
+              console.error('Error rendering map:', error);
+              return null;
+            }
+          })()}
         </View>
       )}
 
@@ -135,18 +218,18 @@ export const AlertDetailsScreen: React.FC = () => {
           </View>
           <View style={styles.headerText}>
             <Text style={styles.alertType}>
-              {alert.alertType.charAt(0).toUpperCase() + alert.alertType.slice(1)}
+              {alert.alertType ? alert.alertType.charAt(0).toUpperCase() + alert.alertType.slice(1) : 'Alert'}
             </Text>
             <View
               style={[styles.severityBadge, { backgroundColor: `${severityColor}20` }]}
             >
               <Text style={[styles.severityText, { color: severityColor }]}>
-                {alert.severity.toUpperCase()}
+                {alert.severity ? alert.severity.toUpperCase() : 'UNKNOWN'}
               </Text>
             </View>
           </View>
         </View>
-        <Text style={styles.title}>{alert.title}</Text>
+        <Text style={styles.title}>{alert.title || 'No title'}</Text>
       </View>
 
       {/* Description */}
@@ -155,11 +238,11 @@ export const AlertDetailsScreen: React.FC = () => {
           <Ionicons name="document-text" size={20} color={COLORS.primary} />
           <Text style={styles.sectionTitle}>Description</Text>
         </View>
-        <Text style={styles.description}>{alert.description}</Text>
+        <Text style={styles.description}>{alert.description || 'No description available'}</Text>
       </View>
 
       {/* Affected Areas */}
-      {alert.affectedAreas && alert.affectedAreas.length > 0 && (
+      {alert.affectedAreas && Array.isArray(alert.affectedAreas) && alert.affectedAreas.length > 0 && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="location" size={20} color={COLORS.primary} />
@@ -167,8 +250,8 @@ export const AlertDetailsScreen: React.FC = () => {
           </View>
           <View style={styles.areasContainer}>
             {alert.affectedAreas.map((area: string, index: number) => (
-              <View key={index} style={styles.areaChip}>
-                <Text style={styles.areaText}>{area}</Text>
+              <View key={`area-${index}-${area}`} style={styles.areaChip}>
+                <Text style={styles.areaText}>{area || 'Unknown'}</Text>
               </View>
             ))}
           </View>
@@ -185,7 +268,13 @@ export const AlertDetailsScreen: React.FC = () => {
           <View style={styles.timelineItem}>
             <Text style={styles.timelineLabel}>Start:</Text>
             <Text style={styles.timelineValue}>
-              {format(new Date(alert.startTime), 'MMM dd, yyyy h:mm a')}
+              {(() => {
+                try {
+                  return format(new Date(alert.startTime), 'MMM dd, yyyy h:mm a');
+                } catch (e) {
+                  return alert.startTime;
+                }
+              })()}
             </Text>
           </View>
         )}
@@ -193,16 +282,30 @@ export const AlertDetailsScreen: React.FC = () => {
           <View style={styles.timelineItem}>
             <Text style={styles.timelineLabel}>End:</Text>
             <Text style={styles.timelineValue}>
-              {format(new Date(alert.endTime), 'MMM dd, yyyy h:mm a')}
+              {(() => {
+                try {
+                  return format(new Date(alert.endTime), 'MMM dd, yyyy h:mm a');
+                } catch (e) {
+                  return alert.endTime;
+                }
+              })()}
             </Text>
           </View>
         )}
-        <View style={styles.timelineItem}>
-          <Text style={styles.timelineLabel}>Issued:</Text>
-          <Text style={styles.timelineValue}>
-            {format(new Date(alert.createdAt), 'MMM dd, yyyy h:mm a')}
-          </Text>
-        </View>
+        {alert.createdAt && (
+          <View style={styles.timelineItem}>
+            <Text style={styles.timelineLabel}>Issued:</Text>
+            <Text style={styles.timelineValue}>
+              {(() => {
+                try {
+                  return format(new Date(alert.createdAt), 'MMM dd, yyyy h:mm a');
+                } catch (e) {
+                  return alert.createdAt;
+                }
+              })()}
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Source */}
@@ -211,22 +314,22 @@ export const AlertDetailsScreen: React.FC = () => {
           <Ionicons name="information-circle" size={20} color={COLORS.primary} />
           <Text style={styles.sectionTitle}>Source</Text>
         </View>
-        <Text style={styles.source}>{alert.source}</Text>
+        <Text style={styles.source}>{alert.source || 'Unknown source'}</Text>
       </View>
 
       {/* Additional Info */}
-      {alert.metadata && Object.keys(alert.metadata).length > 0 && (
+      {alert.metadata && typeof alert.metadata === 'object' && Object.keys(alert.metadata).length > 0 && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="list" size={20} color={COLORS.primary} />
             <Text style={styles.sectionTitle}>Additional Information</Text>
           </View>
           {Object.entries(alert.metadata).map(([key, value]) => (
-            <View key={key} style={styles.metadataItem}>
+            <View key={`metadata-${key}`} style={styles.metadataItem}>
               <Text style={styles.metadataKey}>
-                {key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}:
+                {key ? key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()) : 'Unknown'}:
               </Text>
-              <Text style={styles.metadataValue}>{String(value)}</Text>
+              <Text style={styles.metadataValue}>{value ? String(value) : 'N/A'}</Text>
             </View>
           ))}
         </View>
@@ -256,7 +359,21 @@ export const AlertDetailsScreen: React.FC = () => {
         </View>
       </View>
     </ScrollView>
-  );
+    );
+  } catch (renderError) {
+    console.error('❌ Error rendering alert details:', renderError);
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <Text style={{ fontSize: 18, marginBottom: 10 }}>⚠️</Text>
+        <Text style={{ fontSize: 16, textAlign: 'center', marginBottom: 10 }}>
+          Error displaying alert details
+        </Text>
+        <Text style={{ fontSize: 12, color: '#666', textAlign: 'center' }}>
+          {renderError instanceof Error ? renderError.message : 'Unknown error'}
+        </Text>
+      </View>
+    );
+  }
 };
 
 const styles = StyleSheet.create({

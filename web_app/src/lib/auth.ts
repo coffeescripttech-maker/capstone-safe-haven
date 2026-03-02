@@ -1,7 +1,7 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { getUserByEmail } from "./d1-users";
-import bcrypt from "bcrypt";
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -17,37 +17,52 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          // Query user from D1 database
-          const user = await getUserByEmail(credentials.email);
-
-          if (!user) {
-            throw new Error("No user found with this email");
-          }
-
-          // Check if password is hashed (starts with $2b$ for bcrypt)
-          const isHashed = user.password.startsWith('$2b$') || user.password.startsWith('$2a$');
+          console.log('[NextAuth] Authenticating with backend:', BACKEND_URL);
           
-          let isValid = false;
-          if (isHashed) {
-            // Use bcrypt for hashed passwords
-            isValid = await bcrypt.compare(credentials.password, user.password);
-          } else {
-            // Direct comparison for plain text (backward compatibility)
-            isValid = user.password === credentials.password;
+          // Call the backend API for authentication
+          const response = await fetch(`${BACKEND_URL}/auth/login`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: credentials.email,
+              password: credentials.password,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            console.error('[NextAuth] Backend auth failed:', data);
+            throw new Error(data.message || 'Authentication failed');
           }
 
-          if (!isValid) {
-            throw new Error("Invalid password");
+          // Backend returns: { status: 'success', data: { user, accessToken, refreshToken } }
+          if (data.status !== 'success' || !data.data) {
+            console.error('[NextAuth] Invalid response format:', data);
+            throw new Error('Invalid response from backend');
           }
+
+          const { user, accessToken, refreshToken } = data.data;
+
+          if (!user || !accessToken) {
+            console.error('[NextAuth] Missing user or accessToken in response');
+            throw new Error('Invalid response from backend');
+          }
+
+          console.log('[NextAuth] Authentication successful:', user.email, 'Role:', user.role);
 
           return {
-            id: user.id,
+            id: user.id.toString(),
             email: user.email,
-            name: user.name,
+            name: `${user.firstName} ${user.lastName}`,
             role: user.role,
+            jurisdiction: user.jurisdiction,
+            token: accessToken, // Store the backend JWT token
           };
-        } catch (error) {
-          console.error('Auth error:', error);
+        } catch (error: any) {
+          console.error('[NextAuth] Auth error:', error.message);
           throw error;
         }
       },

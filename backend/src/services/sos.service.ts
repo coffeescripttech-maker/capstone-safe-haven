@@ -3,6 +3,7 @@
 import pool from '../config/database';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { logger } from '../utils/logger';
+import { dataFilterService } from './dataFilter.service';
 
 export interface SOSAlert {
   id: number;
@@ -279,6 +280,8 @@ class SOSService {
     endDate?: Date;
     page?: number;
     limit?: number;
+    userRole?: string;
+    userJurisdiction?: string | null;
   }): Promise<{ alerts: SOSAlert[]; total: number }> {
     try {
       const page = filters.page || 1;
@@ -287,6 +290,16 @@ class SOSService {
 
       let whereConditions: string[] = [];
       let params: any[] = [];
+
+      // Apply geographic filtering using DataFilterService
+      // Requirements: 4.1, 7.4, 11.2
+      if (filters.userRole && filters.userJurisdiction !== undefined) {
+        const filterConditions = dataFilterService.applySOSAlertFilter(filters.userRole, filters.userJurisdiction);
+        if (filterConditions.whereClause) {
+          whereConditions.push(filterConditions.whereClause);
+          params.push(...filterConditions.params);
+        }
+      }
 
       if (filters.userId) {
         whereConditions.push('sa.user_id = ?');

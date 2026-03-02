@@ -6,6 +6,7 @@ import { useAuth } from '../../store/AuthContext';
 import { useAlerts } from '../../store/AlertContext';
 import { useLocation } from '../../store/LocationContext';
 import { useNotifications } from '../../store/NotificationContext';
+import { ProtectedComponent } from '../../components/common/ProtectedComponent';
 import { centersService } from '../../services/centers';
 import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
@@ -26,7 +27,9 @@ import {
   FileText,
   Users,
   Shield,
-  Sparkles
+  Sparkles,
+  BarChart3,
+  Settings
 } from 'lucide-react-native';
 
 type Props = BottomTabScreenProps<MainTabParamList, 'Home'>;
@@ -129,9 +132,9 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
             <AlertTriangle color={COLORS.white} size={24} strokeWidth={2.5} />
             <Text style={styles.criticalTitle}>CRITICAL ALERTS</Text>
           </View>
-          {criticalAlerts.slice(0, 2).map((alert) => (
+          {criticalAlerts.slice(0, 2).map((alert, index) => (
             <TouchableOpacity
-              key={alert.id}
+              key={`${alert.id}-${alert.alertType}-${index}`}
               style={styles.criticalAlert}
               onPress={() => navigation.navigate('Alerts')}
             >
@@ -275,6 +278,38 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
             </View>
             <Text style={styles.actionLabel}>Family Locator</Text>
           </TouchableOpacity>
+
+          {/* Admin/MDRRMO Only - Analytics */}
+          <ProtectedComponent requiredRole={['super_admin', 'admin', 'mdrrmo']}>
+            <TouchableOpacity
+              style={styles.actionCard}
+              onPress={() => {
+                // Navigate to analytics (placeholder)
+                console.log('Navigate to analytics');
+              }}
+            >
+              <View style={styles.actionIconContainer}>
+                <BarChart3 color={COLORS.primary} size={28} strokeWidth={2} />
+              </View>
+              <Text style={styles.actionLabel}>Analytics</Text>
+            </TouchableOpacity>
+          </ProtectedComponent>
+
+          {/* Super Admin Only - System Settings */}
+          <ProtectedComponent requiredRole={['super_admin']}>
+            <TouchableOpacity
+              style={styles.actionCard}
+              onPress={() => {
+                // Navigate to system settings (placeholder)
+                console.log('Navigate to system settings');
+              }}
+            >
+              <View style={styles.actionIconContainer}>
+                <Settings color={COLORS.primary} size={28} strokeWidth={2} />
+              </View>
+              <Text style={styles.actionLabel}>Settings</Text>
+            </TouchableOpacity>
+          </ProtectedComponent>
         </View>
       </View>
     </ScrollView>

@@ -3,11 +3,14 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, Bell, Building2, Menu } from 'lucide-react-native';
 import { COLORS } from '../../constants/colors';
 import { SOSButton } from '../home/SOSButton';
 
 export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation }) => {
+  const insets = useSafeAreaInsets();
+  
   // Define which tabs should be visible in the tab bar
   const visibleTabNames = ['Home', 'Alerts', 'Centers', 'Profile'];
   
@@ -16,7 +19,7 @@ export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
 
   return (
     <View style={styles.container}>
-      <View style={styles.tabBar}>
+      <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, 5) }]}>
         {visibleRoutes.map((route, index) => {
           const { options } = descriptors[route.key];
           const label = options.tabBarLabel || options.title || route.name;
@@ -133,7 +136,6 @@ const styles = StyleSheet.create({
     height: 65,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    paddingBottom: Platform.OS === 'ios' ? 20 : 5,
     paddingTop: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },

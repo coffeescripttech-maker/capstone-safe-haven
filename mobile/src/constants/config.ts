@@ -1,16 +1,31 @@
 // App Configuration
 
-// Determine if we're in development mode
-const isDev = typeof __DEV__ !== 'undefined' ? __DEV__ : process.env.NODE_ENV !== 'production';
+// Determine if we're in development mode - safe check for production builds
+const isDev = (() => {
+  try {
+    return typeof __DEV__ !== 'undefined' && __DEV__ === true;
+  } catch {
+    return false;
+  }
+})();
+
+// Get environment variables (Expo uses EXPO_PUBLIC_ prefix)
+const getEnvVar = (key: string, fallback: string): string => {
+  try {
+    // @ts-ignore - Expo injects these at build time
+    return process.env[key] || fallback;
+  } catch {
+    return fallback;
+  }
+};
 
 // API Configuration
 export const API_CONFIG = {
-  // Base URL - adjust based on your setup
-  BASE_URL: isDev
-    ? 'http://192.168.43.25:3000/api/v1'  // Android emulator
-    // ? 'http://localhost:3000/api/v1'  // iOS simulator
-    // ? 'http://192.168.1.100:3000/api/v1'  // Physical device (use your computer's IP)
-    : 'http://192.168.43.25:3000/api/v1',
+  // Base URL - uses environment variable or fallback
+  BASE_URL: getEnvVar(
+    'EXPO_PUBLIC_API_URL',
+    'https://safe-haven-backend-api.onrender.com/api/v1'
+  ),
   
   TIMEOUT: 10000, // 10 seconds
   

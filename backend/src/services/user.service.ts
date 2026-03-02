@@ -1,6 +1,8 @@
 import db from '../config/database';
 import { AppError } from '../middleware/errorHandler';
 import bcrypt from 'bcryptjs';
+import { permissionService } from './permission.service';
+import { dataFilterService } from './dataFilter.service';
 
 interface UserFilters {
   role?: string;
@@ -8,6 +10,8 @@ interface UserFilters {
   search?: string;
   page?: number;
   limit?: number;
+  actorRole?: string;
+  actorId?: number;
 }
 
 interface UpdateUserData {
@@ -21,6 +25,8 @@ interface UpdateUserData {
 export class UserService {
   /**
    * Get all users with filtering and pagination
+   * Apply role hierarchy filtering to prevent viewing higher privilege accounts
+   * Requirements: 2.2, 3.3, 11.4
    */
   async getUsers(filters: UserFilters) {
     const {
@@ -28,7 +34,9 @@ export class UserService {
       is_active,
       search,
       page = 1,
-      limit = 20
+      limit = 20,
+      actorRole,
+      actorId
     } = filters;
 
     let query = `
@@ -40,6 +48,26 @@ export class UserService {
       WHERE 1=1
     `;
     const params: any[] = [];
+
+    // Apply role hierarchy filtering
+    // Requirements: 2.2, 3.3, 11.4
+    if (actorRole && actorRole !== 'super_admin') {
+      const hierarchy = permissionService.getRoleHierarchy();
+      const actorLevel = hierarchy[actorRole as keyof typeof hierarchy];
+      
+      // Filter out users with equal or higher privilege levels
+      const allowedRoles = Object.entries(hierarchy)
+        .filter(([_, level]) => level < actorLevel)
+        .map(([role, _]) => role);
+      
+      if (allowedRoles.length > 0) {
+        query += ` AND u.role IN (${allowedRoles.map(() => '?').join(',')})`;
+        params.push(...allowedRoles);
+      } else {
+        // If no allowed roles, return empty result
+        query += ` AND 1=0`;
+      }
+    }
 
     if (role) {
       query += ` AND u.role = ?`;
@@ -66,9 +94,26 @@ export class UserService {
     try {
       const [users] = await db.query(query, params);
       
-      // Get total count
+      // Get total count with same filters
       let countQuery = `SELECT COUNT(*) as total FROM users u WHERE 1=1`;
       const countParams: any[] = [];
+      
+      // Apply same role hierarchy filtering to count
+      if (actorRole && actorRole !== 'super_admin') {
+        const hierarchy = permissionService.getRoleHierarchy();
+        const actorLevel = hierarchy[actorRole as keyof typeof hierarchy];
+        
+        const allowedRoles = Object.entries(hierarchy)
+          .filter(([_, level]) => level < actorLevel)
+          .map(([role, _]) => role);
+        
+        if (allowedRoles.length > 0) {
+          countQuery += ` AND u.role IN (${allowedRoles.map(() => '?').join(',')})`;
+          countParams.push(...allowedRoles);
+        } else {
+          countQuery += ` AND 1=0`;
+        }
+      }
       
       if (role) {
         countQuery += ` AND u.role = ?`;
@@ -128,9 +173,43 @@ export class UserService {
 
   /**
    * Update user information
+   * Validates role modification permissions based on role hierarchy
+   * Requirements: 1.5, 12.4
    */
-  async updateUser(id: number, data: UpdateUserData) {
-    await this.getUserById(id);
+  async updateUser(id: number, data: UpdateUserData, actorRole?: string) {
+    const targetUser = await this.getUserById(id);
+
+    // If role is being modified, validate permissions
+    // Requirements: 1.5, 12.4
+    if (data.role && actorRole) {
+      const targetRole = targetUser.role;
+      
+      // Check if actor can modify target user's role
+      const canModify = permissionService.canModifyUser(
+        actorRole as any,
+        targetRole as any
+      );
+
+      if (!canModify) {
+        throw new AppError(
+          'Cannot modify user with equal or higher privilege level',
+          403
+        );
+      }
+
+      // Validate that the new role is also within actor's authority
+      const canAssignNewRole = permissionService.canModifyUser(
+        actorRole as any,
+        data.role as any
+      );
+
+      if (!canAssignNewRole) {
+        throw new AppError(
+          'Cannot assign a role with equal or higher privilege level',
+          403
+        );
+      }
+    }
 
     const updates: string[] = [];
     const params: any[] = [];
@@ -180,10 +259,27 @@ export class UserService {
   }
 
   /**
-   * Delete user (soft delete by deactivating)
+   * Delete user (soft delete)
+   * Validates role hierarchy permissions
+   * Requirements: 2.2, 3.3, 11.4
    */
-  async deleteUser(id: number) {
-    await this.getUserById(id);
+  async deleteUser(id: number, actorRole?: string) {
+    const targetUser = await this.getUserById(id);
+
+    // If actor role is provided, validate permissions
+    if (actorRole) {
+      const canModify = permissionService.canModifyUser(
+        actorRole as any,
+        targetUser.role as any
+      );
+
+      if (!canModify) {
+        throw new AppError(
+          'Cannot delete user with equal or higher privilege level',
+          403
+        );
+      }
+    }
 
     try {
       await db.query(
@@ -234,6 +330,89 @@ export class UserService {
       );
     } catch (error) {
       throw new AppError('Failed to reset password', 500);
+    }
+  }
+
+  /**
+   * Get citizen location data
+   * Used by PNP during active emergencies
+   * Requirements: 4.4
+   */
+  async getCitizenLocations(filters: {
+    latitude?: number;
+    longitude?: number;
+    radius?: number;
+    page?: number;
+    limit?: number;
+  }) {
+    const {
+      latitude,
+      longitude,
+      radius = 10, // Default 10km radius
+      page = 1,
+      limit = 50
+    } = filters;
+
+    let query = `
+      SELECT u.id, u.first_name, u.last_name, u.phone,
+             p.latitude, p.longitude, p.city, p.province, p.barangay,
+             p.emergency_contact_name, p.emergency_contact_phone
+      FROM users u
+      INNER JOIN user_profiles p ON u.id = p.user_id
+      WHERE u.role = 'citizen' 
+      AND u.is_active = TRUE
+      AND p.latitude IS NOT NULL 
+      AND p.longitude IS NOT NULL
+    `;
+    const params: any[] = [];
+
+    // If coordinates provided, filter by distance
+    if (latitude && longitude) {
+      query += ` AND (6371 * acos(cos(radians(?)) * cos(radians(p.latitude)) * 
+                 cos(radians(p.longitude) - radians(?)) + sin(radians(?)) * 
+                 sin(radians(p.latitude)))) <= ?`;
+      params.push(latitude, longitude, latitude, radius);
+    }
+
+    query += ` ORDER BY u.last_login DESC`;
+
+    const offset = (page - 1) * limit;
+    query += ` LIMIT ? OFFSET ?`;
+    params.push(limit, offset);
+
+    try {
+      const [users] = await db.query(query, params);
+      
+      // Get total count
+      let countQuery = `
+        SELECT COUNT(*) as total 
+        FROM users u
+        INNER JOIN user_profiles p ON u.id = p.user_id
+        WHERE u.role = 'citizen' 
+        AND u.is_active = TRUE
+        AND p.latitude IS NOT NULL 
+        AND p.longitude IS NOT NULL
+      `;
+      const countParams: any[] = [];
+      
+      if (latitude && longitude) {
+        countQuery += ` AND (6371 * acos(cos(radians(?)) * cos(radians(p.latitude)) * 
+                       cos(radians(p.longitude) - radians(?)) + sin(radians(?)) * 
+                       sin(radians(p.latitude)))) <= ?`;
+        countParams.push(latitude, longitude, latitude, radius);
+      }
+
+      const [countResult] = await db.query(countQuery, countParams);
+      const total = (countResult as any)[0].total;
+
+      return {
+        locations: users,
+        total,
+        page,
+        limit
+      };
+    } catch (error) {
+      throw new AppError('Failed to fetch citizen locations', 500);
     }
   }
 

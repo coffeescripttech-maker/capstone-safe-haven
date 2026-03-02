@@ -2,6 +2,7 @@ import './globals.css';
 
 import { SidebarProvider } from '@/context/SidebarContext';
 import { SafeHavenAuthProvider } from '@/context/SafeHavenAuthContext';
+import { RoleProvider } from '@/context/RoleContext';
 import { Toaster } from 'react-hot-toast';
 
 export const metadata = {
@@ -23,10 +24,12 @@ export default function RootLayout({
       </head>
       <body className="font-outfit">
         <SafeHavenAuthProvider>
-          <SidebarProvider>
-            {children}
-            <Toaster position="top-right" />
-          </SidebarProvider>
+          <RoleProvider>
+            <SidebarProvider>
+              {children}
+              <Toaster position="top-right" />
+            </SidebarProvider>
+          </RoleProvider>
         </SafeHavenAuthProvider>
       </body>
     </html>

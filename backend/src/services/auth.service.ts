@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt, { SignOptions } from 'jsonwebtoken';
+import { v4 as uuidv4 } from 'uuid';
 import db from '../config/database';
 import { AppError } from '../middleware/errorHandler';
 
@@ -44,7 +45,7 @@ export class AuthService {
     );
 
     // Generate tokens
-    const tokens = this.generateTokens(userId, email, 'user');
+    const tokens = this.generateTokens(userId, email, 'citizen', null);
 
     return {
       user: {
@@ -58,9 +59,9 @@ export class AuthService {
   }
 
   async login(email: string, password: string) {
-    // Get user
+    // Get user with role and jurisdiction
     const [users] = await db.query(
-      `SELECT id, email, password_hash, first_name, last_name, role, is_active 
+      `SELECT id, email, password_hash, first_name, last_name, role, jurisdiction, is_active 
        FROM users WHERE email = ?`,
       [email]
     );
@@ -87,8 +88,8 @@ export class AuthService {
       [user.id]
     );
 
-    // Generate tokens
-    const tokens = this.generateTokens(user.id, user.email, user.role);
+    // Generate tokens with role and jurisdiction
+    const tokens = this.generateTokens(user.id, user.email, user.role, user.jurisdiction);
 
     return {
       user: {
@@ -96,7 +97,8 @@ export class AuthService {
         email: user.email,
         firstName: user.first_name,
         lastName: user.last_name,
-        role: user.role
+        role: user.role,
+        jurisdiction: user.jurisdiction
       },
       ...tokens
     };
@@ -109,7 +111,7 @@ export class AuthService {
         process.env.JWT_REFRESH_SECRET || 'default-refresh-secret-key'
       ) as any;
 
-      const tokens = this.generateTokens(decoded.id, decoded.email, decoded.role);
+      const tokens = this.generateTokens(decoded.id, decoded.email, decoded.role, decoded.jurisdiction);
       return tokens;
     } catch (error) {
       throw new AppError('Invalid refresh token', 401);
@@ -180,28 +182,75 @@ export class AuthService {
     );
   }
 
-  private generateTokens(id: number, email: string, role: string) {
+  async logout(token: string) {
+    try {
+      // Decode token to get JTI and expiration
+      const decoded = jwt.verify(
+        token,
+        process.env.JWT_SECRET || 'default-secret-key'
+      ) as any;
+
+      // Add token to blacklist
+      // Requirement: 14.5
+      await db.query(
+        `INSERT INTO token_blacklist (token_jti, user_id, expires_at) 
+         VALUES (?, ?, FROM_UNIXTIME(?))`,
+        [decoded.jti, decoded.id, decoded.exp]
+      );
+
+      return { message: 'Logged out successfully' };
+    } catch (error) {
+      throw new AppError('Invalid token', 401);
+    }
+  }
+
+  async isTokenBlacklisted(jti: string): Promise<boolean> {
+    const [results] = await db.query(
+      'SELECT id FROM token_blacklist WHERE token_jti = ? AND expires_at > NOW()',
+      [jti]
+    );
+
+    return Array.isArray(results) && results.length > 0;
+  }
+
+  private generateTokens(id: number, email: string, role: string, jurisdiction: string | null) {
     const jwtSecret = process.env.JWT_SECRET || 'default-secret-key';
     const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET || 'default-refresh-secret-key';
     
-    const accessTokenOptions: SignOptions = {
-      expiresIn: (process.env.JWT_EXPIRE || '7d') as any
-    };
+    // Role-based token expiration
+    // Requirements: 14.1, 14.2, 14.3
+    let accessTokenExpiry: string;
+    if (role === 'super_admin' || role === 'admin') {
+      accessTokenExpiry = '4h'; // 4 hours for super_admin/admin
+    } else if (role === 'pnp' || role === 'bfp' || role === 'mdrrmo') {
+      accessTokenExpiry = '8h'; // 8 hours for agencies
+    } else {
+      accessTokenExpiry = '24h'; // 24 hours for lgu_officer/citizen
+    }
     
-    const refreshTokenOptions: SignOptions = {
-      expiresIn: (process.env.JWT_REFRESH_EXPIRE || '30d') as any
+    // Generate unique JTI for token tracking (for logout/blacklist)
+    const jti = uuidv4();
+    
+    // Include role and jurisdiction in JWT payload
+    // Requirement: 1.4
+    const payload = {
+      id,
+      email,
+      role,
+      jurisdiction,
+      jti
     };
     
     const accessToken = jwt.sign(
-      { id, email, role },
+      payload,
       jwtSecret,
-      accessTokenOptions
+      { expiresIn: accessTokenExpiry as any }
     );
 
     const refreshToken = jwt.sign(
-      { id, email, role },
+      payload,
       jwtRefreshSecret,
-      refreshTokenOptions
+      { expiresIn: (process.env.JWT_REFRESH_EXPIRE || '30d') as any }
     );
 
     return { accessToken, refreshToken };

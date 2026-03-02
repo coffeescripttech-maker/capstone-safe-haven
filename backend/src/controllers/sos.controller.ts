@@ -121,7 +121,9 @@ export class SOSController {
         status,
         priority,
         page,
-        limit
+        limit,
+        userRole: req.user?.role,
+        userJurisdiction: req.user?.jurisdiction
       });
 
       res.json({

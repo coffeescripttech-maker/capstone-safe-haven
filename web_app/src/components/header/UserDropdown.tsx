@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { useSafeHavenAuth } from "@/context/SafeHavenAuthContext";
+import { useRole } from "@/context/RoleContext";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { 
@@ -10,12 +11,14 @@ import {
   LogOut, 
   ChevronDown,
   Shield,
-  Crown
+  Crown,
+  MapPin
 } from "lucide-react";
 
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const { user, logout } = useSafeHavenAuth();
+  const { getRoleDisplayName, jurisdiction, role } = useRole();
 
   function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
     e.stopPropagation();
@@ -41,7 +44,32 @@ export default function UserDropdown() {
     return `${user.firstName} ${user.lastName}`;
   };
 
-  const isAdmin = user?.role === 'admin';
+  const isPrivilegedRole = role === 'super_admin' || role === 'admin' || role === 'mdrrmo';
+  
+  // Get role badge color
+  const getRoleBadgeColor = () => {
+    switch (role) {
+      case 'super_admin':
+        return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
+      case 'admin':
+        return 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400';
+      case 'mdrrmo':
+        return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+      case 'pnp':
+      case 'bfp':
+        return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+      case 'lgu_officer':
+        return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
+      default:
+        return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
+    }
+  };
+
+  const getRoleIcon = () => {
+    if (role === 'super_admin') return <Crown className="w-3 h-3" />;
+    if (isPrivilegedRole) return <Shield className="w-3 h-3" />;
+    return <User className="w-3 h-3" />;
+  };
 
   return (
     <div className="relative">
@@ -88,16 +116,20 @@ export default function UserDropdown() {
             <span className="block mt-0.5 text-xs text-gray-600 dark:text-gray-400 truncate">
               {user?.email || "user@example.com"}
             </span>
-            {user?.role && (
-              <span className={`inline-flex items-center gap-1 px-2.5 py-1 mt-2 text-xs font-semibold rounded-full ${
-                isAdmin 
-                  ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400' 
-                  : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
-              }`}>
-                {isAdmin ? <Crown className="w-3 h-3" /> : <Shield className="w-3 h-3" />}
-                {isAdmin ? 'Administrator' : 'User'}
-              </span>
-            )}
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              {role && (
+                <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full ${getRoleBadgeColor()}`}>
+                  {getRoleIcon()}
+                  {getRoleDisplayName()}
+                </span>
+              )}
+              {jurisdiction && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                  <MapPin className="w-3 h-3" />
+                  {jurisdiction}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

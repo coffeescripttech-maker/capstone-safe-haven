@@ -37,7 +37,19 @@ export const CenterDetailsScreen: React.FC = () => {
   const loadCenter = async () => {
     try {
       setLoading(true);
+      console.log('Loading center with ID:', centerId);
+      
+      if (!centerId) {
+        throw new Error('No center ID provided');
+      }
+      
       const data = await centersService.getCenterById(centerId);
+      console.log('Loaded center data:', data);
+      
+      if (!data) {
+        throw new Error('Center not found');
+      }
+      
       setCenter(data);
     } catch (error) {
       console.error('Error loading center:', error);
@@ -66,8 +78,17 @@ export const CenterDetailsScreen: React.FC = () => {
   }
 
   if (!center) {
+    console.error('Center is null or undefined');
     return null;
   }
+
+  console.log('Rendering center:', {
+    id: center.id,
+    name: center.name,
+    hasLatitude: !!center.latitude,
+    hasLongitude: !!center.longitude,
+    hasFacilities: !!center.facilities,
+  });
 
   const occupancyPercentage = center.occupancyPercentage || 0;
   const getCapacityColor = () => {
@@ -90,14 +111,14 @@ export const CenterDetailsScreen: React.FC = () => {
   return (
     <ScrollView style={styles.container}>
       {/* Map Preview */}
-      {center.latitude && center.longitude && (
+      {center.latitude && center.longitude && !isNaN(center.latitude) && !isNaN(center.longitude) && (
         <View style={styles.mapContainer}>
           <MapView
             style={styles.map}
             provider={PROVIDER_GOOGLE}
             initialRegion={{
-              latitude: center.latitude,
-              longitude: center.longitude,
+              latitude: Number(center.latitude),
+              longitude: Number(center.longitude),
               latitudeDelta: 0.01,
               longitudeDelta: 0.01,
             }}
@@ -106,8 +127,8 @@ export const CenterDetailsScreen: React.FC = () => {
           >
             <Marker
               coordinate={{
-                latitude: center.latitude,
-                longitude: center.longitude,
+                latitude: Number(center.latitude),
+                longitude: Number(center.longitude),
               }}
               pinColor={getCapacityColor()}
             />
@@ -117,7 +138,7 @@ export const CenterDetailsScreen: React.FC = () => {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.name}>{center.name}</Text>
+        <Text style={styles.name}>{center.name || 'Unnamed Center'}</Text>
         <View
           style={[
             styles.statusBadge,
@@ -141,12 +162,12 @@ export const CenterDetailsScreen: React.FC = () => {
           <Ionicons name="location" size={20} color={COLORS.primary} />
           <Text style={styles.sectionTitle}>Location</Text>
         </View>
-        <Text style={styles.address}>{center.address}</Text>
+        <Text style={styles.address}>{center.address || 'No address available'}</Text>
         {center.barangay && (
           <Text style={styles.locationDetail}>Barangay {center.barangay}</Text>
         )}
         <Text style={styles.locationDetail}>
-          {center.city}, {center.province}
+          {center.city || 'Unknown'}, {center.province || 'Unknown'}
         </Text>
       </View>
 
@@ -176,7 +197,7 @@ export const CenterDetailsScreen: React.FC = () => {
       </View>
 
       {/* Facilities */}
-      {center.facilities && center.facilities.length > 0 && (
+      {center.facilities && Array.isArray(center.facilities) && center.facilities.length > 0 && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} />
@@ -184,14 +205,14 @@ export const CenterDetailsScreen: React.FC = () => {
           </View>
           <View style={styles.facilitiesGrid}>
             {center.facilities.map((facility, index) => (
-              <View key={index} style={styles.facilityChip}>
+              <View key={`facility-${index}-${facility}`} style={styles.facilityChip}>
                 <Ionicons
-                  name={facilityIcons[facility] as any || 'checkmark'}
+                  name={(facilityIcons[facility] as any) || 'checkmark'}
                   size={16}
                   color={COLORS.primary}
                 />
                 <Text style={styles.facilityText}>
-                  {facility.charAt(0).toUpperCase() + facility.slice(1)}
+                  {facility ? facility.charAt(0).toUpperCase() + facility.slice(1) : 'Unknown'}
                 </Text>
               </View>
             ))}
@@ -212,6 +233,9 @@ export const CenterDetailsScreen: React.FC = () => {
         )}
         {center.contactNumber && (
           <Text style={styles.contactInfo}>Phone: {center.contactNumber}</Text>
+        )}
+        {!center.contactPerson && !center.contactNumber && (
+          <Text style={styles.contactInfo}>No contact information available</Text>
         )}
       </View>
 

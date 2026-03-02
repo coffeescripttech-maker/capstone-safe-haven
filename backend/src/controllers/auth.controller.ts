@@ -139,4 +139,22 @@ export class AuthController {
       next(error);
     }
   }
+
+  async logout(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const token = req.headers.authorization?.split(' ')[1];
+      
+      if (!token) {
+        throw new AppError('Token is required', 400);
+      }
+
+      const result = await authService.logout(token);
+      res.json({
+        status: 'success',
+        data: result
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

@@ -15,7 +15,7 @@ class IncidentController {
         });
       }
 
-      const validTypes = ['damage', 'injury', 'missing_person', 'hazard', 'other'];
+      const validTypes = ['damage', 'injury', 'missing_person', 'hazard', 'fire', 'other'];
       if (!validTypes.includes(incidentType)) {
         return res.status(400).json({
           status: 'error',
@@ -68,6 +68,8 @@ class IncidentController {
         endDate: req.query.endDate as string,
         page: req.query.page ? parseInt(req.query.page as string) : 1,
         limit: req.query.limit ? parseInt(req.query.limit as string) : 20,
+        userRole: req.user?.role,
+        userJurisdiction: req.user?.jurisdiction
       };
 
       const result = await incidentService.getIncidents(filters);
@@ -88,7 +90,7 @@ class IncidentController {
   async getIncidentById(req: AuthRequest, res: Response) {
     try {
       const id = parseInt(req.params.id);
-      const incident = await incidentService.getIncidentById(id);
+      const incident = await incidentService.getIncidentById(id, req.user?.role);
 
       res.json({
         status: 'success',
@@ -125,14 +127,6 @@ class IncidentController {
       const id = parseInt(req.params.id);
       const { status, assignedTo } = req.body;
 
-      // Only admins and LGU officers can update status
-      if (req.user!.role !== 'admin' && req.user!.role !== 'lgu_officer') {
-        return res.status(403).json({
-          status: 'error',
-          message: 'Unauthorized to update incident status',
-        });
-      }
-
       const validStatuses = ['pending', 'verified', 'in_progress', 'resolved'];
       if (!validStatuses.includes(status)) {
         return res.status(400).json({
@@ -160,14 +154,6 @@ class IncidentController {
   async deleteIncident(req: AuthRequest, res: Response) {
     try {
       const id = parseInt(req.params.id);
-
-      // Only admins can delete incidents
-      if (req.user!.role !== 'admin') {
-        return res.status(403).json({
-          status: 'error',
-          message: 'Unauthorized to delete incidents',
-        });
-      }
 
       await incidentService.deleteIncident(id);
 

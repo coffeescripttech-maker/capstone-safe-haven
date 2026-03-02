@@ -44,6 +44,8 @@ interface Alert {
   start_time: Date;
   end_time?: Date;
   is_active: boolean;
+  status?: string;
+  approved_by?: number;
   metadata?: Record<string, any>;
   created_by: number;
   created_at: Date;
@@ -188,8 +190,10 @@ export class AlertService {
 
   /**
    * Create a new disaster alert
+   * LGU officers create alerts with pending_approval status
+   * Requirements: 7.1
    */
-  async createAlert(data: CreateAlertDto, createdBy: number): Promise<Alert> {
+  async createAlert(data: CreateAlertDto, createdBy: number, creatorRole?: string): Promise<Alert> {
     const {
       alert_type,
       severity,
@@ -213,12 +217,17 @@ export class AlertService {
     this.validateCoordinates(latitude, longitude);
     this.validateDateRange(start_time, end_time);
 
+    // Determine if alert needs approval
+    // Requirements: 7.1 - LGU officers need approval
+    const needsApproval = creatorRole === 'lgu_officer';
+    const status = needsApproval ? 'pending_approval' : 'approved';
+
     try {
       const [result] = await db.query(
         `INSERT INTO disaster_alerts 
          (alert_type, severity, title, description, source, affected_areas, 
-          latitude, longitude, radius_km, start_time, end_time, metadata, created_by) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          latitude, longitude, radius_km, start_time, end_time, metadata, created_by, status) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           alert_type,
           severity,
@@ -232,7 +241,8 @@ export class AlertService {
           start_time,
           end_time || null,
           metadata ? JSON.stringify(metadata) : null,
-          createdBy
+          createdBy,
+          status
         ]
       );
 
@@ -245,8 +255,10 @@ export class AlertService {
 
   /**
    * Get alerts with filtering and pagination
+   * Apply visibility filtering for citizens (exclude pending alerts)
+   * Requirements: 6.1, 7.1, 8.1
    */
-  async getAlerts(filters: AlertFilters): Promise<{ alerts: Alert[]; total: number; page: number; limit: number }> {
+  async getAlerts(filters: AlertFilters & { userRole?: string }): Promise<{ alerts: Alert[]; total: number; page: number; limit: number }> {
     const {
       alert_type,
       severity,
@@ -255,7 +267,8 @@ export class AlertService {
       longitude,
       radius,
       page = 1,
-      limit = 20
+      limit = 20,
+      userRole
     } = filters;
 
     let query = `
@@ -263,6 +276,12 @@ export class AlertService {
       WHERE 1=1
     `;
     const params: any[] = [];
+
+    // Apply visibility filtering for citizens
+    // Requirements: 7.1, 8.1 - Citizens should not see pending alerts
+    if (userRole === 'citizen') {
+      query += ` AND (status = 'approved' OR status IS NULL)`;
+    }
 
     // Apply filters
     if (alert_type) {
@@ -309,6 +328,11 @@ export class AlertService {
       // Get total count
       let countQuery = `SELECT COUNT(*) as total FROM disaster_alerts WHERE 1=1`;
       const countParams: any[] = [];
+      
+      // Apply same visibility filtering to count
+      if (userRole === 'citizen') {
+        countQuery += ` AND (status = 'approved' OR status IS NULL)`;
+      }
       
       if (alert_type) {
         countQuery += ` AND alert_type = ?`;
@@ -566,6 +590,38 @@ export class AlertService {
       );
     } catch (error) {
       throw new AppError('Failed to deactivate alert', 500);
+    }
+  }
+
+  /**
+   * Approve a pending alert
+   * Requirements: 7.1
+   */
+  async approveAlert(id: number, approvedBy: number): Promise<Alert> {
+    // Verify alert exists
+    const alert = await this.getAlertById(id);
+
+    // Check if alert is pending approval
+    if (alert.status !== 'pending_approval') {
+      throw new AppError('Alert is not pending approval', 400);
+    }
+
+    try {
+      await db.query(
+        `UPDATE disaster_alerts 
+         SET status = 'approved', approved_by = ?, updated_at = NOW() 
+         WHERE id = ?`,
+        [approvedBy, id]
+      );
+
+      const approvedAlert = await this.getAlertById(id);
+
+      // Broadcast the approved alert
+      await this.broadcastAlert(id);
+
+      return approvedAlert;
+    } catch (error) {
+      throw new AppError('Failed to approve alert', 500);
     }
   }
 

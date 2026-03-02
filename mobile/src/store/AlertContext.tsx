@@ -84,11 +84,22 @@ export const AlertProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       });
       
       console.log('✅ Fetched alerts in context:', fetchedAlerts.length);
-      setAlerts(fetchedAlerts || []);
+      
+      // Filter out invalid alerts (those with ID 0 or missing required fields)
+      const validAlerts = (fetchedAlerts || []).filter(alert => 
+        alert && 
+        alert.id && 
+        alert.id > 0 && 
+        alert.title && 
+        alert.alertType
+      );
+      
+      console.log('✅ Valid alerts after filtering:', validAlerts.length);
+      setAlerts(validAlerts);
       
       // Cache for offline use
-      if (fetchedAlerts && fetchedAlerts.length > 0) {
-        await cacheService.set(CACHE_KEYS.ALERTS, fetchedAlerts, CACHE_EXPIRY.ALERTS);
+      if (validAlerts && validAlerts.length > 0) {
+        await cacheService.set(CACHE_KEYS.ALERTS, validAlerts, CACHE_EXPIRY.ALERTS);
       }
     } catch (err) {
       const errorMessage = handleApiError(err);
@@ -130,11 +141,22 @@ export const AlertProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       });
       
       console.log('✅ Refreshed alerts:', fetchedAlerts.length);
-      setAlerts(fetchedAlerts || []);
+      
+      // Filter out invalid alerts
+      const validAlerts = (fetchedAlerts || []).filter(alert => 
+        alert && 
+        alert.id && 
+        alert.id > 0 && 
+        alert.title && 
+        alert.alertType
+      );
+      
+      console.log('✅ Valid alerts after filtering:', validAlerts.length);
+      setAlerts(validAlerts);
       
       // Cache for offline use
-      if (fetchedAlerts && fetchedAlerts.length > 0) {
-        await cacheService.set(CACHE_KEYS.ALERTS, fetchedAlerts, CACHE_EXPIRY.ALERTS);
+      if (validAlerts && validAlerts.length > 0) {
+        await cacheService.set(CACHE_KEYS.ALERTS, validAlerts, CACHE_EXPIRY.ALERTS);
       }
     } catch (err) {
       console.error('Error refreshing alerts:', handleApiError(err));

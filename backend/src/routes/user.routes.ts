@@ -1,18 +1,34 @@
 import { Router } from 'express';
 import { UserController } from '../controllers/user.controller';
-import { authenticate, authorize } from '../middleware/auth';
+import { authenticate, requirePermission } from '../middleware/auth';
+import { requireActiveEmergency } from '../middleware/emergencyAccess';
 
 const router = Router();
 const userController = new UserController();
 
-// All routes require authentication and admin/lgu_officer role
-router.get('/', authenticate, authorize('admin', 'lgu_officer'), userController.getUsers.bind(userController));
-router.get('/statistics', authenticate, authorize('admin', 'lgu_officer'), userController.getStatistics.bind(userController));
-router.get('/:id', authenticate, authorize('admin', 'lgu_officer'), userController.getUserById.bind(userController));
-router.put('/:id', authenticate, authorize('admin', 'lgu_officer'), userController.updateUser.bind(userController));
-router.delete('/:id', authenticate, authorize('admin', 'lgu_officer'), userController.deleteUser.bind(userController));
+// All routes require authentication and specific permissions
+// Requirements: 2.2, 3.3, 11.4
 
-// Reset user password (admin only)
-router.post('/:id/reset-password', authenticate, authorize('admin'), userController.resetPassword.bind(userController));
+// Get all users - requires 'read' permission on 'users' resource
+router.get('/', authenticate, requirePermission('users', 'read'), userController.getUsers.bind(userController));
+
+// Get user statistics - requires 'read' permission on 'users' resource
+router.get('/statistics', authenticate, requirePermission('users', 'read'), userController.getStatistics.bind(userController));
+
+// Get citizen locations - requires active emergency for PNP
+// Requirements: 4.4
+router.get('/locations', authenticate, requireActiveEmergency, userController.getCitizenLocations.bind(userController));
+
+// Get user by ID - requires 'read' permission on 'users' resource
+router.get('/:id', authenticate, requirePermission('users', 'read'), userController.getUserById.bind(userController));
+
+// Update user - requires 'update' permission on 'users' resource with hierarchy check
+router.put('/:id', authenticate, requirePermission('users', 'update'), userController.updateUser.bind(userController));
+
+// Delete user - requires 'delete' permission on 'users' resource with hierarchy check
+router.delete('/:id', authenticate, requirePermission('users', 'delete'), userController.deleteUser.bind(userController));
+
+// Reset user password - requires 'update' permission on 'users' resource
+router.post('/:id/reset-password', authenticate, requirePermission('users', 'update'), userController.resetPassword.bind(userController));
 
 export default router;

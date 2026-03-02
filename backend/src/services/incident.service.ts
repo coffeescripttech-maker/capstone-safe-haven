@@ -1,5 +1,6 @@
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import pool from '../config/database';
+import { dataFilterService } from './dataFilter.service';
 
 export interface IncidentReport extends RowDataPacket {
   id: number;
@@ -41,6 +42,8 @@ export interface IncidentFilters {
   endDate?: string;
   page?: number;
   limit?: number;
+  userRole?: string;
+  userJurisdiction?: string | null;
 }
 
 class IncidentService {
@@ -79,6 +82,8 @@ class IncidentService {
       endDate,
       page = 1,
       limit = 20,
+      userRole,
+      userJurisdiction
     } = filters;
 
     let query = `
@@ -91,6 +96,16 @@ class IncidentService {
       WHERE 1=1
     `;
     const params: any[] = [];
+
+    // Apply geographic and role-based filtering using DataFilterService
+    // Requirements: 4.1, 5.1, 7.2, 11.1
+    if (userRole && userJurisdiction !== undefined) {
+      const filterConditions = dataFilterService.applyIncidentFilter(userRole, userJurisdiction);
+      if (filterConditions.whereClause) {
+        query += ` AND ${filterConditions.whereClause}`;
+        params.push(...filterConditions.params);
+      }
+    }
 
     if (type) {
       query += ' AND ir.incident_type = ?';
@@ -137,24 +152,9 @@ class IncidentService {
     const [rows] = await pool.query<IncidentReport[]>(query, params);
 
     // Parse photos JSON and convert to camelCase
-    const incidents = rows.map(incident => ({
-      id: incident.id,
-      userId: incident.user_id,
-      incidentType: incident.incident_type,
-      title: incident.title,
-      description: incident.description,
-      latitude: incident.latitude ? Number(incident.latitude) : null,
-      longitude: incident.longitude ? Number(incident.longitude) : null,
-      address: incident.address,
-      severity: incident.severity,
-      status: incident.status,
-      photos: incident.photos ? JSON.parse(incident.photos) : [],
-      assignedTo: incident.assigned_to,
-      createdAt: incident.created_at ? new Date(incident.created_at).toISOString() : null,
-      updatedAt: incident.updated_at ? new Date(incident.updated_at).toISOString() : null,
-      userName: incident.user_name,
-      userPhone: incident.user_phone,
-    }));
+    // Apply fire incident filtering for BFP role
+    // Requirements: 5.1, 5.6
+    const incidents = rows.map(incident => this.formatIncidentForRole(incident, userRole));
 
     return {
       data: incidents,
@@ -164,7 +164,44 @@ class IncidentService {
     };
   }
 
-  async getIncidentById(id: number): Promise<any> {
+  /**
+   * Format incident based on user role
+   * BFP role: full details for fire incidents, basic info for others
+   * Requirements: 5.1, 5.6
+   */
+  private formatIncidentForRole(incident: IncidentReport, userRole?: string): any {
+    const baseIncident = {
+      id: incident.id,
+      userId: incident.user_id,
+      incidentType: incident.incident_type,
+      latitude: incident.latitude ? Number(incident.latitude) : null,
+      longitude: incident.longitude ? Number(incident.longitude) : null,
+      status: incident.status,
+      createdAt: incident.created_at ? new Date(incident.created_at).toISOString() : null,
+      updatedAt: incident.updated_at ? new Date(incident.updated_at).toISOString() : null,
+    };
+
+    // BFP role: full details for fire incidents, basic info for others
+    // Requirements: 5.1, 5.6
+    if (userRole === 'bfp' && incident.incident_type !== 'fire') {
+      return baseIncident;
+    }
+
+    // Full details for all other roles or fire incidents for BFP
+    return {
+      ...baseIncident,
+      title: incident.title,
+      description: incident.description,
+      address: incident.address,
+      severity: incident.severity,
+      photos: incident.photos ? JSON.parse(incident.photos) : [],
+      assignedTo: incident.assigned_to,
+      userName: incident.user_name,
+      userPhone: incident.user_phone,
+    };
+  }
+
+  async getIncidentById(id: number, userRole?: string): Promise<any> {
     const [rows] = await pool.query<IncidentReport[]>(
       `SELECT 
         ir.*,
@@ -181,24 +218,10 @@ class IncidentService {
     }
 
     const incident = rows[0];
-    return {
-      id: incident.id,
-      userId: incident.user_id,
-      incidentType: incident.incident_type,
-      title: incident.title,
-      description: incident.description,
-      latitude: incident.latitude ? Number(incident.latitude) : null,
-      longitude: incident.longitude ? Number(incident.longitude) : null,
-      address: incident.address,
-      severity: incident.severity,
-      status: incident.status,
-      photos: incident.photos ? JSON.parse(incident.photos) : [],
-      assignedTo: incident.assigned_to,
-      createdAt: incident.created_at ? new Date(incident.created_at).toISOString() : null,
-      updatedAt: incident.updated_at ? new Date(incident.updated_at).toISOString() : null,
-      userName: incident.user_name,
-      userPhone: incident.user_phone,
-    };
+    
+    // Apply role-based formatting
+    // Requirements: 5.1, 5.6
+    return this.formatIncidentForRole(incident, userRole);
   }
 
   async getUserIncidents(userId: number): Promise<any[]> {

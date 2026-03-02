@@ -33,7 +33,9 @@ export class EvacuationCenterController {
         barangay: req.query.barangay as string,
         is_active: req.query.is_active === 'false' ? false : true,
         page: req.query.page ? parseInt(req.query.page as string) : 1,
-        limit: req.query.limit ? parseInt(req.query.limit as string) : 20
+        limit: req.query.limit ? parseInt(req.query.limit as string) : 20,
+        userRole: req.user?.role,
+        userJurisdiction: req.user?.jurisdiction
       };
 
       const result = await centerService.getCenters(filters);

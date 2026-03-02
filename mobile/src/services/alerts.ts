@@ -11,27 +11,54 @@ import {
 import { DisasterAlert } from '../types/models';
 
 // Transform snake_case to camelCase
-const transformAlert = (alert: any): DisasterAlert => {
+const transformAlert = (alert: any): DisasterAlert | null => {
+  // Validate required fields
+  if (!alert) {
+    console.error('❌ Alert is null or undefined');
+    return null;
+  }
+  
+  if (!alert.id || alert.id === 0) {
+    console.error('❌ Alert has invalid ID:', alert.id);
+    return null;
+  }
+  
+  if (!alert.title || alert.title.trim() === '') {
+    console.error('❌ Alert missing title:', alert.id);
+    return null;
+  }
+  
   console.log('🔄 Transforming alert:', alert.id, 'type:', alert.alert_type);
   
-  return {
-    id: alert.id,
-    alertType: alert.alert_type,
-    severity: alert.severity,
-    title: alert.title,
-    description: alert.description,
-    source: alert.source,
-    affectedAreas: Array.isArray(alert.affected_areas) ? alert.affected_areas : [],
-    latitude: parseFloat(alert.latitude),
-    longitude: parseFloat(alert.longitude),
-    radiusKm: alert.radius_km,
-    startTime: alert.start_time,
-    endTime: alert.end_time,
-    isActive: Boolean(alert.is_active),
-    metadata: alert.metadata,
-    createdAt: alert.created_at,
-    updatedAt: alert.updated_at,
-  };
+  try {
+    // Handle empty strings and null values
+    const severity = alert.severity && alert.severity.trim() !== '' ? alert.severity : 'moderate';
+    const alertType = alert.alert_type && alert.alert_type.trim() !== '' ? alert.alert_type : 'unknown';
+    const description = alert.description && alert.description.trim() !== '' ? alert.description : 'No description available';
+    const source = alert.source && alert.source.trim() !== '' ? alert.source : 'Unknown';
+    
+    return {
+      id: alert.id,
+      alertType: alertType,
+      severity: severity,
+      title: alert.title.trim(),
+      description: description,
+      source: source,
+      affectedAreas: Array.isArray(alert.affected_areas) ? alert.affected_areas : [],
+      latitude: alert.latitude ? parseFloat(alert.latitude) : 0,
+      longitude: alert.longitude ? parseFloat(alert.longitude) : 0,
+      radiusKm: alert.radius_km || 0,
+      startTime: alert.start_time || new Date().toISOString(),
+      endTime: alert.end_time || null,
+      isActive: Boolean(alert.is_active),
+      metadata: alert.metadata || {},
+      createdAt: alert.created_at || new Date().toISOString(),
+      updatedAt: alert.updated_at || new Date().toISOString(),
+    };
+  } catch (error) {
+    console.error('❌ Error transforming alert:', error);
+    return null;
+  }
 };
 
 export const alertsService = {
@@ -63,7 +90,11 @@ export const alertsService = {
     // Backend returns { data: { alerts: [...], total, page, limit } }
     const responseData = response.data.data!;
     const alertsData = (responseData as any).alerts || [];
-    const transformedAlerts = alertsData.map(transformAlert);
+    
+    // Transform and filter out null results
+    const transformedAlerts = alertsData
+      .map(transformAlert)
+      .filter((alert: DisasterAlert | null): alert is DisasterAlert => alert !== null);
     
     console.log('✅ Transformed alerts:', transformedAlerts.length);
     
@@ -75,8 +106,18 @@ export const alertsService = {
 
   // Get alert by ID
   getAlertById: async (id: number): Promise<DisasterAlert> => {
+    console.log('📡 Fetching alert by ID:', id);
+    
     const response = await api.get<AlertResponse>(`/alerts/${id}`);
-    return transformAlert(response.data.data!);
+    console.log('📦 Raw alert response:', JSON.stringify(response.data, null, 2));
+    
+    const transformedAlert = transformAlert(response.data.data!);
+    
+    if (!transformedAlert) {
+      throw new Error('Failed to load alert details - invalid data received');
+    }
+    
+    return transformedAlert;
   },
 
   // Search alerts
@@ -87,7 +128,11 @@ export const alertsService = {
     if (params.endDate) queryParams.append('end_date', params.endDate);
 
     const response = await api.get<SearchAlertsResponse>(`/alerts/search?${queryParams.toString()}`);
-    return (response.data.data! as any[]).map(transformAlert);
+    
+    // Transform and filter out null results
+    return (response.data.data! as any[])
+      .map(transformAlert)
+      .filter((alert: DisasterAlert | null): alert is DisasterAlert => alert !== null);
   },
 
   // Get active alerts for user's location
