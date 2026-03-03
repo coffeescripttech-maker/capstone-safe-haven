@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     
     // Build query parameters
-    const url = new URL(`${BACKEND_URL}/api/admin/audit-logs`);
+    const url = new URL(`${BACKEND_URL}/admin/audit-logs`);
     
     // Add all query parameters
     const params = [

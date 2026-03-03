@@ -85,7 +85,7 @@ export default function AuditLogsPage() {
         setIsRefreshing(true);
       }
 
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('safehaven_token');
       const params = new URLSearchParams({
         limit: logsPerPage.toString(),
         offset: ((currentPage - 1) * logsPerPage).toString()
@@ -126,7 +126,7 @@ export default function AuditLogsPage() {
 
   const loadStats = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('safehaven_token');
       const params = new URLSearchParams();
 
       if (filters.startDate) params.set('startDate', filters.startDate);

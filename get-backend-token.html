@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Get Backend Token</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f5e9;
+            border-radius: 4px;
+            display: none;
+        }
+        .error {
+            background: #ffebee;
+            color: #c62828;
+        }
+        .success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .token {
+            word-break: break-all;
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            color: #1565c0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔑 Get Backend Token</h1>
+        
+        <div class="info">
+            <strong>Instructions:</strong><br>
+            1. Select a test user<br>
+            2. Click "Get Token"<br>
+            3. Token will be saved to localStorage<br>
+            4. Refresh the audit logs page
+        </div>
+
+        <div class="form-group">
+            <label for="userSelect">Select Test User:</label>
+            <select id="userSelect">
+                <option value="superadmin@test.safehaven.com">Super Admin</option>
+                <option value="admin@test.safehaven.com">Admin</option>
+                <option value="mdrrmo@test.safehaven.com">MDRRMO</option>
+                <option value="pnp@test.safehaven.com">PNP</option>
+                <option value="bfp@test.safehaven.com">BFP</option>
+                <option value="lgu@test.safehaven.com">LGU Officer</option>
+                <option value="citizen@test.safehaven.com">Citizen</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="password">Password:</label>
+            <input type="password" id="password" value="Test123!" readonly>
+        </div>
+
+        <button onclick="getToken()">Get Token & Save to localStorage</button>
+
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        async function getToken() {
+            const email = document.getElementById('userSelect').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('result');
+
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = '⏳ Logging in...';
+
+            try {
+                const response = await fetch('http://localhost:3001/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (data.token) {
+                    // Save to localStorage
+                    localStorage.setItem('token', data.token);
+                    
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <strong>✅ Success!</strong><br>
+                        Token saved to localStorage<br>
+                        <div class="token">${data.token}</div>
+                        <br>
+                        <strong>Next steps:</strong><br>
+                        1. Go to <a href="http://localhost:3000/audit-logs" target="_blank">Audit Logs Page</a><br>
+                        2. Refresh the page (F5)<br>
+                        3. Audit logs should now load!
+                    `;
+                } else {
+                    throw new Error(data.message || 'Login failed');
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <strong>❌ Error:</strong><br>
+                    ${error.message}<br><br>
+                    <strong>Troubleshooting:</strong><br>
+                    • Make sure backend is running on port 3001<br>
+                    • Check if the user exists in database<br>
+                    • Verify password is correct
+                `;
+            }
+        }
+
+        // Auto-fill on load
+        window.onload = function() {
+            console.log('Ready to get backend token!');
+        };
+    </script>
+</body>
+</html>
