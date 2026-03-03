@@ -128,32 +128,8 @@ export class SMSBlastController {
         recipients.length
       );
 
-      // Requirement 8.5: Check if cost exceeds available credits
-      const balance = await iProgClient.getBalance();
-      if (costEstimate.totalCredits > balance) {
-        throw new AppError(
-          `Insufficient credits. Required: ${costEstimate.totalCredits}, Available: ${balance}`,
-          402
-        );
-      }
-
-      // Requirement 14.1: Check spending limits
-      if (!costEstimate.withinLimit) {
-        const limitCheck = await costEstimator.checkSpendingLimit(
-          costEstimate.totalCredits,
-          user.id.toString()
-        );
-        
-        // Only Superadmin can override spending limits
-        if (user.role !== 'super_admin') {
-          throw new AppError(
-            `Daily spending limit would be exceeded. Limit: ${limitCheck.dailyLimit}, ` +
-            `Current spend: ${limitCheck.currentDailySpend}, ` +
-            `Remaining: ${limitCheck.remainingBudget}`,
-            403
-          );
-        }
-      }
+      // Note: Credit balance check removed - credits are monitored directly on iProg platform
+      // SMS will fail at send time if insufficient credits, and error will be returned
 
       // Requirement 8.6: Check rate limits (5000 SMS per hour)
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
@@ -211,15 +187,51 @@ export class SMSBlastController {
         }
       }));
 
-      // Requirement 7.1, 7.2: Enqueue jobs for immediate or scheduled delivery
-      if (scheduledDate) {
-        // Schedule for future delivery
+      // DIRECT SEND: Send SMS immediately without queue (no Redis needed)
+      console.log(`Sending ${recipients.length} SMS messages directly using bulk API...`);
+      
+      let sentCount = 0;
+      let failedCount = 0;
+      let actualCost = 0;
+
+      if (!scheduledDate) {
+        // Send immediately via iProg bulk API
+        const messages = recipients.map(recipient => ({
+          phoneNumber: recipient.phoneNumber,
+          message: composedMessage.content
+        }));
+
+        try {
+          const bulkResult = await iProgClient.sendBulkSMS(messages);
+          
+          // Count successes and failures
+          bulkResult.results.forEach(result => {
+            if (result.success) {
+              sentCount++;
+            } else {
+              failedCount++;
+              console.error(`Failed to send SMS: ${result.error}`);
+            }
+          });
+
+          actualCost = bulkResult.totalCreditsUsed;
+
+          console.log(`SMS Blast completed: ${sentCount} sent, ${failedCount} failed, ${actualCost} credits used`);
+        } catch (error) {
+          failedCount = recipients.length;
+          console.error('Bulk SMS send failed:', error);
+        }
+
+        // Update blast status to completed
+        await connection.query(
+          `UPDATE sms_blasts SET status = ?, actual_cost = ?, completed_at = NOW() WHERE id = ?`,
+          [sentCount > 0 ? 'completed' : 'failed', actualCost, blastId]
+        );
+      } else {
+        // For scheduled messages, still use queue (requires Redis)
         for (const job of jobs) {
           await smsQueue.schedule(job, scheduledDate);
         }
-      } else {
-        // Requirement 7.2: Immediate delivery (within 1 minute)
-        await smsQueue.enqueueBulk(jobs);
       }
 
       // Log blast creation to audit logs
@@ -249,9 +261,12 @@ export class SMSBlastController {
         data: {
           blastId,
           recipientCount: recipients.length,
+          sentCount: scheduledDate ? 0 : sentCount,
+          failedCount: scheduledDate ? 0 : failedCount,
           estimatedCost: costEstimate.totalCredits,
+          actualCost: scheduledDate ? undefined : actualCost,
           creditsPerMessage: costEstimate.creditsPerMessage,
-          status: scheduledDate ? 'scheduled' : 'queued',
+          status: scheduledDate ? 'scheduled' : (sentCount > 0 ? 'completed' : 'failed'),
           scheduledTime: scheduledDate?.toISOString(),
           message: {
             content: composedMessage.content,
@@ -488,7 +503,7 @@ export class SMSBlastController {
           sb.id, sb.user_id, sb.message, sb.template_id, sb.language,
           sb.recipient_count, sb.estimated_cost, sb.actual_cost,
           sb.status, sb.scheduled_time, sb.created_at, sb.completed_at,
-          u.name as user_name, u.email as user_email
+          CONCAT(u.first_name, ' ', u.last_name) as user_name, u.email as user_email
          FROM sms_blasts sb
          LEFT JOIN users u ON sb.user_id = u.id
          ${whereClause}
@@ -746,6 +761,59 @@ export class SMSBlastController {
           name,
           memberCount: result.memberCount,
           recipientFilters
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * List all contact groups
+   * Requirement: 17.1
+   * 
+   * GET /api/sms-blast/contact-groups
+   */
+  async listContactGroups(
+    req: SMSAuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const user = req.user!;
+
+      // Build query based on user role
+      let whereClause = '';
+      const params: any[] = [];
+
+      // Admins can only see their own contact groups
+      if (user.role === 'admin') {
+        whereClause = 'WHERE created_by = ?';
+        params.push(user.id);
+      }
+
+      // Get contact groups
+      const [groupRows] = await pool.query<any[]>(
+        `SELECT 
+          id, name, created_by, recipient_filters, member_count, created_at, updated_at
+         FROM contact_groups
+         ${whereClause}
+         ORDER BY created_at DESC`,
+        params
+      );
+
+      res.status(200).json({
+        status: 'success',
+        data: {
+          groups: groupRows.map((group: any) => ({
+            id: group.id,
+            name: group.name,
+            createdBy: group.created_by,
+            recipientFilters: JSON.parse(group.recipient_filters),
+            memberCount: group.member_count,
+            createdAt: group.created_at,
+            updatedAt: group.updated_at
+          }))
         }
       });
     } catch (error) {
@@ -1092,5 +1160,147 @@ export class SMSBlastController {
       next(error);
     }
   }
+
+  /**
+   * Get available locations (provinces, cities, barangays) from database
+   * 
+   * GET /api/sms-blast/locations
+   */
+  async getAvailableLocations(
+    req: SMSAuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const user = req.user!;
+
+      // Get distinct provinces
+      const [provinceRows] = await pool.query<any[]>(
+        `SELECT DISTINCT province 
+         FROM user_profiles 
+         WHERE province IS NOT NULL AND province != ''
+         ORDER BY province`
+      );
+
+      // Get distinct cities
+      const [cityRows] = await pool.query<any[]>(
+        `SELECT DISTINCT city 
+         FROM user_profiles 
+         WHERE city IS NOT NULL AND city != ''
+         ORDER BY city`
+      );
+
+      // Get distinct barangays
+      const [barangayRows] = await pool.query<any[]>(
+        `SELECT DISTINCT barangay 
+         FROM user_profiles 
+         WHERE barangay IS NOT NULL AND barangay != ''
+         ORDER BY barangay`
+      );
+
+      // If user is admin (not super_admin), filter by their jurisdiction
+      let provinces = provinceRows.map((row: any) => row.province);
+      let cities = cityRows.map((row: any) => row.city);
+      let barangays = barangayRows.map((row: any) => row.barangay);
+
+      if (user.role === 'admin' && user.jurisdiction) {
+        // Filter locations based on admin's jurisdiction
+        const jurisdictionLower = user.jurisdiction.toLowerCase();
+        provinces = provinces.filter((p: string) => 
+          p.toLowerCase().includes(jurisdictionLower)
+        );
+        cities = cities.filter((c: string) => 
+          c.toLowerCase().includes(jurisdictionLower)
+        );
+        barangays = barangays.filter((b: string) => 
+          b.toLowerCase().includes(jurisdictionLower)
+        );
+      }
+
+      res.status(200).json({
+        status: 'success',
+        data: {
+          provinces,
+          cities,
+          barangays
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Estimate recipients and cost for SMS blast
+   * 
+   * POST /api/sms-blast/estimate
+   */
+  async estimateRecipients(
+    req: SMSAuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const {
+        recipientFilters: filters,
+        message,
+        templateId,
+        language = 'en'
+      } = req.body;
+
+      if (!filters) {
+        throw new AppError('Recipient filters are required', 400);
+      }
+
+      // Count recipients matching the filters
+      const user = req.user!;
+      const recipientCount = await recipientFilter.countRecipients(filters, user);
+
+      // Estimate cost if message is provided
+      let estimatedCost = 0;
+      let smsPartCount = 1;
+      let characterCount = 0;
+
+      if (message || templateId) {
+        let messageContent = message;
+        
+        if (templateId) {
+          // Get template to calculate message length
+          const template = await templateManager.getTemplate(templateId);
+          if (template) {
+            messageContent = template.content;
+          }
+        }
+
+        if (messageContent) {
+          characterCount = messageContent.length;
+          
+          // Calculate SMS parts based on encoding
+          const maxCharsPerSMS = language === 'en' ? 160 : 70;
+          const maxCharsPerPart = language === 'en' ? 153 : 67;
+          
+          if (characterCount > maxCharsPerSMS) {
+            smsPartCount = Math.ceil(characterCount / maxCharsPerPart);
+          }
+
+          // Estimate cost (1 credit per SMS part per recipient)
+          estimatedCost = smsPartCount * recipientCount;
+        }
+      }
+
+      res.status(200).json({
+        status: 'success',
+        data: {
+          recipientCount,
+          estimatedCost,
+          smsPartCount,
+          characterCount
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
+
 

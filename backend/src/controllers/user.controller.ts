@@ -7,6 +7,34 @@ const userService = new UserService();
 
 export class UserController {
   /**
+   * Create new user
+   * Validates role hierarchy permissions
+   * Requirements: 2.2, 3.3, 11.4
+   */
+  async createUser(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const actorRole = req.user?.role;
+      const userData = req.body;
+
+      // Validate required fields
+      if (!userData.email || !userData.phone || !userData.password || !userData.first_name || !userData.last_name || !userData.role) {
+        throw new AppError('Email, phone, password, first name, last name, and role are required', 400);
+      }
+
+      // Create user with role hierarchy validation
+      const user = await userService.createUser(userData, actorRole);
+      
+      res.status(201).json({
+        status: 'success',
+        data: user,
+        message: 'User created successfully'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Get all users with filtering
    * Apply role hierarchy filtering
    * Requirements: 2.2, 3.3, 11.4

@@ -21,29 +21,27 @@ import {
 import { smsBlastAPI } from '@/lib/sms-blast-api';
 
 interface SMSBlast {
-  id: string;
+  blastId: string; // Changed from 'id' to match API response
   message: string;
   recipientCount: number;
   status: 'draft' | 'queued' | 'processing' | 'completed' | 'failed' | 'scheduled';
-  sentCount: number;
-  deliveredCount: number;
-  failedCount: number;
+  deliveryStatistics: {
+    sent: number;
+    delivered: number;
+    failed: number;
+    pending: number;
+  };
   estimatedCost: number;
   actualCost?: number;
   createdAt: string;
   scheduledTime?: string;
   language: 'en' | 'fil';
-}
-
-interface CreditBalance {
-  balance: number;
-  lastUpdated: string;
+  successRate: number;
 }
 
 export default function SMSBlastPage() {
   const router = useRouter();
   const [blasts, setBlasts] = useState<SMSBlast[]>([]);
-  const [creditBalance, setCreditBalance] = useState<CreditBalance | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | SMSBlast['status']>('all');
@@ -62,11 +60,10 @@ export default function SMSBlastPage() {
 
       // Load SMS blast history from backend
       const historyData: any = await smsBlastAPI.getBlastHistory();
-      setBlasts(historyData.data || []);
+      setBlasts(historyData.data?.blasts || []);
 
-      // Load credit balance from backend
-      const balanceData: any = await smsBlastAPI.getCreditBalance();
-      setCreditBalance(balanceData.data);
+      // Note: Credit balance is monitored directly on iProg platform
+      // No need to fetch it here to avoid API errors
 
     } catch (error) {
       console.error('Error loading SMS blast data:', error);
@@ -104,9 +101,9 @@ export default function SMSBlastPage() {
   );
 
   const stats = {
-    totalSent: blasts.reduce((sum, b) => sum + b.sentCount, 0),
-    totalDelivered: blasts.reduce((sum, b) => sum + b.deliveredCount, 0),
-    totalFailed: blasts.reduce((sum, b) => sum + b.failedCount, 0),
+    totalSent: blasts.reduce((sum, b) => sum + (b.deliveryStatistics?.sent || 0), 0),
+    totalDelivered: blasts.reduce((sum, b) => sum + (b.deliveryStatistics?.delivered || 0), 0),
+    totalFailed: blasts.reduce((sum, b) => sum + (b.deliveryStatistics?.failed || 0), 0),
     totalCost: blasts.reduce((sum, b) => sum + (b.actualCost || b.estimatedCost), 0),
   };
 
@@ -151,19 +148,19 @@ export default function SMSBlastPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Credit Balance */}
+        {/* Total Blasts */}
         <div className="bg-gradient-to-br from-brand-500 to-brand-600 rounded-xl p-6 text-white shadow-lg">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-brand-100">Credit Balance</p>
+              <p className="text-sm font-medium text-brand-100">Total Blasts</p>
               <p className="mt-2 text-3xl font-bold">
-                {creditBalance?.balance.toLocaleString() || '0'}
+                {blasts.length.toLocaleString()}
               </p>
               <p className="mt-1 text-xs text-brand-100">
-                Last updated: {creditBalance?.lastUpdated ? new Date(creditBalance.lastUpdated).toLocaleTimeString() : 'N/A'}
+                SMS campaigns sent
               </p>
             </div>
-            <DollarSign className="w-12 h-12 text-brand-200" />
+            <MessageSquare className="w-12 h-12 text-brand-200" />
           </div>
         </div>
 
@@ -289,7 +286,7 @@ export default function SMSBlastPage() {
                 </tr>
               ) : (
                 filteredBlasts.map((blast) => (
-                  <tr key={blast.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <tr key={blast.blastId} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className="px-6 py-4">
                       <div className="flex items-start gap-3">
                         <MessageSquare className="w-5 h-5 text-gray-400 mt-0.5" />
@@ -328,14 +325,14 @@ export default function SMSBlastPage() {
                         <div className="flex items-center gap-2 text-xs">
                           <CheckCircle className="w-3 h-3 text-success-500" />
                           <span className="text-gray-600 dark:text-gray-400">
-                            {blast.deliveredCount} delivered
+                            {blast.deliveryStatistics?.delivered || 0} delivered
                           </span>
                         </div>
-                        {blast.failedCount > 0 && (
+                        {(blast.deliveryStatistics?.failed || 0) > 0 && (
                           <div className="flex items-center gap-2 text-xs">
                             <XCircle className="w-3 h-3 text-emergency-500" />
                             <span className="text-gray-600 dark:text-gray-400">
-                              {blast.failedCount} failed
+                              {blast.deliveryStatistics.failed} failed
                             </span>
                           </div>
                         )}
@@ -355,7 +352,7 @@ export default function SMSBlastPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button
-                        onClick={() => router.push(`/sms-blast/${blast.id}`)}
+                        onClick={() => router.push(`/sms-blast/${blast.blastId}`)}
                         className="text-brand-600 hover:text-brand-700 text-sm font-medium"
                       >
                         View Details

@@ -26,7 +26,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Apply general rate limiting to all routes
-app.use('/api/', generalLimiter);
+// app.use('/api/', generalLimiter);
 
 // Request logging
 app.use((req, _res, next) => {

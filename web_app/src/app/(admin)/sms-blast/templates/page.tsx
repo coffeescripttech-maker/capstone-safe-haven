@@ -54,7 +54,10 @@ export default function TemplatesPage() {
     try {
       setIsLoading(true);
       const data: any = await smsBlastAPI.getTemplates();
-      setTemplates(data.data || []);
+      console.log('Templates API Response:', data);
+      console.log('Extracted templates:', data.data?.templates);
+      // API returns { status: "success", data: { templates: [...], count: ... } }
+      setTemplates(data.data?.templates || []);
     } catch (error) {
       console.error('Error loading templates:', error);
       toast.error('Failed to load templates');

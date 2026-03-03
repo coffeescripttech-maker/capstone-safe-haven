@@ -7,7 +7,6 @@ import {
   MessageSquare,
   Send,
   Users,
-  DollarSign,
   Clock,
   AlertCircle,
   Calendar,
@@ -45,7 +44,11 @@ export default function SendSMSBlastPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [contactGroups, setContactGroups] = useState<ContactGroup[]>([]);
-  const [creditBalance, setCreditBalance] = useState<number>(0);
+  
+  // Location data from database
+  const [provinces, setProvinces] = useState<string[]>([]);
+  const [cities, setCities] = useState<string[]>([]);
+  const [barangays, setBarangays] = useState<string[]>([]);
   
   // Form state
   const [messageType, setMessageType] = useState<'custom' | 'template'>('custom');
@@ -78,20 +81,51 @@ export default function SendSMSBlastPage() {
     calculateMessageMetrics();
   }, [customMessage, selectedTemplate, templateVariables, language]);
 
+  useEffect(() => {
+    // Estimate recipients when filters change
+    estimateRecipients();
+  }, [selectedProvinces, selectedCities, selectedBarangays, selectedContactGroups]);
+
   const loadInitialData = async () => {
     try {
-      const [templatesData, groupsData, balanceData]: any = await Promise.all([
+      console.log('Starting to load initial data...');
+      
+      // Load templates, groups, and locations (required)
+      const [templatesData, groupsData, locationsData]: any = await Promise.all([
         smsBlastAPI.getTemplates(),
         smsBlastAPI.getContactGroups(),
-        smsBlastAPI.getCreditBalance()
+        smsBlastAPI.getAllLocations()
       ]);
       
-      setTemplates(templatesData.data || []);
-      setContactGroups(groupsData.data || []);
-      setCreditBalance(balanceData.data?.balance || 0);
-    } catch (error) {
-      console.error('Error loading data:', error);
-      toast.error('Failed to load initial data');
+      console.log('Templates Response:', templatesData);
+      console.log('Groups Response:', groupsData);
+      console.log('Locations Response:', locationsData);
+      
+      // API returns { status: "success", data: { templates: [...], count: ... } }
+      const extractedTemplates = templatesData.data?.templates || [];
+      const extractedGroups = groupsData.data?.groups || [];
+      const extractedProvinces = locationsData.data?.provinces || [];
+      const extractedCities = locationsData.data?.cities || [];
+      const extractedBarangays = locationsData.data?.barangays || [];
+      
+      console.log('Extracted templates count:', extractedTemplates.length);
+      console.log('Extracted groups count:', extractedGroups.length);
+      console.log('Extracted provinces count:', extractedProvinces.length);
+      
+      setTemplates(extractedTemplates);
+      setContactGroups(extractedGroups);
+      setProvinces(extractedProvinces);
+      setCities(extractedCities);
+      setBarangays(extractedBarangays);
+      
+      console.log('Successfully loaded initial data');
+    } catch (error: any) {
+      console.error('=== ERROR LOADING DATA ===');
+      console.error('Error object:', error);
+      console.error('Error message:', error?.message);
+      console.error('Error stack:', error?.stack);
+      console.error('========================');
+      toast.error(`Failed to load initial data: ${error?.message || 'Unknown error'}`);
     }
   };
 
@@ -127,6 +161,40 @@ export default function SendSMSBlastPage() {
     // Estimate cost (1 credit per SMS part per recipient)
     const cost = parts * recipientCount;
     setEstimatedCost(cost);
+  };
+
+  const estimateRecipients = async () => {
+    // Only estimate if at least one filter is selected
+    if (selectedProvinces.length === 0 && selectedContactGroups.length === 0) {
+      setRecipientCount(0);
+      setEstimatedCost(0);
+      return;
+    }
+
+    try {
+      const data: any = await smsBlastAPI.estimateRecipients({
+        recipientFilters: {
+          provinces: selectedProvinces,
+          cities: selectedCities,
+          barangays: selectedBarangays,
+          contactGroupIds: selectedContactGroups
+        },
+        message: messageType === 'custom' ? customMessage : undefined,
+        templateId: messageType === 'template' ? selectedTemplate : undefined,
+        language
+      });
+
+      const count = data.data?.recipientCount || 0;
+      setRecipientCount(count);
+      
+      // Recalculate cost with new recipient count
+      const cost = smsPartCount * count;
+      setEstimatedCost(cost);
+    } catch (error: any) {
+      console.error('Error estimating recipients:', error);
+      // Don't show error toast, just keep count at 0
+      setRecipientCount(0);
+    }
   };
 
   const handleTemplateChange = (templateId: string) => {
@@ -175,11 +243,6 @@ export default function SendSMSBlastPage() {
 
     if (!sendNow && !scheduledTime) {
       toast.error('Please select a scheduled time');
-      return false;
-    }
-
-    if (estimatedCost > creditBalance) {
-      toast.error('Insufficient credits');
       return false;
     }
 
@@ -243,6 +306,8 @@ export default function SendSMSBlastPage() {
     return message;
   };
 
+  console.log({templates});
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       {/* Header */}
@@ -260,25 +325,6 @@ export default function SendSMSBlastPage() {
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Create and send emergency SMS notifications
           </p>
-        </div>
-      </div>
-
-      {/* Credit Balance Alert */}
-      <div className="bg-gradient-to-r from-brand-500 to-brand-600 rounded-xl p-4 text-white shadow-lg">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <DollarSign className="w-6 h-6" />
-            <div>
-              <p className="text-sm font-medium">Available Credits</p>
-              <p className="text-2xl font-bold">{creditBalance.toLocaleString()}</p>
-            </div>
-          </div>
-          {creditBalance < 1000 && (
-            <div className="flex items-center gap-2 bg-white/20 px-4 py-2 rounded-lg">
-              <AlertCircle className="w-5 h-5" />
-              <span className="text-sm font-medium">Low Balance</span>
-            </div>
-          )}
         </div>
       </div>
 
@@ -346,6 +392,7 @@ export default function SendSMSBlastPage() {
               </div>
             )}
 
+
             {messageType === 'template' && (
               <div className="mt-6 space-y-4">
                 <div>
@@ -405,10 +452,15 @@ export default function SendSMSBlastPage() {
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                   size={4}
                 >
-                  <option value="Metro Manila">Metro Manila</option>
-                  <option value="Cebu">Cebu</option>
-                  <option value="Davao">Davao</option>
-                  <option value="Benguet">Benguet</option>
+                  {provinces.length === 0 ? (
+                    <option disabled>No provinces found in database</option>
+                  ) : (
+                    provinces.map(province => (
+                      <option key={province} value={province}>
+                        {province}
+                      </option>
+                    ))
+                  )}
                 </select>
                 <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple</p>
               </div>
@@ -595,14 +647,6 @@ export default function SendSMSBlastPage() {
                       {estimatedCost.toLocaleString()} credits
                     </span>
                   </div>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Remaining:</span>
-                  <span className={`font-medium ${
-                    creditBalance - estimatedCost < 0 ? 'text-red-600' : 'text-green-600'
-                  }`}>
-                    {(creditBalance - estimatedCost).toLocaleString()} credits
-                  </span>
                 </div>
               </div>
 

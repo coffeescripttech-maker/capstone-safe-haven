@@ -24,6 +24,82 @@ interface UpdateUserData {
 
 export class UserService {
   /**
+   * Create new user
+   * Validates role hierarchy and uniqueness
+   * Requirements: 2.2, 3.3, 11.4
+   */
+  async createUser(userData: any, actorRole?: string) {
+    const { email, phone, password, first_name, last_name, role, jurisdiction, city, province, barangay } = userData;
+
+    // Validate role hierarchy - can't create user with equal or higher privilege
+    if (actorRole && actorRole !== 'super_admin') {
+      const hierarchy = permissionService.getRoleHierarchy();
+      const actorLevel = hierarchy[actorRole as keyof typeof hierarchy];
+      const targetLevel = hierarchy[role as keyof typeof hierarchy];
+
+      if (targetLevel >= actorLevel) {
+        throw new AppError('Cannot create user with equal or higher privilege level', 403);
+      }
+    }
+
+    // Validate role is valid
+    const validRoles = ['super_admin', 'admin', 'pnp', 'bfp', 'mdrrmo', 'lgu_officer', 'citizen'];
+    if (!validRoles.includes(role)) {
+      throw new AppError('Invalid role', 400);
+    }
+
+    try {
+      // Check if email already exists
+      const [existingEmail] = await db.query(
+        'SELECT id FROM users WHERE email = ?',
+        [email]
+      );
+      if ((existingEmail as any[]).length > 0) {
+        throw new AppError('Email already exists', 400);
+      }
+
+      // Check if phone already exists
+      const [existingPhone] = await db.query(
+        'SELECT id FROM users WHERE phone = ?',
+        [phone]
+      );
+      if ((existingPhone as any[]).length > 0) {
+        throw new AppError('Phone number already exists', 400);
+      }
+
+      // Hash password
+      const password_hash = await bcrypt.hash(password, 10);
+
+      // Insert user
+      const [result] = await db.query(
+        `INSERT INTO users (email, phone, password_hash, first_name, last_name, role, jurisdiction, is_verified, is_active, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, NOW())`,
+        [email, phone, password_hash, first_name, last_name, role, jurisdiction || null]
+      );
+
+      const userId = (result as any).insertId;
+
+      // Create user profile if location data provided
+      if (city || province || barangay) {
+        await db.query(
+          `INSERT INTO user_profiles (user_id, city, province, barangay)
+           VALUES (?, ?, ?, ?)`,
+          [userId, city || null, province || null, barangay || null]
+        );
+      }
+
+      // Fetch and return created user
+      return await this.getUserById(userId);
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      console.error('Error creating user:', error);
+      throw new AppError('Failed to create user', 500);
+    }
+  }
+
+  /**
    * Get all users with filtering and pagination
    * Apply role hierarchy filtering to prevent viewing higher privilege accounts
    * Requirements: 2.2, 3.3, 11.4

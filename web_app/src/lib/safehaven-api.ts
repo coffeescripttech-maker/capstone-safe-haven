@@ -399,6 +399,13 @@ export const usersApi = {
     return response.data;
   },
   
+  create: async (userData: any) => {
+    console.log('📡 Creating user:', userData);
+    const response = await api.post('/users', userData);
+    console.log('📦 Create user response:', response.data);
+    return response.data;
+  },
+  
   getById: async (id: number) => {
     console.log('📡 Fetching user:', id);
     const response = await api.get(`/users/${id}`);

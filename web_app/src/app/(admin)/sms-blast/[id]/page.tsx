@@ -34,13 +34,13 @@ interface BlastDetails {
   completedAt?: string;
   scheduledTime?: string;
   language: 'en' | 'fil';
-  priority: 'critical' | 'high' | 'normal';
-  createdBy: {
+  priority?: 'critical' | 'high' | 'normal'; // Made optional since API might not return it
+  createdBy?: {
     id: string;
     name: string;
     email: string;
   };
-  recipientFilters: {
+  recipientFilters?: {
     provinces?: string[];
     cities?: string[];
     barangays?: string[];
@@ -211,10 +211,12 @@ export default function BlastDetailsPage() {
                 <Globe className="w-4 h-4" />
                 {blast.language === 'en' ? 'English' : 'Filipino'}
               </span>
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${getPriorityColor(blast.priority)}`}>
-                <Zap className="w-4 h-4" />
-                {blast.priority.charAt(0).toUpperCase() + blast.priority.slice(1)} Priority
-              </span>
+              {blast.priority && (
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${getPriorityColor(blast.priority)}`}>
+                  <Zap className="w-4 h-4" />
+                  {blast.priority.charAt(0).toUpperCase() + blast.priority.slice(1)} Priority
+                </span>
+              )}
             </div>
           </div>
 
@@ -297,7 +299,7 @@ export default function BlastDetailsPage() {
               Recipient Filters
             </h2>
             <div className="space-y-3">
-              {blast.recipientFilters.provinces && blast.recipientFilters.provinces.length > 0 && (
+              {blast.recipientFilters?.provinces && blast.recipientFilters.provinces.length > 0 && (
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
                     Provinces:
@@ -313,6 +315,11 @@ export default function BlastDetailsPage() {
                     ))}
                   </div>
                 </div>
+              )}
+              {!blast.recipientFilters && (
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  No recipient filter information available
+                </p>
               )}
             </div>
           </div>
@@ -387,24 +394,26 @@ export default function BlastDetailsPage() {
           </div>
 
           {/* Created By */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Created By</h2>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center">
-                <span className="text-sm font-medium text-brand-600 dark:text-brand-400">
-                  {blast.createdBy.name.charAt(0).toUpperCase()}
-                </span>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">
-                  {blast.createdBy.name}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {blast.createdBy.email}
-                </p>
+          {blast.createdBy && (
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Created By</h2>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center">
+                  <span className="text-sm font-medium text-brand-600 dark:text-brand-400">
+                    {blast.createdBy.name?.charAt(0).toUpperCase() || '?'}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    {blast.createdBy.name || 'Unknown'}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {blast.createdBy.email || 'N/A'}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

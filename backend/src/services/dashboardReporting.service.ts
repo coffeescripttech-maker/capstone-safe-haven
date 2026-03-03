@@ -145,7 +145,7 @@ export class DashboardReportingService {
           sb.recipient_count,
           sb.status,
           sb.created_at,
-          u.name as user_name,
+          CONCAT(u.first_name, ' ', u.last_name) as user_name,
           u.email as user_email
          FROM sms_blasts sb
          LEFT JOIN users u ON sb.user_id = u.id
@@ -366,7 +366,7 @@ export class DashboardReportingService {
           sb.recipient_count,
           sb.status,
           sb.created_at,
-          u.name as user_name,
+          CONCAT(u.first_name, ' ', u.last_name) as user_name,
           u.email as user_email
          FROM sms_blasts sb
          LEFT JOIN sms_templates st ON sb.template_id = st.id
@@ -623,7 +623,7 @@ export class DashboardReportingService {
       const [breakdownRows] = await connection.query<RowDataPacket[]>(
         `SELECT 
           su.user_id,
-          u.name as user_name,
+          CONCAT(u.first_name, ' ', u.last_name) as user_name,
           u.email as user_email,
           COALESCE(SUM(su.credits_used), 0) as credits_used,
           COALESCE(SUM(su.message_count), 0) as message_count,
@@ -631,7 +631,7 @@ export class DashboardReportingService {
          FROM sms_usage su
          LEFT JOIN users u ON su.user_id = u.id
          WHERE su.created_at >= ? ${userFilter}
-         GROUP BY su.user_id, u.name, u.email
+         GROUP BY su.user_id, u.first_name, u.last_name, u.email
          ORDER BY credits_used DESC`,
         [startDate]
       );

@@ -23,6 +23,7 @@ export default function ContactGroupsPage() {
   const [groups, setGroups] = useState<ContactGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [provinces, setProvinces] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     provinces: [] as string[],
@@ -32,13 +33,25 @@ export default function ContactGroupsPage() {
 
   useEffect(() => {
     loadGroups();
+    loadProvinces();
   }, []);
+
+  const loadProvinces = async () => {
+    try {
+      const data: any = await smsBlastAPI.getProvinces();
+      setProvinces(data.data?.provinces || []);
+    } catch (error) {
+      console.error('Error loading provinces:', error);
+      toast.error('Failed to load provinces');
+    }
+  };
 
   const loadGroups = async () => {
     try {
       setIsLoading(true);
       const data: any = await smsBlastAPI.getContactGroups();
-      setGroups(data.data || []);
+      // API returns { status: "success", data: { groups: [...] } }
+      setGroups(data.data?.groups || []);
     } catch (error) {
       console.error('Error loading contact groups:', error);
       toast.error('Failed to load contact groups');
@@ -215,10 +228,15 @@ export default function ContactGroupsPage() {
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                   size={4}
                 >
-                  <option value="Metro Manila">Metro Manila</option>
-                  <option value="Cebu">Cebu</option>
-                  <option value="Davao">Davao</option>
-                  <option value="Benguet">Benguet</option>
+                  {provinces.length === 0 ? (
+                    <option disabled>No provinces found in database</option>
+                  ) : (
+                    provinces.map(province => (
+                      <option key={province} value={province}>
+                        {province}
+                      </option>
+                    ))
+                  )}
                 </select>
                 <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple</p>
               </div>

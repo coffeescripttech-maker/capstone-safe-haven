@@ -4,6 +4,7 @@
  */
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const SMS_BLAST_BASE = `${API_BASE_URL}/sms-blast`;
 
 interface ApiResponse<T> {
   success?: boolean;
@@ -17,7 +18,7 @@ interface ApiResponse<T> {
 
 class SMSBlastAPI {
   private getHeaders(): HeadersInit {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('safehaven_token') : null;
     return {
       'Content-Type': 'application/json',
       ...(token && { 'Authorization': `Bearer ${token}` }),
@@ -47,7 +48,7 @@ class SMSBlastAPI {
     priority?: 'critical' | 'high' | 'normal';
     scheduledTime?: string;
   }) {
-    const response = await fetch(`${API_BASE_URL}/api/sms-blast`, {
+    const response = await fetch(`${API_BASE_URL}/sms-blast`, {
       method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify(data),
@@ -55,14 +56,43 @@ class SMSBlastAPI {
     return this.handleResponse(response);
   }
 
-  async getBlastHistory(params?: { limit?: number; offset?: number; status?: string }) {
+  async estimateRecipients(data: {
+    recipientFilters: {
+      provinces?: string[];
+      cities?: string[];
+      barangays?: string[];
+      contactGroupIds?: string[];
+    };
+    message?: string;
+    templateId?: string;
+    language?: 'en' | 'fil';
+  }) {
+    const response = await fetch(`${API_BASE_URL}/sms-blast/estimate`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse(response);
+  }
+
+  async getBlastHistory(params?: { 
+    page?: number; 
+    limit?: number; 
+    status?: string;
+    startDate?: string;
+    endDate?: string;
+    userId?: string;
+  }) {
     const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.offset) queryParams.append('offset', params.offset.toString());
     if (params?.status) queryParams.append('status', params.status);
+    if (params?.startDate) queryParams.append('startDate', params.startDate);
+    if (params?.endDate) queryParams.append('endDate', params.endDate);
+    if (params?.userId) queryParams.append('userId', params.userId);
 
     const response = await fetch(
-      `${API_BASE_URL}/api/sms-blast/history?${queryParams}`,
+      `${API_BASE_URL}/sms-blast/history?${queryParams}`,
       {
         headers: this.getHeaders(),
       }
@@ -71,7 +101,7 @@ class SMSBlastAPI {
   }
 
   async getBlastDetails(blastId: string) {
-    const response = await fetch(`${API_BASE_URL}/api/sms-blast/${blastId}`, {
+    const response = await fetch(`${API_BASE_URL}/sms-blast/${blastId}`, {
       headers: this.getHeaders(),
     });
     return this.handleResponse(response);
@@ -79,7 +109,7 @@ class SMSBlastAPI {
 
   // Credit Operations
   async getCreditBalance() {
-    const response = await fetch(`${API_BASE_URL}/api/sms-blast/credits/balance`, {
+    const response = await fetch(`${API_BASE_URL}/sms-blast/credits/balance`, {
       headers: this.getHeaders(),
     });
     return this.handleResponse(response);
@@ -92,7 +122,7 @@ class SMSBlastAPI {
     if (params?.language) queryParams.append('language', params.language);
 
     const response = await fetch(
-      `${API_BASE_URL}/api/sms-blast/templates?${queryParams}`,
+      `${API_BASE_URL}/sms-blast/templates?${queryParams}`,
       {
         headers: this.getHeaders(),
       }
@@ -106,7 +136,7 @@ class SMSBlastAPI {
     content: string;
     language: 'en' | 'fil';
   }) {
-    const response = await fetch(`${API_BASE_URL}/api/sms-blast/templates`, {
+    const response = await fetch(`${API_BASE_URL}/sms-blast/templates`, {
       method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify(data),
@@ -120,7 +150,7 @@ class SMSBlastAPI {
     content: string;
     language: 'en' | 'fil';
   }>) {
-    const response = await fetch(`${API_BASE_URL}/api/sms-blast/templates/${templateId}`, {
+    const response = await fetch(`${API_BASE_URL}/sms-blast/templates/${templateId}`, {
       method: 'PUT',
       headers: this.getHeaders(),
       body: JSON.stringify(data),
@@ -129,7 +159,7 @@ class SMSBlastAPI {
   }
 
   async deleteTemplate(templateId: string) {
-    const response = await fetch(`${API_BASE_URL}/api/sms-blast/templates/${templateId}`, {
+    const response = await fetch(`${API_BASE_URL}/sms-blast/templates/${templateId}`, {
       method: 'DELETE',
       headers: this.getHeaders(),
     });
@@ -138,7 +168,7 @@ class SMSBlastAPI {
 
   // Contact Group Operations
   async getContactGroups() {
-    const response = await fetch(`${API_BASE_URL}/api/sms-blast/contact-groups`, {
+    const response = await fetch(`${API_BASE_URL}/sms-blast/contact-groups`, {
       headers: this.getHeaders(),
     });
     return this.handleResponse(response);
@@ -152,7 +182,7 @@ class SMSBlastAPI {
       barangays?: string[];
     };
   }) {
-    const response = await fetch(`${API_BASE_URL}/api/sms-blast/contact-groups`, {
+    const response = await fetch(`${API_BASE_URL}/sms-blast/contact-groups`, {
       method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify(data),
@@ -161,7 +191,7 @@ class SMSBlastAPI {
   }
 
   async deleteContactGroup(groupId: string) {
-    const response = await fetch(`${API_BASE_URL}/api/sms-blast/contact-groups/${groupId}`, {
+    const response = await fetch(`${API_BASE_URL}/sms-blast/contact-groups/${groupId}`, {
       method: 'DELETE',
       headers: this.getHeaders(),
     });
@@ -175,7 +205,7 @@ class SMSBlastAPI {
     if (params?.endDate) queryParams.append('endDate', params.endDate);
 
     const response = await fetch(
-      `${API_BASE_URL}/api/sms-blast/usage?${queryParams}`,
+      `${API_BASE_URL}/sms-blast/usage?${queryParams}`,
       {
         headers: this.getHeaders(),
       }
@@ -191,7 +221,7 @@ class SMSBlastAPI {
   }) {
     const queryParams = new URLSearchParams(params);
     const response = await fetch(
-      `${API_BASE_URL}/api/sms-blast/audit-logs/export?${queryParams}`,
+      `${API_BASE_URL}/sms-blast/audit-logs/export?${queryParams}`,
       {
         headers: this.getHeaders(),
       }
@@ -202,6 +232,48 @@ class SMSBlastAPI {
     }
     
     return response.blob();
+  }
+
+  // Location Operations
+  async getProvinces() {
+    const response = await fetch(`${API_BASE_URL}/locations/provinces`, {
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async getCities(province?: string) {
+    const queryParams = new URLSearchParams();
+    if (province) queryParams.append('province', province);
+
+    const response = await fetch(
+      `${API_BASE_URL}/locations/cities?${queryParams}`,
+      {
+        headers: this.getHeaders(),
+      }
+    );
+    return this.handleResponse(response);
+  }
+
+  async getBarangays(province?: string, city?: string) {
+    const queryParams = new URLSearchParams();
+    if (province) queryParams.append('province', province);
+    if (city) queryParams.append('city', city);
+
+    const response = await fetch(
+      `${API_BASE_URL}/locations/barangays?${queryParams}`,
+      {
+        headers: this.getHeaders(),
+      }
+    );
+    return this.handleResponse(response);
+  }
+
+  async getAllLocations() {
+    const response = await fetch(`${API_BASE_URL}/locations/all`, {
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse(response);
   }
 }
 

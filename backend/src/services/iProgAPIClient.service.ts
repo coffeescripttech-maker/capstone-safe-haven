@@ -226,8 +226,8 @@ export class IProgAPIClient {
   }
 
   /**
-   * Send bulk SMS messages
-   * Requirement 4.3: Process messages in batches
+   * Send bulk SMS messages using iProg's bulk endpoint
+   * Much faster than sending one by one!
    * 
    * @param messages - Array of messages to send
    * @returns BulkSendResult with individual results and total credits used
@@ -235,14 +235,78 @@ export class IProgAPIClient {
   async sendBulkSMS(
     messages: Array<{ phoneNumber: string; message: string }>
   ): Promise<BulkSendResult> {
+    // Group messages by content (same message can be sent to multiple numbers at once)
+    const messageGroups = new Map<string, string[]>();
+    
+    for (const msg of messages) {
+      const content = msg.message;
+      if (!messageGroups.has(content)) {
+        messageGroups.set(content, []);
+      }
+      // Remove + prefix if present (API expects 639XXXXXXXXX format)
+      const cleanPhoneNumber = msg.phoneNumber.startsWith('+') 
+        ? msg.phoneNumber.substring(1) 
+        : msg.phoneNumber;
+      messageGroups.get(content)!.push(cleanPhoneNumber);
+    }
+
     const results: SendResult[] = [];
     let totalCreditsUsed = 0;
 
-    // Send messages sequentially to respect rate limiting
-    for (const msg of messages) {
-      const result = await this.sendSMS(msg.phoneNumber, msg.message);
-      results.push(result);
-      totalCreditsUsed += result.creditsUsed;
+    // Send each group using bulk endpoint
+    for (const [message, phoneNumbers] of messageGroups) {
+      try {
+        // Check rate limit before making request
+        await this.checkRateLimit();
+
+        // Join phone numbers with comma
+        const phoneNumbersStr = phoneNumbers.join(',');
+
+        // Make bulk API request with retry logic
+        const response = await this.retryWithBackoff(async () => {
+          return await this.axiosInstance.post('/sms_messages/send_bulk', {
+            api_token: this.apiKey,
+            phone_number: phoneNumbersStr,
+            message: message
+          });
+        });
+
+        // Parse successful response
+        if (response.data && response.data.status === 200) {
+          // Add success result for each phone number
+          for (const phoneNumber of phoneNumbers) {
+            results.push({
+              success: true,
+              messageId: response.data.message_id || `bulk-${Date.now()}`,
+              creditsUsed: 1 // iProg charges 1 credit per SMS part per recipient
+            });
+            totalCreditsUsed += 1;
+          }
+        } else {
+          // Handle API-level errors - mark all as failed
+          const errorMsg = response.data?.message || 'Unknown API error';
+          for (const phoneNumber of phoneNumbers) {
+            results.push({
+              success: false,
+              error: errorMsg,
+              creditsUsed: 0
+            });
+          }
+        }
+
+      } catch (error) {
+        // Mark all numbers in this group as failed
+        const errorMessage = this.parseError(error);
+        console.error(`Failed to send bulk SMS to ${phoneNumbers.length} recipients:`, errorMessage);
+
+        for (const phoneNumber of phoneNumbers) {
+          results.push({
+            success: false,
+            error: errorMessage,
+            creditsUsed: 0
+          });
+        }
+      }
     }
 
     return {

@@ -342,6 +342,9 @@ export const alertAutomationService = {
     const connection = await pool.getConnection();
     
     try {
+      await connection.beginTransaction();
+      
+      // Update alert status
       await connection.query(
         `UPDATE disaster_alerts 
          SET auto_approved = 1, approved_by = ?, approved_at = NOW()
@@ -357,10 +360,129 @@ export const alertAutomationService = {
         [alertId]
       );
       
-      // Send notifications to targeted users
+      // Get alert details
+      const [alerts] = await connection.query<RowDataPacket[]>(
+        `SELECT * FROM disaster_alerts WHERE id = ?`,
+        [alertId]
+      );
+      
+      if (alerts.length === 0) {
+        throw new Error('Alert not found');
+      }
+      
+      const alert = alerts[0];
+      const affectedAreas = typeof alert.affected_areas === 'string' 
+        ? JSON.parse(alert.affected_areas) 
+        : alert.affected_areas;
+      
+      // Find target users with phone numbers for SMS
+      let targetUsers: RowDataPacket[] = [];
+      
+      if (alert.source === 'auto_weather' && affectedAreas && affectedAreas.length > 0) {
+        // Target by city from user_profiles
+        const [users] = await connection.query<RowDataPacket[]>(
+          `SELECT u.id, u.phone, u.first_name, u.last_name, up.city
+           FROM users u
+           JOIN user_profiles up ON u.id = up.user_id
+           WHERE up.city IN (?) 
+           AND u.phone IS NOT NULL 
+           AND u.phone != ''`,
+          [affectedAreas]
+        );
+        targetUsers = users;
+      } else if (alert.source === 'auto_earthquake' && alert.latitude && alert.longitude && alert.radius_km) {
+        // Target by radius from user_profiles
+        const [users] = await connection.query<RowDataPacket[]>(
+          `SELECT 
+            u.id, u.phone, u.first_name, u.last_name,
+            (6371 * acos(cos(radians(?)) * cos(radians(up.latitude)) * 
+             cos(radians(up.longitude) - radians(?)) + sin(radians(?)) * 
+             sin(radians(up.latitude)))) AS distance
+           FROM users u
+           JOIN user_profiles up ON u.id = up.user_id
+           WHERE u.phone IS NOT NULL 
+           AND u.phone != ''
+           AND up.latitude IS NOT NULL
+           AND up.longitude IS NOT NULL
+           HAVING distance <= ?`,
+          [alert.latitude, alert.longitude, alert.latitude, alert.radius_km]
+        );
+        targetUsers = users;
+      }
+      
+      console.log(`[Alert Automation] Found ${targetUsers.length} users with phone numbers for SMS`);
+      
+      // Send SMS if there are target users
+      if (targetUsers.length > 0) {
+        // Import SMS services
+        const { IProgAPIClient } = require('./iProgAPIClient.service');
+        const { v4: uuidv4 } = require('uuid');
+        const iProgClient = new IProgAPIClient();
+        
+        const blastId = uuidv4();
+        
+        // Format SMS message
+        const severityEmoji = alert.severity === 'critical' ? '🚨' : 
+                             alert.severity === 'high' ? '⚠️' : 
+                             alert.severity === 'moderate' ? '⚡' : 'ℹ️';
+        const message = `${severityEmoji} ${alert.title}\n\n${alert.description}\n\nStay safe! - SafeHaven`;
+        
+        // Create SMS blast record
+        await connection.query(
+          `INSERT INTO sms_blasts (
+            id, user_id, message, template_id, language,
+            recipient_count, estimated_cost, status, created_at
+          ) VALUES (?, ?, ?, NULL, 'en', ?, ?, 'processing', NOW())`,
+          [blastId, adminId, message, targetUsers.length, targetUsers.length]
+        );
+        
+        // Send SMS via bulk API
+        const messages = targetUsers.map(user => ({
+          phoneNumber: user.phone,
+          message: message
+        }));
+        
+        try {
+          const bulkResult = await iProgClient.sendBulkSMS(messages);
+          
+          let sentCount = 0;
+          let failedCount = 0;
+          
+          bulkResult.results.forEach((result: any) => {
+            if (result.success) sentCount++;
+            else failedCount++;
+          });
+          
+          // Update blast status
+          await connection.query(
+            `UPDATE sms_blasts 
+             SET status = ?, actual_cost = ?, completed_at = NOW() 
+             WHERE id = ?`,
+            [sentCount > 0 ? 'completed' : 'failed', bulkResult.totalCreditsUsed, blastId]
+          );
+          
+          console.log(`[Alert Automation] SMS sent: ${sentCount} success, ${failedCount} failed, ${bulkResult.totalCreditsUsed} credits used`);
+        } catch (smsError) {
+          console.error('[Alert Automation] SMS sending failed:', smsError);
+          // Update blast status to failed
+          await connection.query(
+            `UPDATE sms_blasts SET status = 'failed', completed_at = NOW() WHERE id = ?`,
+            [blastId]
+          );
+          // Don't fail the approval if SMS fails
+        }
+      } else {
+        console.log('[Alert Automation] No users with phone numbers found for SMS');
+      }
+      
+      // Send push notifications
       await alertTargetingService.sendNotificationsForAlert(alertId);
       
+      await connection.commit();
       return true;
+    } catch (error) {
+      await connection.rollback();
+      throw error;
     } finally {
       connection.release();
     }

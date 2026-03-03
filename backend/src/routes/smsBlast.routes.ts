@@ -44,6 +44,19 @@ router.post(
 );
 
 /**
+ * POST /api/sms-blast/estimate
+ * Estimate recipient count and cost before sending
+ * 
+ * Access: Admin and Superadmin only
+ */
+router.post(
+  '/estimate',
+  authenticateSMS,
+  requireSMSRole('admin', 'super_admin'),
+  (req: SMSAuthRequest, res, next) => smsBlastController.estimateRecipients(req, res, next)
+);
+
+/**
  * GET /api/sms-blast/credits/balance
  * Get SMS credit balance from iProg API with caching
  * 
@@ -103,6 +116,21 @@ router.post(
   requireSMSRole('admin', 'super_admin'),
   createUpdateLimiter,
   (req: SMSAuthRequest, res, next) => smsBlastController.createContactGroup(req, res, next)
+);
+
+/**
+ * GET /api/sms-blast/contact-groups
+ * List all contact groups
+ * 
+ * Requirements: 17.1
+ * 
+ * Access: Admin and Superadmin
+ */
+router.get(
+  '/contact-groups',
+  authenticateSMS,
+  requireSMSRole('admin', 'super_admin'),
+  (req: SMSAuthRequest, res, next) => smsBlastController.listContactGroups(req, res, next)
 );
 
 /**

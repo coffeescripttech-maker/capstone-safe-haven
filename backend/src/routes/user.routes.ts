@@ -9,6 +9,9 @@ const userController = new UserController();
 // All routes require authentication and specific permissions
 // Requirements: 2.2, 3.3, 11.4
 
+// Create user - requires 'create' permission on 'users' resource
+router.post('/', authenticate, requirePermission('users', 'create'), userController.createUser.bind(userController));
+
 // Get all users - requires 'read' permission on 'users' resource
 router.get('/', authenticate, requirePermission('users', 'read'), userController.getUsers.bind(userController));
 

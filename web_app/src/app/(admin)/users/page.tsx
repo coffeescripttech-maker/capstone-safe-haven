@@ -52,6 +52,20 @@ export default function UsersListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [newUserData, setNewUserData] = useState({
+    email: '',
+    phone: '',
+    password: '',
+    first_name: '',
+    last_name: '',
+    role: 'citizen',
+    jurisdiction: '',
+    city: '',
+    province: '',
+    barangay: ''
+  });
   const [stats, setStats] = useState({
     total_users: 0,
     active_users: 0,
@@ -127,6 +141,49 @@ export default function UsersListPage() {
     }
   };
 
+  const handleCreateUser = async () => {
+    // Validate required fields
+    if (!newUserData.email || !newUserData.phone || !newUserData.password || 
+        !newUserData.first_name || !newUserData.last_name) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    if (newUserData.password.length < 8) {
+      toast.error('Password must be at least 8 characters');
+      return;
+    }
+
+    try {
+      setIsCreating(true);
+      await usersApi.create(newUserData);
+      toast.success('User created successfully');
+      setShowAddUser(false);
+      setNewUserData({
+        email: '',
+        phone: '',
+        password: '',
+        first_name: '',
+        last_name: '',
+        role: 'citizen',
+        jurisdiction: '',
+        city: '',
+        province: '',
+        barangay: ''
+      });
+      loadUsers(true);
+      loadStatistics();
+    } catch (error) {
+      toast.error(handleApiError(error));
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const needsJurisdiction = (role: string) => {
+    return ['admin', 'pnp', 'bfp', 'mdrrmo', 'lgu_officer'].includes(role);
+  };
+
   const getRoleBadge = (role: string) => {
     switch (role) {
       case 'admin':
@@ -191,6 +248,13 @@ export default function UsersListPage() {
             >
               <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               Refresh
+            </button>
+            <button
+              onClick={() => setShowAddUser(true)}
+              className="px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-all flex items-center gap-2 shadow-md hover:shadow-lg font-semibold"
+            >
+              <Plus className="w-4 h-4" />
+              Add User
             </button>
           </div>
         </div>
@@ -536,6 +600,203 @@ export default function UsersListPage() {
         <div className="mt-4 text-center text-sm text-gray-600">
           Showing <span className="font-semibold text-gray-900">{filteredUsers.length}</span> of{' '}
           <span className="font-semibold text-gray-900">{users.length}</span> users
+        </div>
+      )}
+
+      {/* Add User Modal */}
+      {showAddUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">Create New User</h2>
+              <p className="text-gray-600 mt-1">Add a new user to the system</p>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Personal Information */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      First Name <span className="text-error-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={newUserData.first_name}
+                      onChange={(e) => setNewUserData({ ...newUserData, first_name: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                      placeholder="Juan"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Last Name <span className="text-error-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={newUserData.last_name}
+                      onChange={(e) => setNewUserData({ ...newUserData, last_name: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                      placeholder="Dela Cruz"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Account Details */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Account Details</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Email <span className="text-error-500">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      value={newUserData.email}
+                      onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                      placeholder="juan@example.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Phone <span className="text-error-500">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      value={newUserData.phone}
+                      onChange={(e) => setNewUserData({ ...newUserData, phone: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                      placeholder="639123456789"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Password <span className="text-error-500">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      value={newUserData.password}
+                      onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                      placeholder="Minimum 8 characters"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Role <span className="text-error-500">*</span>
+                    </label>
+                    <select
+                      value={newUserData.role}
+                      onChange={(e) => setNewUserData({ ...newUserData, role: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                    >
+                      <option value="citizen">👤 Citizen - Regular app user</option>
+                      <option value="lgu_officer">👮 LGU Officer - Local government officer</option>
+                      <option value="mdrrmo">🚨 MDRRMO - Disaster management officer</option>
+                      <option value="bfp">🚒 BFP - Bureau of Fire Protection</option>
+                      <option value="pnp">👮‍♂️ PNP - Philippine National Police</option>
+                      <option value="admin">🛡️ Admin - System administrator</option>
+                      <option value="super_admin">⭐ Super Admin - Full system access</option>
+                    </select>
+                  </div>
+                  {needsJurisdiction(newUserData.role) && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Jurisdiction
+                      </label>
+                      <input
+                        type="text"
+                        value={newUserData.jurisdiction}
+                        onChange={(e) => setNewUserData({ ...newUserData, jurisdiction: e.target.value })}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                        placeholder="e.g., Legazpi City, Albay Province"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Location (Optional) */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Location (Optional)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+                    <input
+                      type="text"
+                      value={newUserData.city}
+                      onChange={(e) => setNewUserData({ ...newUserData, city: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                      placeholder=""
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Province</label>
+                    <input
+                      type="text"
+                      value={newUserData.province}
+                      onChange={(e) => setNewUserData({ ...newUserData, province: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                      placeholder=""
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Barangay</label>
+                    <input
+                      type="text"
+                      value={newUserData.barangay}
+                      onChange={(e) => setNewUserData({ ...newUserData, barangay: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                      placeholder=""
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowAddUser(false);
+                  setNewUserData({
+                    email: '',
+                    phone: '',
+                    password: '',
+                    first_name: '',
+                    last_name: '',
+                    role: 'citizen',
+                    jurisdiction: '',
+                    city: '',
+                    province: '',
+                    barangay: ''
+                  });
+                }}
+                className="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateUser}
+                disabled={isCreating}
+                className="px-6 py-2.5 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-all font-semibold shadow-md hover:shadow-lg flex items-center gap-2 disabled:opacity-50"
+              >
+                {isCreating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    Create User
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
