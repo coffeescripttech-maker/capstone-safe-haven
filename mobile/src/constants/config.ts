@@ -24,7 +24,8 @@ export const API_CONFIG = {
   // Base URL - uses environment variable or fallback
   BASE_URL: getEnvVar(
     'EXPO_PUBLIC_API_URL',
-    'https://safe-haven-backend-api.onrender.com/api/v1'
+    'http://localhost:3001/api/v1'
+    // 'https://safe-haven-backend-api.onrender.com/api/v1'
   ),
   
   TIMEOUT: 10000, // 10 seconds

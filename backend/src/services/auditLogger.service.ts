@@ -1,6 +1,7 @@
 import db from '../config/database';
 import { logger } from '../utils/logger';
 import { RowDataPacket } from 'mysql2';
+import { v4 as uuidv4 } from 'uuid';
 
 type Role = 
   | 'super_admin'
@@ -12,6 +13,15 @@ type Role =
   | 'citizen';
 
 type AuditStatus = 'success' | 'denied' | 'error';
+
+type SMSEventType = 
+  | 'blast_created'
+  | 'sms_sent'
+  | 'status_change'
+  | 'unauthorized_access'
+  | 'template_created'
+  | 'template_updated'
+  | 'template_deleted';
 
 interface AuditLog {
   id: number;
@@ -47,6 +57,74 @@ interface AuditLogRow extends RowDataPacket {
   status: AuditStatus;
   ip_address: string | null;
   user_agent: string | null;
+  created_at: Date;
+}
+
+// SMS Blast specific interfaces
+interface BlastCreatedEvent {
+  blastId: string;
+  userId: number;
+  message: string;
+  recipientCount: number;
+  filters: Record<string, any>;
+  estimatedCost: number;
+  timestamp: Date;
+}
+
+interface SMSSentEvent {
+  blastId: string;
+  jobId: string;
+  recipientId: number;
+  phoneNumber: string;
+  messageId: string;
+  creditsUsed: number;
+  timestamp: Date;
+}
+
+interface StatusChangeEvent {
+  jobId: string;
+  messageId: string;
+  oldStatus: string;
+  newStatus: string;
+  timestamp: Date;
+}
+
+interface UnauthorizedAccessEvent {
+  userId: number;
+  action: string;
+  resource: string;
+  reason: string;
+  timestamp: Date;
+}
+
+interface SMSAuditLog {
+  id: string;
+  eventType: SMSEventType;
+  userId: number | null;
+  blastId: string | null;
+  jobId: string | null;
+  details: Record<string, any>;
+  createdAt: Date;
+}
+
+interface SMSLogFilters {
+  eventType?: SMSEventType | SMSEventType[];
+  userId?: number;
+  blastId?: string;
+  jobId?: string;
+  startDate?: Date;
+  endDate?: Date;
+  limit?: number;
+  offset?: number;
+}
+
+interface SMSAuditLogRow extends RowDataPacket {
+  id: string;
+  event_type: SMSEventType;
+  user_id: number | null;
+  blast_id: string | null;
+  job_id: string | null;
+  details: string;
   created_at: Date;
 }
 
@@ -313,6 +391,323 @@ export class AuditLoggerService {
       logger.error('Error getting audit statistics:', error);
       throw error;
     }
+  }
+
+  // ==================== SMS Blast Audit Logging Methods ====================
+
+  /**
+   * Log SMS blast creation
+   * Requirements: 10.1
+   */
+  async logBlastCreated(event: BlastCreatedEvent): Promise<void> {
+    setImmediate(async () => {
+      try {
+        await db.query(
+          `INSERT INTO sms_audit_logs 
+           (id, event_type, user_id, blast_id, details, created_at) 
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            uuidv4(),
+            'blast_created',
+            event.userId,
+            event.blastId,
+            JSON.stringify({
+              message: event.message,
+              recipientCount: event.recipientCount,
+              filters: event.filters,
+              estimatedCost: event.estimatedCost
+            }),
+            event.timestamp
+          ]
+        );
+      } catch (error) {
+        logger.error('Failed to log blast creation:', error);
+      }
+    });
+  }
+
+  /**
+   * Log SMS sent via iProg API
+   * Requirements: 10.2
+   */
+  async logSMSSent(event: SMSSentEvent): Promise<void> {
+    setImmediate(async () => {
+      try {
+        await db.query(
+          `INSERT INTO sms_audit_logs 
+           (id, event_type, user_id, blast_id, job_id, details, created_at) 
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            uuidv4(),
+            'sms_sent',
+            event.recipientId,
+            event.blastId,
+            event.jobId,
+            JSON.stringify({
+              phoneNumber: event.phoneNumber,
+              messageId: event.messageId,
+              creditsUsed: event.creditsUsed
+            }),
+            event.timestamp
+          ]
+        );
+      } catch (error) {
+        logger.error('Failed to log SMS sent:', error);
+      }
+    });
+  }
+
+  /**
+   * Log delivery status change
+   * Requirements: 10.3
+   */
+  async logDeliveryStatusChange(event: StatusChangeEvent): Promise<void> {
+    setImmediate(async () => {
+      try {
+        await db.query(
+          `INSERT INTO sms_audit_logs 
+           (id, event_type, job_id, details, created_at) 
+           VALUES (?, ?, ?, ?, ?)`,
+          [
+            uuidv4(),
+            'status_change',
+            event.jobId,
+            JSON.stringify({
+              messageId: event.messageId,
+              oldStatus: event.oldStatus,
+              newStatus: event.newStatus
+            }),
+            event.timestamp
+          ]
+        );
+      } catch (error) {
+        logger.error('Failed to log status change:', error);
+      }
+    });
+  }
+
+  /**
+   * Log unauthorized access attempt for SMS blast features
+   * Requirements: 10.6
+   */
+  async logUnauthorizedAccess(event: UnauthorizedAccessEvent): Promise<void> {
+    setImmediate(async () => {
+      try {
+        await db.query(
+          `INSERT INTO sms_audit_logs 
+           (id, event_type, user_id, details, created_at) 
+           VALUES (?, ?, ?, ?, ?)`,
+          [
+            uuidv4(),
+            'unauthorized_access',
+            event.userId,
+            JSON.stringify({
+              action: event.action,
+              resource: event.resource,
+              reason: event.reason
+            }),
+            event.timestamp
+          ]
+        );
+      } catch (error) {
+        logger.error('Failed to log unauthorized access:', error);
+      }
+    });
+  }
+
+  /**
+   * Log SMS template creation
+   * Requirements: 9.5
+   */
+  async logTemplateCreated(event: {
+    templateId: string;
+    userId: number;
+    name: string;
+    category: string;
+    language: string;
+    timestamp: Date;
+  }): Promise<void> {
+    setImmediate(async () => {
+      try {
+        await db.query(
+          `INSERT INTO sms_audit_logs 
+           (id, event_type, user_id, details, created_at) 
+           VALUES (?, ?, ?, ?, ?)`,
+          [
+            uuidv4(),
+            'template_created',
+            event.userId,
+            JSON.stringify({
+              templateId: event.templateId,
+              name: event.name,
+              category: event.category,
+              language: event.language
+            }),
+            event.timestamp
+          ]
+        );
+      } catch (error) {
+        logger.error('Failed to log template creation:', error);
+      }
+    });
+  }
+
+  /**
+   * Query SMS audit logs with filtering
+   * Requirements: 10.4
+   */
+  async querySMSLogs(filters: SMSLogFilters): Promise<SMSAuditLog[]> {
+    try {
+      const conditions: string[] = [];
+      const params: any[] = [];
+
+      if (filters.eventType !== undefined) {
+        if (Array.isArray(filters.eventType)) {
+          const placeholders = filters.eventType.map(() => '?').join(',');
+          conditions.push(`event_type IN (${placeholders})`);
+          params.push(...filters.eventType);
+        } else {
+          conditions.push('event_type = ?');
+          params.push(filters.eventType);
+        }
+      }
+
+      if (filters.userId !== undefined) {
+        conditions.push('user_id = ?');
+        params.push(filters.userId);
+      }
+
+      if (filters.blastId) {
+        conditions.push('blast_id = ?');
+        params.push(filters.blastId);
+      }
+
+      if (filters.jobId) {
+        conditions.push('job_id = ?');
+        params.push(filters.jobId);
+      }
+
+      if (filters.startDate) {
+        conditions.push('created_at >= ?');
+        params.push(filters.startDate);
+      }
+
+      if (filters.endDate) {
+        conditions.push('created_at <= ?');
+        params.push(filters.endDate);
+      }
+
+      const whereClause = conditions.length > 0 
+        ? `WHERE ${conditions.join(' AND ')}` 
+        : '';
+
+      const limit = filters.limit || 100;
+      const offset = filters.offset || 0;
+
+      const [rows] = await db.query<SMSAuditLogRow[]>(
+        `SELECT id, event_type, user_id, blast_id, job_id, details, created_at
+         FROM sms_audit_logs
+         ${whereClause}
+         ORDER BY created_at DESC
+         LIMIT ? OFFSET ?`,
+        [...params, limit, offset]
+      );
+
+      return rows.map(row => ({
+        id: row.id,
+        eventType: row.event_type,
+        userId: row.user_id,
+        blastId: row.blast_id,
+        jobId: row.job_id,
+        details: JSON.parse(row.details),
+        createdAt: row.created_at
+      }));
+    } catch (error) {
+      logger.error('Error querying SMS audit logs:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Export SMS audit logs to CSV format
+   * Requirements: 10.5
+   */
+  async exportSMSLogs(
+    filters: SMSLogFilters,
+    format: 'csv' | 'pdf'
+  ): Promise<Buffer> {
+    try {
+      const logs = await this.querySMSLogs({ ...filters, limit: 10000 });
+
+      if (format === 'csv') {
+        return this.generateCSV(logs);
+      } else {
+        return this.generatePDF(logs);
+      }
+    } catch (error) {
+      logger.error('Error exporting SMS audit logs:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate CSV from SMS audit logs
+   */
+  private generateCSV(logs: SMSAuditLog[]): Buffer {
+    const headers = [
+      'ID',
+      'Event Type',
+      'User ID',
+      'Blast ID',
+      'Job ID',
+      'Details',
+      'Created At'
+    ];
+
+    const rows = logs.map(log => [
+      log.id,
+      log.eventType,
+      log.userId?.toString() || '',
+      log.blastId || '',
+      log.jobId || '',
+      JSON.stringify(log.details),
+      log.createdAt.toISOString()
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => 
+        row.map(cell => `"${cell.toString().replace(/"/g, '""')}"`).join(',')
+      )
+    ].join('\n');
+
+    return Buffer.from(csvContent, 'utf-8');
+  }
+
+  /**
+   * Generate PDF from SMS audit logs
+   * Note: This is a placeholder. In production, use a library like pdfkit or puppeteer
+   */
+  private generatePDF(logs: SMSAuditLog[]): Buffer {
+    // For now, return a simple text-based PDF placeholder
+    // In production, implement proper PDF generation with pdfkit or similar
+    const content = `SMS Audit Logs Report
+Generated: ${new Date().toISOString()}
+Total Records: ${logs.length}
+
+${logs.map(log => `
+ID: ${log.id}
+Event Type: ${log.eventType}
+User ID: ${log.userId || 'N/A'}
+Blast ID: ${log.blastId || 'N/A'}
+Job ID: ${log.jobId || 'N/A'}
+Details: ${JSON.stringify(log.details, null, 2)}
+Created At: ${log.createdAt.toISOString()}
+${'='.repeat(80)}
+`).join('\n')}
+`;
+
+    return Buffer.from(content, 'utf-8');
   }
 }
 

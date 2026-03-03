@@ -91,6 +91,12 @@ const navItems: NavItem[] = [
     requiredRoles: ['super_admin', 'admin', 'mdrrmo'], // Automation management
   },
   {
+    icon: <PageIcon />,
+    name: "SMS Blast",
+    path: "/sms-blast",
+    requiredRoles: ['super_admin', 'admin'], // SMS blast - admin and superadmin only
+  },
+  {
     icon: <UserCircleIcon />,
     name: "Permissions",
     path: "/permissions",
