@@ -198,6 +198,12 @@ class IncidentService {
       assignedTo: incident.assigned_to,
       userName: incident.user_name,
       userPhone: incident.user_phone,
+      // Add nested user object for frontend compatibility
+      user: incident.user_name ? {
+        firstName: incident.user_name.split(' ')[0] || '',
+        lastName: incident.user_name.split(' ').slice(1).join(' ') || '',
+        phone: incident.user_phone || ''
+      } : undefined
     };
   }
 

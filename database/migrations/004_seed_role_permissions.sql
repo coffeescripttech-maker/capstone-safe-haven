@@ -191,8 +191,9 @@ INSERT INTO role_permissions (role, resource, action) VALUES
 ('citizen', 'alerts', 'read'),
 -- SOS Alerts (create personal emergencies)
 ('citizen', 'sos_alerts', 'create'),
--- Incidents (create reports)
+-- Incidents (create and read reports)
 ('citizen', 'incidents', 'create'),
+('citizen', 'incidents', 'read'),
 -- Evacuation Centers (read locations and capacity)
 ('citizen', 'evacuation_centers', 'read'),
 -- Profile (manage own profile)

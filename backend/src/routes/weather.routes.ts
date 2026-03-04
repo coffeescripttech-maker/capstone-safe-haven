@@ -1,4 +1,4 @@
-// Weather Routes - Admin-only access to weather data
+// Weather Routes - Weather data access
 
 import { Router } from 'express';
 import { authenticate, authorize } from '../middleware/auth';
@@ -6,9 +6,8 @@ import * as weatherController from '../controllers/weather.controller';
 
 const router = Router();
 
-// All weather routes require authentication and admin role
+// Public weather routes - require authentication only
 router.use(authenticate);
-router.use(authorize('admin'));
 
 // GET /api/v1/admin/weather/philippines - Get weather for major PH cities
 router.get('/philippines', weatherController.getPhilippinesWeather);

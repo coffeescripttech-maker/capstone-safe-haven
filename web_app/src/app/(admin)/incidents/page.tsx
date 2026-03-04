@@ -65,6 +65,15 @@ export default function IncidentsListPage() {
     loadIncidents();
   }, [filters]);
 
+  // Auto-refresh incidents every 15 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadIncidents(true); // Silent refresh
+    }, 15000); // Refresh every 15 seconds
+
+    return () => clearInterval(interval);
+  }, [filters]);
+
   const loadIncidents = async (silent = false) => {
     try {
       if (!silent) {
@@ -424,7 +433,12 @@ export default function IncidentsListPage() {
                       <div className="flex items-center gap-1.5 text-sm text-gray-600">
                         <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
                         <div className="min-w-0">
-                          <div className="truncate">{incident.address || 'No address'}</div>
+                          <div className="truncate">
+                            {incident.address || 
+                             (incident.latitude && incident.longitude 
+                               ? `${incident.latitude.toFixed(4)}, ${incident.longitude.toFixed(4)}` 
+                               : 'No location')}
+                          </div>
                         </div>
                       </div>
                     </td>

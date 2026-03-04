@@ -8,6 +8,8 @@ import { useLocation } from '../../store/LocationContext';
 import { useNotifications } from '../../store/NotificationContext';
 import { ProtectedComponent } from '../../components/common/ProtectedComponent';
 import { centersService } from '../../services/centers';
+import { weatherService, WeatherData } from '../../services/weather';
+import { geocodingService } from '../../services/geocoding';
 import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { SPACING } from '../../constants/spacing';
@@ -29,7 +31,8 @@ import {
   Shield,
   Sparkles,
   BarChart3,
-  Settings
+  Settings,
+  Clock
 } from 'lucide-react-native';
 
 type Props = BottomTabScreenProps<MainTabParamList, 'Home'>;
@@ -41,6 +44,55 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const { hasPermission: hasNotificationPermission, requestPermission: requestNotificationPermission } = useNotifications();
   const [nearestCenter, setNearestCenter] = useState<EvacuationCenter | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [locationName, setLocationName] = useState<string>('Fetching location...');
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [isLoadingWeather, setIsLoadingWeather] = useState(false);
+
+  // Update time every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  // Reverse geocode location to get address and fetch weather
+  useEffect(() => {
+    if (location) {
+      reverseGeocode(location.latitude, location.longitude);
+      fetchWeather(location.latitude, location.longitude);
+    }
+  }, [location]);
+
+  const reverseGeocode = async (lat: number, lng: number) => {
+    try {
+      const result = await geocodingService.reverseGeocode(lat, lng);
+      if (result) {
+        const shortAddress = geocodingService.formatShortAddress(result.address);
+        setLocationName(shortAddress);
+      } else {
+        setLocationName(`${lat.toFixed(4)}°, ${lng.toFixed(4)}°`);
+      }
+    } catch (error) {
+      console.error('Error reverse geocoding:', error);
+      setLocationName('Location unavailable');
+    }
+  };
+
+  const fetchWeather = async (lat: number, lng: number) => {
+    try {
+      setIsLoadingWeather(true);
+      const weatherData = await weatherService.getLocationWeather(lat, lng);
+      setWeather(weatherData);
+    } catch (error) {
+      console.error('Error fetching weather:', error);
+      setWeather(null);
+    } finally {
+      setIsLoadingWeather(false);
+    }
+  };
 
   useEffect(() => {
     if (location) {
@@ -68,11 +120,34 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await loadNearestCenter();
+    if (location) {
+      await fetchWeather(location.latitude, location.longitude);
+    }
     setIsRefreshing(false);
   };
 
   const criticalAlerts = alerts.filter(a => a.severity === 'critical');
   const activeAlerts = alerts.filter(a => a.isActive);
+
+  // Format date and time
+  const formatDate = (date: Date) => {
+    const options: Intl.DateTimeFormatOptions = { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    };
+    return date.toLocaleDateString('en-US', options);
+  };
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true 
+    });
+  };
 
   return (
     <ScrollView
@@ -81,20 +156,95 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
         <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} colors={[COLORS.primary]} />
       }
     >
-      {/* Welcome Section */}
-      <View style={styles.welcomeSection}>
-        <View style={styles.welcomeContent}>
-          <View style={styles.welcomeIconContainer}>
-            <Shield color={COLORS.primary} size={28} strokeWidth={2.5} />
+      {/* Enhanced Date, Time, Location & Weather Widget */}
+      <View style={styles.dateTimeLocationCard}>
+        {/* Welcome Message */}
+        <View style={styles.welcomeInWidget}>
+          <View style={styles.welcomeIconSmall}>
+            <Shield color={COLORS.primary} size={20} strokeWidth={2.5} />
           </View>
-          <View style={styles.welcomeTextContainer}>
-            <Text style={styles.greeting}>Hello, {user?.firstName}! 👋</Text>
-            <View style={styles.subtitleRow}>
-              <Sparkles color={COLORS.primary} size={16} strokeWidth={2} />
-              <Text style={styles.subtitle}>Stay safe and informed</Text>
+          <View style={styles.welcomeTextSmall}>
+            <Text style={styles.greetingSmall}>Hello, {user?.firstName}! 👋</Text>
+            <View style={styles.subtitleRowSmall}>
+              <Sparkles color={COLORS.primary} size={14} strokeWidth={2} />
+              <Text style={styles.subtitleSmall}>Stay safe and informed</Text>
             </View>
           </View>
         </View>
+
+        {/* Date & Time Section */}
+        <View style={styles.dateTimeSection}>
+          <View style={styles.timeContainer}>
+            <Text style={styles.timeText}>{formatTime(currentTime)}</Text>
+          </View>
+          <Text style={styles.dateText}>{formatDate(currentTime)}</Text>
+        </View>
+        
+        {/* Location & Weather Section */}
+        {location && (
+          <View style={styles.locationWeatherSection}>
+            {/* Location */}
+            <View style={styles.locationSection}>
+              <View style={styles.locationHeader}>
+                <MapPin color={COLORS.primary} size={18} strokeWidth={2.5} />
+                <Text style={styles.locationLabel}>Current Location</Text>
+              </View>
+              <Text style={styles.locationText} numberOfLines={2}>
+                {locationName}
+              </Text>
+              <View style={styles.coordinatesRow}>
+                <Text style={styles.coordinatesText}>
+                  {location.latitude.toFixed(6)}°N, {location.longitude.toFixed(6)}°E
+                </Text>
+              </View>
+            </View>
+
+            {/* Weather */}
+            {weather && !isLoadingWeather && (
+              <View style={styles.weatherSection}>
+                <View style={styles.weatherHeader}>
+                  <Text style={styles.weatherIcon}>{weather.weatherIcon}</Text>
+                  <View style={styles.weatherInfo}>
+                    <Text style={styles.weatherTemp}>{Math.round(weather.temperature)}°C</Text>
+                    <Text style={styles.weatherDesc}>{weather.weatherDescription}</Text>
+                  </View>
+                </View>
+                <View style={styles.weatherDetails}>
+                  <View style={styles.weatherDetailItem}>
+                    <Text style={styles.weatherDetailLabel}>Feels like</Text>
+                    <Text style={styles.weatherDetailValue}>{Math.round(weather.apparentTemperature)}°C</Text>
+                  </View>
+                  <View style={styles.weatherDetailItem}>
+                    <Text style={styles.weatherDetailLabel}>Humidity</Text>
+                    <Text style={styles.weatherDetailValue}>{weather.humidity}%</Text>
+                  </View>
+                  <View style={styles.weatherDetailItem}>
+                    <Text style={styles.weatherDetailLabel}>Wind</Text>
+                    <Text style={styles.weatherDetailValue}>{Math.round(weather.windSpeed)} km/h</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {isLoadingWeather && (
+              <View style={styles.weatherLoading}>
+                <Text style={styles.weatherLoadingText}>Loading weather...</Text>
+              </View>
+            )}
+          </View>
+        )}
+        
+        {!location && (
+          <TouchableOpacity 
+            style={styles.locationDisabled}
+            onPress={requestPermission}
+          >
+            <MapPin color={COLORS.textSecondary} size={18} strokeWidth={2} />
+            <Text style={styles.locationDisabledText}>
+              Enable location to see your current position and weather
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Location Permission */}
@@ -112,7 +262,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
       )}
 
       {/* Notification Permission */}
-      {!hasNotificationPermission && (
+      {/* {!hasNotificationPermission && (
         <TouchableOpacity style={styles.permissionCard} onPress={requestNotificationPermission}>
           <View style={styles.permissionIconContainer}>
             <Bell color={COLORS.primary} size={24} strokeWidth={2} />
@@ -123,7 +273,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
           </View>
           <ChevronRight color={COLORS.textSecondary} size={20} />
         </TouchableOpacity>
-      )}
+      )} */}
 
       {/* Critical Alerts */}
       {criticalAlerts.length > 0 && (
@@ -320,6 +470,191 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  dateTimeLocationCard: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: SPACING.md,
+    marginTop: SPACING.md,
+    marginBottom: SPACING.sm,
+    borderRadius: 20,
+    padding: SPACING.lg,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  welcomeInWidget: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F9FF',
+    padding: SPACING.md,
+    borderRadius: 12,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+  },
+  welcomeIconSmall: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.sm,
+    borderWidth: 1.5,
+    borderColor: '#DBEAFE',
+  },
+  welcomeTextSmall: {
+    flex: 1,
+  },
+  greetingSmall: {
+    fontSize: TYPOGRAPHY.sizes.md,
+    fontWeight: TYPOGRAPHY.weights.bold,
+    color: COLORS.text,
+    marginBottom: 2,
+  },
+  subtitleRowSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  subtitleSmall: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    color: COLORS.textSecondary,
+    fontWeight: TYPOGRAPHY.weights.medium,
+  },
+  dateTimeSection: {
+    marginBottom: SPACING.md,
+    paddingBottom: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  timeContainer: {
+    marginBottom: SPACING.xs,
+  },
+  timeText: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: COLORS.primary,
+    letterSpacing: -0.5,
+  },
+  dateText: {
+    fontSize: TYPOGRAPHY.sizes.md,
+    color: COLORS.textSecondary,
+    fontWeight: TYPOGRAPHY.weights.medium,
+  },
+  locationWeatherSection: {
+    marginTop: SPACING.xs,
+  },
+  locationSection: {
+    marginBottom: SPACING.md,
+  },
+  locationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    marginBottom: SPACING.xs,
+  },
+  locationLabel: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    fontWeight: TYPOGRAPHY.weights.semibold,
+    color: COLORS.primary,
+  },
+  locationText: {
+    fontSize: TYPOGRAPHY.sizes.md,
+    color: COLORS.text,
+    fontWeight: TYPOGRAPHY.weights.medium,
+    marginBottom: SPACING.xs,
+    lineHeight: 20,
+  },
+  coordinatesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  coordinatesText: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    color: COLORS.textSecondary,
+    fontFamily: 'monospace',
+  },
+  locationDisabled: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    padding: SPACING.md,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    marginTop: SPACING.xs,
+  },
+  locationDisabledText: {
+    flex: 1,
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.textSecondary,
+    fontWeight: TYPOGRAPHY.weights.medium,
+  },
+  weatherSection: {
+    backgroundColor: '#F0F9FF',
+    padding: SPACING.md,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+  },
+  weatherHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
+  },
+  weatherIcon: {
+    fontSize: 48,
+    marginRight: SPACING.md,
+  },
+  weatherInfo: {
+    flex: 1,
+  },
+  weatherTemp: {
+    fontSize: 32,
+    fontWeight: TYPOGRAPHY.weights.bold,
+    color: COLORS.text,
+    marginBottom: 2,
+  },
+  weatherDesc: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.textSecondary,
+    fontWeight: TYPOGRAPHY.weights.medium,
+    textTransform: 'capitalize',
+  },
+  weatherDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: SPACING.sm,
+    borderTopWidth: 1,
+    borderTopColor: '#DBEAFE',
+  },
+  weatherDetailItem: {
+    alignItems: 'center',
+  },
+  weatherDetailLabel: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    color: COLORS.textSecondary,
+    marginBottom: 2,
+  },
+  weatherDetailValue: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    fontWeight: TYPOGRAPHY.weights.semibold,
+    color: COLORS.text,
+  },
+  weatherLoading: {
+    backgroundColor: '#F9FAFB',
+    padding: SPACING.md,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  weatherLoadingText: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.textSecondary,
+    fontStyle: 'italic',
   },
   welcomeSection: {
     backgroundColor: '#F0F9FF',

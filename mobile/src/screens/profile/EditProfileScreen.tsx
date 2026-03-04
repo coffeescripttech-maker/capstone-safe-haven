@@ -6,7 +6,7 @@ import { Input } from '../../components/common/Input';
 import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { SPACING } from '../../constants/spacing';
-import { api } from '../../services/api';
+import api from '../../services/api';
 
 export const EditProfileScreen: React.FC = ({ navigation }: any) => {
   const { user, profile, refreshUser } = useAuth();

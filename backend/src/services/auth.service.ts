@@ -3,6 +3,8 @@ import jwt, { SignOptions } from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../config/database';
 import { AppError } from '../middleware/errorHandler';
+import { geocodingService } from './geocoding.service';
+import { logger } from '../utils/logger';
 
 interface RegisterData {
   email: string;
@@ -10,11 +12,15 @@ interface RegisterData {
   password: string;
   firstName: string;
   lastName: string;
+  address?: string;
+  barangay?: string;
+  city?: string;
+  province?: string;
 }
 
 export class AuthService {
   async register(data: RegisterData) {
-    const { email, phone, password, firstName, lastName } = data;
+    const { email, phone, password, firstName, lastName, address, barangay, city, province } = data;
 
     // Check if user exists
     const [existing] = await db.query(
@@ -38,10 +44,11 @@ export class AuthService {
 
     const userId = (result as any).insertId;
 
-    // Create profile
+    // Create profile with address fields if provided
     await db.query(
-      'INSERT INTO user_profiles (user_id) VALUES (?)',
-      [userId]
+      `INSERT INTO user_profiles (user_id, address, barangay, city, province) 
+       VALUES (?, ?, ?, ?, ?)`,
+      [userId, address || null, barangay || null, city || null, province || null]
     );
 
     // Generate tokens
@@ -59,9 +66,9 @@ export class AuthService {
   }
 
   async login(email: string, password: string) {
-    // Get user with role and jurisdiction
+    // Get user with role (no jurisdiction in schema)
     const [users] = await db.query(
-      `SELECT id, email, password_hash, first_name, last_name, role, jurisdiction, is_active 
+      `SELECT id, email, password_hash, first_name, last_name, role, is_active 
        FROM users WHERE email = ?`,
       [email]
     );
@@ -88,8 +95,8 @@ export class AuthService {
       [user.id]
     );
 
-    // Generate tokens with role and jurisdiction
-    const tokens = this.generateTokens(user.id, user.email, user.role, user.jurisdiction);
+    // Generate tokens with role (jurisdiction not used in this schema)
+    const tokens = this.generateTokens(user.id, user.email, user.role, null);
 
     return {
       user: {
@@ -97,8 +104,7 @@ export class AuthService {
         email: user.email,
         firstName: user.first_name,
         lastName: user.last_name,
-        role: user.role,
-        jurisdiction: user.jurisdiction
+        role: user.role
       },
       ...tokens
     };
@@ -111,7 +117,7 @@ export class AuthService {
         process.env.JWT_REFRESH_SECRET || 'default-refresh-secret-key'
       ) as any;
 
-      const tokens = this.generateTokens(decoded.id, decoded.email, decoded.role, decoded.jurisdiction);
+      const tokens = this.generateTokens(decoded.id, decoded.email, decoded.role, decoded.jurisdiction || null);
       return tokens;
     } catch (error) {
       throw new AppError('Invalid refresh token', 401);
@@ -122,7 +128,8 @@ export class AuthService {
     const [users] = await db.query(
       `SELECT u.id, u.email, u.phone, u.first_name, u.last_name, u.role,
               p.address, p.city, p.province, p.barangay, p.blood_type,
-              p.medical_conditions, p.emergency_contact_name, p.emergency_contact_phone
+              p.medical_conditions, p.emergency_contact_name, p.emergency_contact_phone,
+              p.latitude, p.longitude
        FROM users u
        LEFT JOIN user_profiles p ON u.id = p.user_id
        WHERE u.id = ?`,
@@ -139,7 +146,8 @@ export class AuthService {
   async updateProfile(userId: number, data: any) {
     const {
       firstName, lastName, phone, address, city, province, barangay,
-      bloodType, medicalConditions, emergencyContactName, emergencyContactPhone
+      bloodType, medicalConditions, emergencyContactName, emergencyContactPhone,
+      latitude, longitude
     } = data;
 
     // Update user table
@@ -154,20 +162,47 @@ export class AuthService {
       );
     }
 
-    // Update profile table
+    // Geocode address if provided and coordinates not manually set
+    let finalLatitude = latitude;
+    let finalLongitude = longitude;
+    
+    if (!latitude && !longitude && (address || city || province || barangay)) {
+      logger.info(`Attempting to geocode address for user ${userId}`);
+      
+      const fullAddress = geocodingService.buildAddress({
+        address,
+        barangay,
+        city,
+        province
+      });
+      
+      const coordinates = await geocodingService.geocodeAddress(fullAddress);
+      
+      if (coordinates) {
+        finalLatitude = coordinates.latitude;
+        finalLongitude = coordinates.longitude;
+        logger.info(`Geocoding successful for user ${userId}: ${finalLatitude}, ${finalLongitude}`);
+      } else {
+        logger.warn(`Geocoding failed for user ${userId}, address: ${fullAddress}`);
+      }
+    }
+
+    // Update profile table with coordinates
     await db.query(
       `UPDATE user_profiles SET
        address = COALESCE(?, address),
        city = COALESCE(?, city),
        province = COALESCE(?, province),
        barangay = COALESCE(?, barangay),
+       latitude = COALESCE(?, latitude),
+       longitude = COALESCE(?, longitude),
        blood_type = COALESCE(?, blood_type),
        medical_conditions = COALESCE(?, medical_conditions),
        emergency_contact_name = COALESCE(?, emergency_contact_name),
        emergency_contact_phone = COALESCE(?, emergency_contact_phone)
        WHERE user_id = ?`,
-      [address, city, province, barangay, bloodType, medicalConditions,
-       emergencyContactName, emergencyContactPhone, userId]
+      [address, city, province, barangay, finalLatitude, finalLongitude, bloodType, 
+       medicalConditions, emergencyContactName, emergencyContactPhone, userId]
     );
 
     return this.getProfile(userId);

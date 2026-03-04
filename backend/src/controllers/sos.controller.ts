@@ -19,7 +19,7 @@ export class SOSController {
         return;
       }
 
-      const { latitude, longitude, message, userInfo } = req.body;
+      const { latitude, longitude, message, userInfo, targetAgency } = req.body;
 
       // Validation
       if (!message) {
@@ -38,16 +38,27 @@ export class SOSController {
         return;
       }
 
+      // Validate target agency
+      const validAgencies = ['barangay', 'lgu', 'bfp', 'pnp', 'mdrrmo', 'all'];
+      if (targetAgency && !validAgencies.includes(targetAgency)) {
+        res.status(400).json({
+          status: 'error',
+          message: 'Invalid target agency'
+        });
+        return;
+      }
+
       // Create SOS alert
       const sosAlert = await sosService.createSOSAlert({
         userId,
         latitude,
         longitude,
         message,
-        userInfo
+        userInfo,
+        targetAgency: targetAgency || 'all'
       });
 
-      logger.info(`SOS alert created by user ${userId}: ${sosAlert.id}`);
+      logger.info(`SOS alert created by user ${userId}: ${sosAlert.id}, target: ${targetAgency || 'all'}`);
 
       res.status(201).json({
         status: 'success',
@@ -55,6 +66,7 @@ export class SOSController {
         data: {
           id: sosAlert.id,
           status: sosAlert.status,
+          targetAgency: sosAlert.targetAgency,
           createdAt: sosAlert.createdAt
         }
       });
@@ -161,8 +173,28 @@ export class SOSController {
         return;
       }
 
-      // Check authorization (user can only see their own, admins can see all)
-      if (sosAlert.userId !== userId && userRole !== 'admin' && userRole !== 'lgu_officer') {
+      // Check authorization
+      // 1. User can see their own alerts
+      // 2. Super admin and admin can see all alerts
+      // 3. Responders can see alerts targeted to them or 'all'
+      const isOwner = sosAlert.userId === userId;
+      const isAdmin = userRole === 'super_admin' || userRole === 'admin';
+      
+      // Check if responder can see this alert based on target_agency
+      let canViewAsResponder = false;
+      if (userRole && ['pnp', 'bfp', 'mdrrmo', 'lgu_officer'].includes(userRole)) {
+        const targetAgency = (sosAlert as any).target_agency || 'all';
+        
+        if (targetAgency === 'all') {
+          canViewAsResponder = true;
+        } else if (userRole === 'lgu_officer' && (targetAgency === 'barangay' || targetAgency === 'lgu')) {
+          canViewAsResponder = true;
+        } else if (userRole === targetAgency) {
+          canViewAsResponder = true;
+        }
+      }
+
+      if (!isOwner && !isAdmin && !canViewAsResponder) {
         res.status(403).json({
           status: 'error',
           message: 'Access denied'
@@ -229,9 +261,19 @@ export class SOSController {
       const userRole = req.user?.role;
 
       // Regular users can only see their own stats
-      const statsUserId = (userRole === 'admin' || userRole === 'lgu_officer') ? undefined : userId;
+      // Role-based users see stats for their agency scope
+      const filters: any = {};
+      
+      if (userRole === 'citizen') {
+        // Citizens only see their own stats
+        filters.userId = userId;
+      } else if (userRole && userRole !== 'admin' && userRole !== 'super_admin') {
+        // Agency-specific roles see stats for their scope
+        filters.userRole = userRole;
+      }
+      // Admin and super_admin see all stats (no filters)
 
-      const stats = await sosService.getSOSStatistics(statsUserId);
+      const stats = await sosService.getSOSStatistics(filters);
 
       res.json({
         status: 'success',

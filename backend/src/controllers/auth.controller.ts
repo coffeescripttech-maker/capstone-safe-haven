@@ -76,7 +76,9 @@ export class AuthController {
         bloodType: data.blood_type,
         medicalConditions: data.medical_conditions,
         emergencyContactName: data.emergency_contact_name,
-        emergencyContactPhone: data.emergency_contact_phone
+        emergencyContactPhone: data.emergency_contact_phone,
+        latitude: data.latitude,
+        longitude: data.longitude
       };
       
       res.json({
@@ -110,7 +112,9 @@ export class AuthController {
         bloodType: data.blood_type,
         medicalConditions: data.medical_conditions,
         emergencyContactName: data.emergency_contact_name,
-        emergencyContactPhone: data.emergency_contact_phone
+        emergencyContactPhone: data.emergency_contact_phone,
+        latitude: data.latitude,
+        longitude: data.longitude
       };
       
       res.json({

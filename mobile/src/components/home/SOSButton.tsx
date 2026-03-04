@@ -21,6 +21,8 @@ interface SOSButtonProps {
   onSOSSent?: () => void;
 }
 
+type TargetAgency = 'barangay' | 'lgu' | 'bfp' | 'pnp' | 'mdrrmo' | 'all';
+
 export const SOSButton: React.FC<SOSButtonProps> = ({ onSOSSent }) => {
   const { user } = useAuth();
   const { location } = useLocation();
@@ -28,6 +30,7 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ onSOSSent }) => {
   const [sending, setSending] = useState(false);
   const [countdown, setCountdown] = useState(3);
   const [pulseAnim] = useState(new Animated.Value(1));
+  const [selectedAgency, setSelectedAgency] = useState<TargetAgency>('all');
 
   // Pulse animation
   React.useEffect(() => {
@@ -87,6 +90,7 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ onSOSSent }) => {
         latitude: location?.latitude,
         longitude: location?.longitude,
         message: 'Emergency! I need help!',
+        targetAgency: selectedAgency,
         userInfo: {
           name: userName,
           phone: user?.phone || 'Not provided',
@@ -132,7 +136,17 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ onSOSSent }) => {
     setShowConfirm(false);
     setSending(false);
     setCountdown(3);
+    setSelectedAgency('all');
   };
+
+  const agencies = [
+    { value: 'all' as TargetAgency, label: 'All Agencies', icon: '🚨', description: 'Notify all emergency responders' },
+    { value: 'barangay' as TargetAgency, label: 'Barangay', icon: '🏘️', description: 'Local barangay officials' },
+    { value: 'lgu' as TargetAgency, label: 'LGU', icon: '🏛️', description: 'Local Government Unit' },
+    { value: 'bfp' as TargetAgency, label: 'BFP', icon: '🚒', description: 'Bureau of Fire Protection' },
+    { value: 'pnp' as TargetAgency, label: 'PNP', icon: '👮', description: 'Philippine National Police' },
+    { value: 'mdrrmo' as TargetAgency, label: 'MDRRMO', icon: '⚠️', description: 'Disaster Risk Management' },
+  ];
 
   return (
     <>
@@ -176,14 +190,35 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ onSOSSent }) => {
               <>
                 <Ionicons name="warning" size={64} color="#DC2626" />
                 <Text style={styles.modalTitle}>Send Emergency Alert?</Text>
-                <Text style={styles.modalMessage}>
-                  This will send your location and information to:
-                </Text>
-                <View style={styles.recipientsList}>
-                  <Text style={styles.recipientItem}>• Emergency Services (911)</Text>
-                  <Text style={styles.recipientItem}>• Local Disaster Response</Text>
-                  <Text style={styles.recipientItem}>• Your registered emergency contact</Text>
+                
+                {/* Agency Selection */}
+                <Text style={styles.sectionTitle}>Select Emergency Agency:</Text>
+                <View style={styles.agencyGrid}>
+                  {agencies.map((agency) => (
+                    <TouchableOpacity
+                      key={agency.value}
+                      style={[
+                        styles.agencyCard,
+                        selectedAgency === agency.value && styles.agencyCardSelected
+                      ]}
+                      onPress={() => setSelectedAgency(agency.value)}
+                    >
+                      <Text style={styles.agencyIcon}>{agency.icon}</Text>
+                      <Text style={[
+                        styles.agencyLabel,
+                        selectedAgency === agency.value && styles.agencyLabelSelected
+                      ]}>
+                        {agency.label}
+                      </Text>
+                      <Text style={styles.agencyDescription}>{agency.description}</Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
+
+                <Text style={styles.modalMessage}>
+                  Your location and information will be sent to the selected agency.
+                </Text>
+                
                 {!location && (
                   <View style={styles.warningBox}>
                     <Ionicons name="alert-circle" size={20} color="#F59E0B" />
@@ -280,6 +315,54 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: SPACING.md,
     lineHeight: 24,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginTop: SPACING.md,
+    marginBottom: SPACING.sm,
+    textAlign: 'center',
+  },
+  agencyGrid: {
+    width: '100%',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+    justifyContent: 'center',
+  },
+  agencyCard: {
+    width: '47%',
+    backgroundColor: '#F9FAFB',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: SPACING.sm,
+    alignItems: 'center',
+    minHeight: 100,
+  },
+  agencyCardSelected: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#DC2626',
+  },
+  agencyIcon: {
+    fontSize: 32,
+    marginBottom: SPACING.xs,
+  },
+  agencyLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 2,
+  },
+  agencyLabelSelected: {
+    color: '#DC2626',
+  },
+  agencyDescription: {
+    fontSize: 10,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
   },
   recipientsList: {
     width: '100%',

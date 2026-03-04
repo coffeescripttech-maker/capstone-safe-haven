@@ -23,6 +23,10 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
     confirmPassword: '',
     firstName: '',
     lastName: '',
+    address: '',
+    barangay: '',
+    city: '',
+    province: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -52,6 +56,12 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
       newErrors.phone = 'Invalid phone number (use 09XXXXXXXXX)';
     }
 
+    // Address fields are required
+    if (!formData.address) newErrors.address = 'Street address is required';
+    if (!formData.barangay) newErrors.barangay = 'Barangay is required';
+    if (!formData.city) newErrors.city = 'City is required';
+    if (!formData.province) newErrors.province = 'Province is required';
+
     if (!formData.password) {
       newErrors.password = 'Password is required';
     } else if (!validatePassword(formData.password)) {
@@ -77,6 +87,10 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
         password: formData.password,
         firstName: formData.firstName,
         lastName: formData.lastName,
+        address: formData.address || undefined,
+        barangay: formData.barangay || undefined,
+        city: formData.city || undefined,
+        province: formData.province || undefined,
       });
       // Navigation handled by RootNavigator
     } catch (error) {
@@ -135,6 +149,44 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
             error={errors.phone}
             keyboardType="phone-pad"
             autoComplete="tel"
+          />
+
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Address (Optional)</Text>
+            <Text style={styles.sectionSubtitle}>Help us serve you better with location-based alerts</Text>
+          </View>
+
+          <Input
+            label="Street Address"
+            placeholder="123 Main Street"
+            value={formData.address}
+            onChangeText={(value) => updateField('address', value)}
+            autoCapitalize="words"
+            multiline
+          />
+
+          <Input
+            label="Barangay"
+            placeholder="Barangay Name"
+            value={formData.barangay}
+            onChangeText={(value) => updateField('barangay', value)}
+            autoCapitalize="words"
+          />
+
+          <Input
+            label="City"
+            placeholder="City Name"
+            value={formData.city}
+            onChangeText={(value) => updateField('city', value)}
+            autoCapitalize="words"
+          />
+
+          <Input
+            label="Province"
+            placeholder="Province Name"
+            value={formData.province}
+            onChangeText={(value) => updateField('province', value)}
+            autoCapitalize="words"
           />
 
           <Input
@@ -204,6 +256,20 @@ const styles = StyleSheet.create({
   },
   form: {
     flex: 1,
+  },
+  sectionHeader: {
+    marginTop: SPACING.md,
+    marginBottom: SPACING.sm,
+  },
+  sectionTitle: {
+    fontSize: TYPOGRAPHY.sizes.md,
+    fontWeight: TYPOGRAPHY.weights.semibold,
+    color: COLORS.text,
+    marginBottom: SPACING.xs,
+  },
+  sectionSubtitle: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.textSecondary,
   },
   registerButton: {
     marginTop: SPACING.lg,

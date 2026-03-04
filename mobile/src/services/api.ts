@@ -21,6 +21,11 @@ api.interceptors.request.use(
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Log the complete URL being called
+    const fullUrl = `${config.baseURL}${config.url}`;
+    console.log('API Request:', config.method?.toUpperCase(), fullUrl);
+    
     return config;
   },
   (error: AxiosError) => {
@@ -33,6 +38,18 @@ api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<ErrorResponse>) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+    // Log error details
+    if (error.response) {
+      console.log('API Error Response:', {
+        status: error.response.status,
+        url: `${error.config?.baseURL}${error.config?.url}`,
+        message: error.response.data?.message || error.message,
+        data: error.response.data
+      });
+    } else {
+      console.log('API Error (No Response):', error.message);
+    }
 
     // Handle 401 - Try to refresh token
     if (error.response?.status === 401 && !originalRequest._retry) {

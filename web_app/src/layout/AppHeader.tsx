@@ -1,5 +1,7 @@
 "use client";
 import UserDropdown from "@/components/header/UserDropdown";
+import SOSNotificationBell from "@/components/header/SOSNotificationBell";
+import IncidentNotificationBell from "@/components/header/IncidentNotificationBell";
 import { useSidebar } from "@/context/SidebarContext";
 import { useSafeHavenAuth } from "@/context/SafeHavenAuthContext";
 import AppLogo from "@/components/common/AppLogo";
@@ -80,8 +82,11 @@ const AppHeader: React.FC = () => {
           } items-center justify-between w-full gap-4 px-5 py-4 lg:flex lg:justify-end lg:px-0 border-t border-gray-200 dark:border-gray-800 lg:border-t-0`}
         >
           <div className="flex items-center gap-3">
-            {/* User Info - Desktop Only */}
+            {/* SOS Notification Bell */}
+            <SOSNotificationBell />
             
+            {/* Incident Notification Bell */}
+            <IncidentNotificationBell />
             
             {/* User Dropdown */}
             <UserDropdown />

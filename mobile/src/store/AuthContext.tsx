@@ -59,7 +59,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (data: LoginRequest) => {
     try {
-      console.log('Login attempt...');
+      console.log('Login attempt with email:', data.email);
       const response = await authService.login(data);
       console.log('Login successful, user:', response.user.email);
       

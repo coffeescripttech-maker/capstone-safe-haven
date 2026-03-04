@@ -47,6 +47,8 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
       await login({ email, password });
       // Navigation handled by RootNavigator
     } catch (error) {
+
+      console.log({error});
       Alert.alert('Login Failed', error instanceof Error ? error.message : 'An error occurred');
     } finally {
       setIsLoading(false);

@@ -34,6 +34,7 @@ interface SOSAlert {
   user_info: any;
   status: string;
   priority: string;
+  target_agency: string;
   responder_id: number | null;
   response_time: string | null;
   resolution_notes: string | null;
@@ -52,6 +53,7 @@ export default function SOSAlertsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
+  const [agencyFilter, setAgencyFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [stats, setStats] = useState({
     total: 0,
@@ -66,7 +68,15 @@ export default function SOSAlertsPage() {
   useEffect(() => {
     loadAlerts();
     loadStatistics();
-  }, [statusFilter, priorityFilter]);
+    
+    // Auto-refresh every 15 seconds
+    const interval = setInterval(() => {
+      loadAlerts(true); // Silent refresh
+      loadStatistics();
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [statusFilter, priorityFilter, agencyFilter]);
 
   const loadAlerts = async (silent = false) => {
     try {
@@ -79,6 +89,7 @@ export default function SOSAlertsPage() {
       
       if (statusFilter) params.status = statusFilter;
       if (priorityFilter) params.priority = priorityFilter;
+      if (agencyFilter) params.targetAgency = agencyFilter;
 
       const response = await sosApi.getAll(params);
       
@@ -126,6 +137,18 @@ export default function SOSAlertsPage() {
       critical: { color: 'bg-error-100 text-error-700 border-error-200', gradient: 'from-error-500 to-error-600' }
     };
     return badges[priority] || { color: 'bg-gray-100 text-gray-700 border-gray-200', gradient: 'from-gray-500 to-gray-600' };
+  };
+
+  const getAgencyBadge = (agency: string) => {
+    const badges: Record<string, { color: string; icon: string }> = {
+      all: { color: 'bg-purple-100 text-purple-700 border-purple-200', icon: '🚨' },
+      barangay: { color: 'bg-green-100 text-green-700 border-green-200', icon: '🏘️' },
+      lgu: { color: 'bg-blue-100 text-blue-700 border-blue-200', icon: '🏛️' },
+      bfp: { color: 'bg-red-100 text-red-700 border-red-200', icon: '🚒' },
+      pnp: { color: 'bg-indigo-100 text-indigo-700 border-indigo-200', icon: '👮' },
+      mdrrmo: { color: 'bg-orange-100 text-orange-700 border-orange-200', icon: '⚠️' }
+    };
+    return badges[agency] || badges.all;
   };
 
   const formatResponseTime = (minutes: number | null) => {
@@ -308,7 +331,7 @@ export default function SOSAlertsPage() {
           <Filter className="w-5 h-5 text-gray-500" />
           <h2 className="text-lg font-bold text-gray-900">Filters</h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Search */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -362,6 +385,26 @@ export default function SOSAlertsPage() {
               <option value="critical">🔴 Critical</option>
             </select>
           </div>
+
+          {/* Agency Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Filter by Agency
+            </label>
+            <select
+              value={agencyFilter}
+              onChange={(e) => setAgencyFilter(e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
+            >
+              <option value="">All Agencies</option>
+              <option value="all">🚨 All Agencies</option>
+              <option value="barangay">🏘️ Barangay</option>
+              <option value="lgu">🏛️ LGU</option>
+              <option value="bfp">🚒 BFP</option>
+              <option value="pnp">👮 PNP</option>
+              <option value="mdrrmo">⚠️ MDRRMO</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -392,6 +435,9 @@ export default function SOSAlertsPage() {
                     Message
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Target Agency
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                     Priority
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
@@ -409,6 +455,7 @@ export default function SOSAlertsPage() {
                 {filteredAlerts.map((alert) => {
                   const statusBadge = getStatusBadge(alert.status);
                   const priorityBadge = getPriorityBadge(alert.priority);
+                  const agencyBadge = getAgencyBadge(alert.target_agency);
                   const StatusIcon = statusBadge.icon;
                   
                   return (
@@ -447,6 +494,12 @@ export default function SOSAlertsPage() {
                             {Number(alert.latitude).toFixed(4)}, {Number(alert.longitude).toFixed(4)}
                           </div>
                         )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full border ${agencyBadge.color}`}>
+                          <span>{agencyBadge.icon}</span>
+                          {alert.target_agency.toUpperCase()}
+                        </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-full border ${priorityBadge.color}`}>

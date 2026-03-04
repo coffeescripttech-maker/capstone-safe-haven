@@ -14,6 +14,7 @@ export interface SOSAlert {
   userInfo: any;
   status: string;
   priority: string;
+  targetAgency: string;
   responderId?: number;
   responseTime?: Date;
   resolutionNotes?: string;
@@ -26,6 +27,7 @@ export interface CreateSOSRequest {
   latitude?: number;
   longitude?: number;
   message: string;
+  targetAgency: 'barangay' | 'lgu' | 'bfp' | 'pnp' | 'mdrrmo' | 'all';
   userInfo: {
     name: string;
     phone: string;
@@ -52,14 +54,15 @@ class SOSService {
 
       // Insert SOS alert
       const [result] = await connection.query<ResultSetHeader>(
-        `INSERT INTO sos_alerts (user_id, latitude, longitude, message, user_info, status, priority)
-         VALUES (?, ?, ?, ?, ?, 'sent', 'high')`,
+        `INSERT INTO sos_alerts (user_id, latitude, longitude, message, user_info, status, priority, target_agency)
+         VALUES (?, ?, ?, ?, ?, 'sent', 'high', ?)`,
         [
           data.userId,
           data.latitude || null,
           data.longitude || null,
           data.message,
-          JSON.stringify(data.userInfo)
+          JSON.stringify(data.userInfo),
+          data.targetAgency
         ]
       );
 
@@ -73,14 +76,14 @@ class SOSService {
 
       const sosAlert = rows[0] as SOSAlert;
 
-      // Send notifications asynchronously (don't wait)
+      // Send notifications asynchronously (don't wait) based on target agency
       this.sendNotifications(sosId, data).catch(error => {
         logger.error('Error sending SOS notifications:', error);
       });
 
       await connection.commit();
 
-      logger.info(`SOS alert created: ${sosId} by user ${data.userId}`);
+      logger.info(`SOS alert created: ${sosId} by user ${data.userId}, target: ${data.targetAgency}`);
 
       return sosAlert;
     } catch (error) {
@@ -95,7 +98,9 @@ class SOSService {
   // Send notifications for SOS alert
   private async sendNotifications(sosId: number, data: CreateSOSRequest): Promise<void> {
     try {
-      // 1. Notify emergency services (911)
+      const targetAgency = data.targetAgency;
+
+      // 1. Always notify emergency services (911) for critical emergencies
       await this.createNotification({
         sosAlertId: sosId,
         recipientType: 'emergency_services',
@@ -104,23 +109,64 @@ class SOSService {
         status: 'pending'
       });
 
-      // 2. Notify local disaster response team
-      await this.notifyLocalResponders(sosId, data.latitude, data.longitude);
-
-      // 3. Notify user's emergency contact (if available)
+      // 2. Notify user's emergency contact (if available)
       await this.notifyEmergencyContact(sosId, data.userId);
 
-      // 4. Notify nearby responders (within 10km)
-      if (data.latitude && data.longitude) {
-        await this.notifyNearbyResponders(sosId, data.latitude, data.longitude);
+      // 3. Route to specific agencies based on target
+      if (targetAgency === 'all') {
+        // Notify all agencies
+        await this.notifyAgency(sosId, 'lgu_officer', 'Barangay/LGU');
+        await this.notifyAgency(sosId, 'bfp', 'BFP');
+        await this.notifyAgency(sosId, 'pnp', 'PNP');
+        await this.notifyAgency(sosId, 'mdrrmo', 'MDRRMO');
+        await this.notifyAgency(sosId, 'admin', 'Admin');
+      } else if (targetAgency === 'barangay' || targetAgency === 'lgu') {
+        // Notify LGU officers (includes barangay officials)
+        await this.notifyAgency(sosId, 'lgu_officer', 'Barangay/LGU');
+        await this.notifyAgency(sosId, 'admin', 'Admin'); // Always notify admins
+      } else {
+        // Notify specific agency (bfp, pnp, mdrrmo)
+        await this.notifyAgency(sosId, targetAgency, targetAgency.toUpperCase());
+        await this.notifyAgency(sosId, 'admin', 'Admin'); // Always notify admins
       }
 
-      // 5. Send push notifications to admins
-      await this.notifyAdmins(sosId);
+      // 4. Notify nearby responders (within 10km) if location available
+      if (data.latitude && data.longitude) {
+        await this.notifyNearbyResponders(sosId, data.latitude, data.longitude, targetAgency);
+      }
 
-      logger.info(`Notifications sent for SOS alert ${sosId}`);
+      logger.info(`Notifications sent for SOS alert ${sosId} to ${targetAgency}`);
     } catch (error) {
       logger.error(`Error sending notifications for SOS ${sosId}:`, error);
+    }
+  }
+
+  // Notify specific agency by role
+  private async notifyAgency(sosId: number, role: string, agencyName: string): Promise<void> {
+    try {
+      const [responders] = await pool.query<RowDataPacket[]>(
+        `SELECT id, email, phone FROM users WHERE role = ? AND is_active = true`,
+        [role]
+      );
+
+      for (const responder of responders) {
+        await this.createNotification({
+          sosAlertId: sosId,
+          recipientType: 'responder',
+          recipientId: responder.id,
+          recipientInfo: { 
+            email: responder.email, 
+            phone: responder.phone,
+            agency: agencyName
+          },
+          notificationMethod: 'push',
+          status: 'pending'
+        });
+      }
+
+      logger.info(`Notified ${responders.length} ${agencyName} responders for SOS ${sosId}`);
+    } catch (error) {
+      logger.error(`Error notifying ${agencyName}:`, error);
     }
   }
 
@@ -191,15 +237,25 @@ class SOSService {
     }
   }
 
-  // Notify nearby responders (within radius)
-  private async notifyNearbyResponders(sosId: number, latitude: number, longitude: number, radiusKm: number = 10): Promise<void> {
+  // Notify nearby responders (within radius) - filtered by target agency
+  private async notifyNearbyResponders(sosId: number, latitude: number, longitude: number, targetAgency: string, radiusKm: number = 10): Promise<void> {
     try {
+      // Build role filter based on target agency
+      let roleFilter = '';
+      if (targetAgency === 'all') {
+        roleFilter = "role IN ('lgu_officer', 'admin', 'pnp', 'bfp', 'mdrrmo')";
+      } else if (targetAgency === 'barangay' || targetAgency === 'lgu') {
+        roleFilter = "role IN ('lgu_officer', 'admin')";
+      } else {
+        roleFilter = `role IN ('${targetAgency}', 'admin')`;
+      }
+
       // Find responders within radius using Haversine formula
       const [responders] = await pool.query<RowDataPacket[]>(
-        `SELECT id, email, phone,
+        `SELECT id, email, phone, role,
          (6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) AS distance
          FROM users
-         WHERE role IN ('lgu_officer', 'admin') 
+         WHERE ${roleFilter}
          AND is_active = true
          AND latitude IS NOT NULL 
          AND longitude IS NOT NULL
@@ -217,12 +273,15 @@ class SOSService {
           recipientInfo: { 
             email: responder.email, 
             phone: responder.phone,
-            distance: responder.distance 
+            distance: responder.distance,
+            role: responder.role
           },
           notificationMethod: 'push',
           status: 'pending'
         });
       }
+
+      logger.info(`Notified ${responders.length} nearby responders for SOS ${sosId}`);
     } catch (error) {
       logger.error('Error notifying nearby responders:', error);
     }
@@ -291,7 +350,27 @@ class SOSService {
       let whereConditions: string[] = [];
       let params: any[] = [];
 
-      // Apply geographic filtering using DataFilterService
+      // Apply role-based filtering for target_agency
+      // Super admin and admin can see all alerts
+      // Other roles only see alerts targeted to them or 'all'
+      if (filters.userRole && filters.userRole !== 'super_admin' && filters.userRole !== 'admin') {
+        // Map role to target_agency values they should see
+        const roleAgencyMap: Record<string, string[]> = {
+          'pnp': ['pnp', 'all'],
+          'bfp': ['bfp', 'all'],
+          'mdrrmo': ['mdrrmo', 'all'],
+          'lgu_officer': ['barangay', 'lgu', 'all']
+        };
+
+        const allowedAgencies = roleAgencyMap[filters.userRole] || ['all'];
+        const placeholders = allowedAgencies.map(() => '?').join(',');
+        whereConditions.push(`sa.target_agency IN (${placeholders})`);
+        params.push(...allowedAgencies);
+
+        logger.info(`Filtering SOS alerts for role ${filters.userRole}: ${allowedAgencies.join(', ')}`);
+      }
+
+      // Apply geographic filtering using DataFilterService (if applicable)
       // Requirements: 4.1, 7.4, 11.2
       if (filters.userRole && filters.userJurisdiction !== undefined) {
         const filterConditions = dataFilterService.applySOSAlertFilter(filters.userRole, filters.userJurisdiction);
@@ -391,11 +470,34 @@ class SOSService {
     }
   }
 
-  // Get SOS statistics
-  async getSOSStatistics(userId?: number): Promise<any> {
+  // Get SOS statistics with role-based filtering
+  async getSOSStatistics(filters?: { userId?: number; userRole?: string }): Promise<any> {
     try {
-      const userCondition = userId ? 'WHERE user_id = ?' : '';
-      const params = userId ? [userId] : [];
+      let whereConditions: string[] = [];
+      let params: any[] = [];
+
+      // Apply role-based filtering for target_agency
+      if (filters?.userRole && filters.userRole !== 'super_admin' && filters.userRole !== 'admin') {
+        const roleAgencyMap: Record<string, string[]> = {
+          'pnp': ['pnp', 'all'],
+          'bfp': ['bfp', 'all'],
+          'mdrrmo': ['mdrrmo', 'all'],
+          'lgu_officer': ['barangay', 'lgu', 'all']
+        };
+
+        const allowedAgencies = roleAgencyMap[filters.userRole] || ['all'];
+        const placeholders = allowedAgencies.map(() => '?').join(',');
+        whereConditions.push(`target_agency IN (${placeholders})`);
+        params.push(...allowedAgencies);
+      }
+
+      // Filter by specific user if provided
+      if (filters?.userId) {
+        whereConditions.push('user_id = ?');
+        params.push(filters.userId);
+      }
+
+      const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
 
       const [stats] = await pool.query<RowDataPacket[]>(
         `SELECT 
@@ -407,7 +509,7 @@ class SOSService {
          SUM(CASE WHEN priority = 'critical' THEN 1 ELSE 0 END) as critical,
          AVG(TIMESTAMPDIFF(MINUTE, created_at, response_time)) as avg_response_time_minutes
          FROM sos_alerts
-         ${userCondition}`,
+         ${whereClause}`,
         params
       );
 
@@ -418,5 +520,6 @@ class SOSService {
     }
   }
 }
+
 
 export const sosService = new SOSService();
