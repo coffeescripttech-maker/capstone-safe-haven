@@ -1,7 +1,7 @@
 // Login Screen
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert, Image } from 'react-native';
 import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
 import { useAuth } from '../../store/AuthContext';
@@ -61,6 +61,15 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Logo */}
+        <View style={styles.logoContainer}>
+          <Image
+            source={require('../../../assets/logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
+
         <View style={styles.header}>
           <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>Sign in to continue</Text>
@@ -119,8 +128,16 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: SPACING.xl,
   },
-  header: {
+  logoContainer: {
+    alignItems: 'center',
     marginTop: SPACING.xxl,
+    marginBottom: SPACING.md,
+  },
+  logo: {
+    width: 100,
+    height: 100,
+  },
+  header: {
     marginBottom: SPACING.xl,
   },
   title: {

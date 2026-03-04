@@ -1,7 +1,7 @@
 // Register Screen
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert, Image } from 'react-native';
 import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
 import { useAuth } from '../../store/AuthContext';
@@ -87,10 +87,10 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
         password: formData.password,
         firstName: formData.firstName,
         lastName: formData.lastName,
-        address: formData.address || undefined,
-        barangay: formData.barangay || undefined,
-        city: formData.city || undefined,
-        province: formData.province || undefined,
+        address: formData.address,
+        barangay: formData.barangay,
+        city: formData.city,
+        province: formData.province,
       });
       // Navigation handled by RootNavigator
     } catch (error) {
@@ -106,6 +106,15 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Logo */}
+        <View style={styles.logoContainer}>
+          <Image
+            source={require('../../../assets/logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
+
         <View style={styles.header}>
           <Text style={styles.title}>Create Account</Text>
           <Text style={styles.subtitle}>Join SafeHaven today</Text>
@@ -152,8 +161,8 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
           />
 
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Address (Optional)</Text>
-            <Text style={styles.sectionSubtitle}>Help us serve you better with location-based alerts</Text>
+            <Text style={styles.sectionTitle}>Address Information</Text>
+            <Text style={styles.sectionSubtitle}>Required for location-based alerts and emergency services</Text>
           </View>
 
           <Input
@@ -161,6 +170,7 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
             placeholder="123 Main Street"
             value={formData.address}
             onChangeText={(value) => updateField('address', value)}
+            error={errors.address}
             autoCapitalize="words"
             multiline
           />
@@ -170,6 +180,7 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
             placeholder="Barangay Name"
             value={formData.barangay}
             onChangeText={(value) => updateField('barangay', value)}
+            error={errors.barangay}
             autoCapitalize="words"
           />
 
@@ -178,6 +189,7 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
             placeholder="City Name"
             value={formData.city}
             onChangeText={(value) => updateField('city', value)}
+            error={errors.city}
             autoCapitalize="words"
           />
 
@@ -186,6 +198,7 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
             placeholder="Province Name"
             value={formData.province}
             onChangeText={(value) => updateField('province', value)}
+            error={errors.province}
             autoCapitalize="words"
           />
 
@@ -240,8 +253,16 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: SPACING.xl,
   },
+  logoContainer: {
+    alignItems: 'center',
+    marginTop: SPACING.lg,
+    marginBottom: SPACING.md,
+  },
+  logo: {
+    width: 100,
+    height: 100,
+  },
   header: {
-    marginTop: SPACING.xl,
     marginBottom: SPACING.lg,
   },
   title: {
