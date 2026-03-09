@@ -3,6 +3,7 @@
 export type IncidentType = 'damage' | 'injury' | 'missing_person' | 'hazard' | 'other';
 export type IncidentSeverity = 'low' | 'moderate' | 'high' | 'critical';
 export type IncidentStatus = 'pending' | 'verified' | 'in_progress' | 'resolved';
+export type TargetAgency = 'pnp' | 'bfp' | 'mdrrmo';
 
 export interface IncidentReport {
   id: number;
@@ -33,6 +34,7 @@ export interface CreateIncidentRequest {
   address?: string;
   severity: IncidentSeverity;
   photos?: string[]; // Base64 encoded images
+  targetAgency?: TargetAgency;
 }
 
 export interface IncidentFilters {

@@ -1,6 +1,8 @@
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import pool from '../config/database';
 import { dataFilterService } from './dataFilter.service';
+import notificationService from './notification.service';
+import { logger } from '../utils/logger';
 
 export interface IncidentReport extends RowDataPacket {
   id: number;
@@ -31,6 +33,7 @@ export interface CreateIncidentData {
   address?: string;
   severity: string;
   photos?: string[];
+  targetAgency?: string;
 }
 
 export interface IncidentFilters {
@@ -58,18 +61,62 @@ class IncidentService {
       address,
       severity,
       photos,
+      targetAgency,
     } = data;
 
     const photosJson = photos && photos.length > 0 ? JSON.stringify(photos) : null;
 
+    // Find agency admin user if targetAgency is specified
+    let assignedTo: number | null = null;
+    if (targetAgency) {
+      try {
+        const [agencyUsers] = await pool.query<RowDataPacket[]>(
+          'SELECT id FROM users WHERE role = ? LIMIT 1',
+          [targetAgency]
+        );
+        
+        if (agencyUsers.length > 0) {
+          assignedTo = agencyUsers[0].id;
+          logger.info(`Incident assigned to ${targetAgency} admin (user ID: ${assignedTo})`);
+        } else {
+          logger.warn(`No admin found for agency: ${targetAgency}`);
+        }
+      } catch (error) {
+        logger.error(`Error finding agency admin for ${targetAgency}:`, error);
+      }
+    }
+
     const [result] = await pool.query<ResultSetHeader>(
       `INSERT INTO incident_reports 
-       (user_id, incident_type, title, description, latitude, longitude, address, severity, photos, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
-      [userId, incidentType, title, description, latitude, longitude, address, severity, photosJson]
+       (user_id, incident_type, title, description, latitude, longitude, address, severity, photos, status, assigned_to)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)`,
+      [userId, incidentType, title, description, latitude, longitude, address, severity, photosJson, assignedTo]
     );
 
-    return this.getIncidentById(result.insertId);
+    const incident = await this.getIncidentById(result.insertId);
+
+    // Send notification to assigned agency if available
+    if (assignedTo && targetAgency) {
+      try {
+        await notificationService.sendIncidentNotification(
+          assignedTo,
+          {
+            id: result.insertId,
+            incidentType,
+            title,
+            severity,
+            address: address || `${latitude}, ${longitude}`,
+          },
+          targetAgency
+        );
+        logger.info(`Notification sent to ${targetAgency} for incident ${result.insertId}`);
+      } catch (error) {
+        logger.error('Error sending incident notification:', error);
+        // Don't fail the incident creation if notification fails
+      }
+    }
+
+    return incident;
   }
 
   async getIncidents(filters: IncidentFilters = {}): Promise<{ data: any[]; total: number; page: number; limit: number }> {

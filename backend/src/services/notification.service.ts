@@ -153,6 +153,100 @@ export class NotificationService {
   }
 
   /**
+   * Send incident notification to assigned agency
+   */
+  async sendIncidentNotification(
+    userId: number,
+    incident: {
+      id: number;
+      incidentType: string;
+      title: string;
+      severity: string;
+      address: string;
+    },
+    targetAgency: string
+  ): Promise<void> {
+    try {
+      // Get user's device tokens for push notification
+      const [tokens] = await db.query<any[]>(
+        'SELECT device_token FROM device_tokens WHERE user_id = ? AND device_token IS NOT NULL',
+        [userId]
+      );
+
+      const deviceTokens = tokens.map(t => t.device_token);
+
+      // Get user's phone for SMS
+      const [users] = await db.query<any[]>(
+        'SELECT phone FROM users WHERE id = ?',
+        [userId]
+      );
+
+      const userPhone = users[0]?.phone;
+
+      // Format notification message
+      const agencyNames: Record<string, string> = {
+        pnp: 'PNP',
+        bfp: 'BFP',
+        mdrrmo: 'MDRRMO'
+      };
+
+      const agencyName = agencyNames[targetAgency] || targetAgency.toUpperCase();
+      const severityEmoji = this.getSeverityEmoji(incident.severity);
+
+      const notificationTitle = `${severityEmoji} New Incident Report`;
+      const notificationBody = `${incident.title} - ${incident.incidentType} at ${incident.address}. Severity: ${incident.severity}`;
+
+      // Send push notification
+      if (deviceTokens.length > 0 && firebaseInitialized) {
+        try {
+          await admin.messaging().sendEachForMulticast({
+            tokens: deviceTokens,
+            notification: {
+              title: notificationTitle,
+              body: notificationBody
+            },
+            data: {
+              type: 'incident',
+              incident_id: incident.id.toString(),
+              incident_type: incident.incidentType,
+              severity: incident.severity,
+              target_agency: targetAgency
+            }
+          });
+          logger.info(`Push notification sent to ${agencyName} for incident ${incident.id}`);
+        } catch (error) {
+          logger.error('Error sending incident push notification:', error);
+        }
+      }
+
+      // Send SMS notification
+      if (userPhone) {
+        const smsMessage = `${agencyName} Alert: ${incident.title} (${incident.severity}). Location: ${incident.address}. Check SafeHaven app for details.`;
+        
+        try {
+          await this.sendSMS([userPhone], smsMessage);
+          logger.info(`SMS sent to ${agencyName} for incident ${incident.id}`);
+        } catch (error) {
+          logger.error('Error sending incident SMS:', error);
+        }
+      }
+
+      // Log notification
+      await this.logNotification(
+        userId,
+        'push',
+        notificationTitle,
+        notificationBody,
+        'sent'
+      );
+
+    } catch (error) {
+      logger.error('Error in sendIncidentNotification:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Log notification attempt to database
    */
   async logNotification(
@@ -206,3 +300,6 @@ export class NotificationService {
     return emojis[severity] || 'ℹ️';
   }
 }
+
+
+export default new NotificationService();

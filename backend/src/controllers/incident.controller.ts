@@ -5,7 +5,7 @@ import incidentService from '../services/incident.service';
 class IncidentController {
   async createIncident(req: AuthRequest, res: Response) {
     try {
-      const { incidentType, title, description, latitude, longitude, address, severity, photos } = req.body;
+      const { incidentType, title, description, latitude, longitude, address, severity, photos, targetAgency } = req.body;
 
       // Validation
       if (!incidentType || !title || !description || !latitude || !longitude || !severity) {
@@ -31,6 +31,15 @@ class IncidentController {
         });
       }
 
+      // Validate target agency if provided
+      const validAgencies = ['pnp', 'bfp', 'mdrrmo'];
+      if (targetAgency && !validAgencies.includes(targetAgency)) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Invalid target agency',
+        });
+      }
+
       const incident = await incidentService.createIncident({
         userId: req.user!.id,
         incidentType,
@@ -41,6 +50,7 @@ class IncidentController {
         address,
         severity,
         photos,
+        targetAgency,
       });
 
       res.status(201).json({

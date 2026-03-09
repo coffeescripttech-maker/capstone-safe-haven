@@ -1,8 +1,6 @@
 import db from '../config/database';
 import { AppError } from '../middleware/errorHandler';
-import { NotificationService } from './notification.service';
-
-const notificationService = new NotificationService();
+import notificationService from './notification.service';
 
 interface CreateAlertDto {
   alert_type: string;
@@ -69,10 +67,7 @@ interface AlertStatistics {
 }
 
 export class AlertService {
-  private notificationService: NotificationService;
-
   constructor() {
-    this.notificationService = new NotificationService();
   }
 
   /**
@@ -115,7 +110,7 @@ export class AlertService {
     tokenMap.forEach(tokens => allTokens.push(...tokens));
 
     if (allTokens.length > 0) {
-      const pushResult = await this.notificationService.sendPushNotification(allTokens, alert);
+      const pushResult = await notificationService.sendPushNotification(allTokens, alert);
       result.push_sent = pushResult.success;
       result.push_failed = pushResult.failure;
 
@@ -123,7 +118,7 @@ export class AlertService {
       for (const user of users) {
         const userTokens = tokenMap.get(user.id) || [];
         if (userTokens.length > 0) {
-          await this.notificationService.logNotification(
+          await notificationService.logNotification(
             user.id,
             'push',
             alert.title,
@@ -142,15 +137,15 @@ export class AlertService {
 
     if (usersForSMS.length > 0) {
       const phones = usersForSMS.map(u => u.phone).filter(p => p);
-      const smsMessage = this.notificationService.formatSMSMessage(alert);
-      const smsResult = await this.notificationService.sendSMS(phones, smsMessage);
+      const smsMessage = notificationService.formatSMSMessage(alert);
+      const smsResult = await notificationService.sendSMS(phones, smsMessage);
       
       result.sms_sent = smsResult.success;
       result.sms_failed = smsResult.failure;
 
       // Log SMS notifications
       for (const user of usersForSMS) {
-        await this.notificationService.logNotification(
+        await notificationService.logNotification(
           user.id,
           'sms',
           alert.title,
@@ -515,7 +510,7 @@ export class AlertService {
           description: `${reason}. ${alert.description}`
         };
         
-        await this.notificationService.sendPushNotification(allTokens, updateMessage);
+        await notificationService.sendPushNotification(allTokens, updateMessage);
       }
     } catch (error) {
       // Log error but don't throw - update notifications are best-effort

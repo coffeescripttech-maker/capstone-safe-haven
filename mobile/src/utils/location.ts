@@ -30,6 +30,12 @@ export const getCurrentLocation = async (): Promise<LocationType | null> => {
       accuracy: Location.Accuracy.Balanced,
     });
 
+    // Validate coordinates - reject if 0,0 (invalid location)
+    if (location.coords.latitude === 0 && location.coords.longitude === 0) {
+      console.warn('Invalid location coordinates (0,0) received - GPS not available');
+      return null;
+    }
+
     return {
       latitude: location.coords.latitude,
       longitude: location.coords.longitude,

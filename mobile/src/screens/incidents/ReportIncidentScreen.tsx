@@ -16,7 +16,7 @@ import { useLocation } from '../../store/LocationContext';
 import { useNetwork } from '../../store/NetworkContext';
 import { incidentService } from '../../services/incidents';
 import { offlineQueue } from '../../services/offlineQueue';
-import { IncidentType, IncidentSeverity } from '../../types/incident';
+import { IncidentType, IncidentSeverity, TargetAgency } from '../../types/incident';
 import { COLORS } from '../../constants/colors';
 import { SPACING } from '../../constants/spacing';
 import { TYPOGRAPHY } from '../../constants/typography';
@@ -38,6 +38,7 @@ export const ReportIncidentScreen: React.FC = () => {
 
   const [incidentType, setIncidentType] = useState<IncidentType>('damage');
   const [severity, setSeverity] = useState<IncidentSeverity>('moderate');
+  const [selectedAgency, setSelectedAgency] = useState<TargetAgency>('mdrrmo');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [address, setAddress] = useState('');
@@ -58,6 +59,28 @@ export const ReportIncidentScreen: React.FC = () => {
     { value: 'high' as IncidentSeverity, label: 'High', color: '#EF4444' },
     { value: 'critical' as IncidentSeverity, label: 'Critical', color: '#7C3AED' },
   ];
+
+  const agencies = [
+    { value: 'pnp' as TargetAgency, label: 'PNP', icon: '👮', description: 'Police matters' },
+    { value: 'bfp' as TargetAgency, label: 'BFP', icon: '🚒', description: 'Fire & rescue' },
+    { value: 'mdrrmo' as TargetAgency, label: 'MDRRMO', icon: '🆘', description: 'Disaster response' },
+  ];
+
+  // Auto-suggest agency based on incident type
+  const handleIncidentTypeChange = (type: IncidentType) => {
+    setIncidentType(type);
+    
+    // Auto-suggest agency based on incident type
+    const agencyMapping: Record<IncidentType, TargetAgency> = {
+      damage: 'mdrrmo',
+      injury: 'bfp',
+      missing_person: 'pnp',
+      hazard: 'bfp',
+      other: 'mdrrmo',
+    };
+    
+    setSelectedAgency(agencyMapping[type]);
+  };
 
   const pickImage = async () => {
     if (!ImagePicker) {
@@ -116,6 +139,7 @@ export const ReportIncidentScreen: React.FC = () => {
       address: address.trim() || undefined,
       severity,
       photos: photos.length > 0 ? photos : undefined,
+      targetAgency: selectedAgency,
     };
 
     try {
@@ -172,7 +196,7 @@ export const ReportIncidentScreen: React.FC = () => {
                   styles.typeCard,
                   incidentType === type.value && styles.typeCardActive,
                 ]}
-                onPress={() => setIncidentType(type.value)}
+                onPress={() => handleIncidentTypeChange(type.value)}
               >
                 <Text style={styles.typeIcon}>{type.icon}</Text>
                 <Text
@@ -183,6 +207,34 @@ export const ReportIncidentScreen: React.FC = () => {
                 >
                   {type.label}
                 </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Agency Selection */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Report To</Text>
+          <View style={styles.agencyRow}>
+            {agencies.map((agency) => (
+              <TouchableOpacity
+                key={agency.value}
+                style={[
+                  styles.agencyCard,
+                  selectedAgency === agency.value && styles.agencyCardActive,
+                ]}
+                onPress={() => setSelectedAgency(agency.value)}
+              >
+                <Text style={styles.agencyIcon}>{agency.icon}</Text>
+                <Text
+                  style={[
+                    styles.agencyLabel,
+                    selectedAgency === agency.value && styles.agencyLabelActive,
+                  ]}
+                >
+                  {agency.label}
+                </Text>
+                <Text style={styles.agencyDescription}>{agency.description}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -349,6 +401,41 @@ const styles = StyleSheet.create({
   typeLabelActive: {
     color: COLORS.primary,
     fontWeight: TYPOGRAPHY.weights.semibold,
+  },
+  agencyRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  agencyCard: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+    borderRadius: 8,
+    padding: SPACING.md,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.border,
+  },
+  agencyCardActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: '#EFF6FF',
+  },
+  agencyIcon: {
+    fontSize: 28,
+    marginBottom: SPACING.xs,
+  },
+  agencyLabel: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    fontWeight: TYPOGRAPHY.weights.semibold,
+    color: COLORS.text,
+    marginBottom: 2,
+  },
+  agencyLabelActive: {
+    color: COLORS.primary,
+  },
+  agencyDescription: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
   },
   severityRow: {
     flexDirection: 'row',
