@@ -39,6 +39,8 @@ interface Incident {
   severity: IncidentSeverity;
   status: IncidentStatus;
   photos?: string[];
+  assignedTo?: number;
+  assignedAgency?: string;
   createdAt: string;
   updatedAt: string;
   user?: {
@@ -182,6 +184,35 @@ export default function IncidentsListPage() {
       case 'closed': return <XCircle className="w-3 h-3" />;
       default: return <Clock className="w-3 h-3" />;
     }
+  };
+
+  const getAgencyBadge = (assignedAgency?: string) => {
+    if (!assignedAgency) {
+      return (
+        <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600 border border-gray-200">
+          Unassigned
+        </span>
+      );
+    }
+
+    const agencyConfig: Record<string, { label: string; color: string; icon: string }> = {
+      pnp: { label: 'PNP', color: 'bg-blue-100 text-blue-700 border-blue-200', icon: '👮' },
+      bfp: { label: 'BFP', color: 'bg-red-100 text-red-700 border-red-200', icon: '🚒' },
+      mdrrmo: { label: 'MDRRMO', color: 'bg-orange-100 text-orange-700 border-orange-200', icon: '🆘' },
+    };
+
+    const config = agencyConfig[assignedAgency] || { 
+      label: assignedAgency.toUpperCase(), 
+      color: 'bg-brand-100 text-brand-700 border-brand-200',
+      icon: '📋'
+    };
+
+    return (
+      <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full border ${config.color}`}>
+        <span>{config.icon}</span>
+        {config.label}
+      </span>
+    );
   };
 
   const stats = {
@@ -376,6 +407,9 @@ export default function IncidentsListPage() {
                     Status
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Assigned To
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                     Location
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
@@ -428,6 +462,9 @@ export default function IncidentsListPage() {
                         {getStatusIcon(incident.status)}
                         {incident.status.replace('_', ' ')}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {getAgencyBadge(incident.assignedAgency)}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-1.5 text-sm text-gray-600">

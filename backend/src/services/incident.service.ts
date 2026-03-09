@@ -137,9 +137,11 @@ class IncidentService {
       SELECT 
         ir.*,
         CONCAT(u.first_name, ' ', u.last_name) as user_name,
-        u.phone as user_phone
+        u.phone as user_phone,
+        assigned_user.role as assigned_agency
       FROM incident_reports ir
       LEFT JOIN users u ON ir.user_id = u.id
+      LEFT JOIN users assigned_user ON ir.assigned_to = assigned_user.id
       WHERE 1=1
     `;
     const params: any[] = [];
@@ -152,6 +154,13 @@ class IncidentService {
         query += ` AND ${filterConditions.whereClause}`;
         params.push(...filterConditions.params);
       }
+    }
+
+    // Filter by assigned agency for agency roles (PNP, BFP, MDRRMO)
+    // Super admin and admin see all incidents
+    if (userRole && ['pnp', 'bfp', 'mdrrmo'].includes(userRole)) {
+      query += ' AND assigned_user.role = ?';
+      params.push(userRole);
     }
 
     if (type) {
@@ -186,7 +195,7 @@ class IncidentService {
 
     // Get total count
     const countQuery = query.replace(
-      'SELECT \n      ir.*,\n        CONCAT(u.first_name, \' \', u.last_name) as user_name,\n        u.phone as user_phone\n      FROM incident_reports ir',
+      'SELECT \n      ir.*,\n        CONCAT(u.first_name, \' \', u.last_name) as user_name,\n        u.phone as user_phone,\n        assigned_user.role as assigned_agency\n      FROM incident_reports ir',
       'SELECT COUNT(*) as total FROM incident_reports ir'
     );
     const [countResult] = await pool.query<RowDataPacket[]>(countQuery, params);
@@ -243,6 +252,7 @@ class IncidentService {
       severity: incident.severity,
       photos: incident.photos ? JSON.parse(incident.photos) : [],
       assignedTo: incident.assigned_to,
+      assignedAgency: (incident as any).assigned_agency || null,
       userName: incident.user_name,
       userPhone: incident.user_phone,
       // Add nested user object for frontend compatibility
@@ -259,9 +269,11 @@ class IncidentService {
       `SELECT 
         ir.*,
         CONCAT(u.first_name, ' ', u.last_name) as user_name,
-        u.phone as user_phone
+        u.phone as user_phone,
+        assigned_user.role as assigned_agency
        FROM incident_reports ir
        LEFT JOIN users u ON ir.user_id = u.id
+       LEFT JOIN users assigned_user ON ir.assigned_to = assigned_user.id
        WHERE ir.id = ?`,
       [id]
     );
