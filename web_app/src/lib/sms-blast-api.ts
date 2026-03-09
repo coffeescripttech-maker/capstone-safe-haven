@@ -21,6 +21,7 @@ class SMSBlastAPI {
     const token = typeof window !== 'undefined' ? localStorage.getItem('safehaven_token') : null;
     return {
       'Content-Type': 'application/json',
+      'ngrok-skip-browser-warning': 'true', // Skip ngrok browser warning page
       ...(token && { 'Authorization': `Bearer ${token}` }),
     };
   }

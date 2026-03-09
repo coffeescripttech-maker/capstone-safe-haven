@@ -1,1 +1,1 @@
-eas update --branch preview --message "Version for testing"
+ eas build --profile preview --platform android
