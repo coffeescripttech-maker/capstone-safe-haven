@@ -786,8 +786,8 @@ export class SMSBlastController {
       let whereClause = '';
       const params: any[] = [];
 
-      // Admins can only see their own contact groups
-      if (user.role === 'admin') {
+      // Admins and MDRRMO can only see their own contact groups
+      if (user.role === 'admin' || user.role === 'mdrrmo') {
         whereClause = 'WHERE created_by = ?';
         params.push(user.id);
       }
@@ -1203,8 +1203,8 @@ export class SMSBlastController {
       let cities = cityRows.map((row: any) => row.city);
       let barangays = barangayRows.map((row: any) => row.barangay);
 
-      if (user.role === 'admin' && user.jurisdiction) {
-        // Filter locations based on admin's jurisdiction
+      if ((user.role === 'admin' || user.role === 'mdrrmo') && user.jurisdiction) {
+        // Filter locations based on admin/mdrrmo's jurisdiction
         const jurisdictionLower = user.jurisdiction.toLowerCase();
         provinces = provinces.filter((p: string) => 
           p.toLowerCase().includes(jurisdictionLower)

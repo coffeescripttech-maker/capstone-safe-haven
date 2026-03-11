@@ -89,13 +89,13 @@ export class DataFilterService {
     const params: any[] = [];
     const prefix = baseTableAlias ? `${baseTableAlias}.` : '';
 
-    // Super admin and admin: no filtering (access all data)
-    if (role === 'super_admin' || role === 'admin') {
+    // Super admin, admin, and mdrrmo: no filtering (access all data)
+    if (role === 'super_admin' || role === 'admin' || role === 'mdrrmo') {
       return { conditions, params };
     }
 
-    // MDRRMO, PNP, BFP: no geographic filtering (system-wide access for emergency coordination)
-    if (role === 'mdrrmo' || role === 'pnp' || role === 'bfp') {
+    // PNP, BFP: no geographic filtering (system-wide access for emergency coordination)
+    if (role === 'pnp' || role === 'bfp') {
       return { conditions, params };
     }
 
@@ -139,14 +139,14 @@ export class DataFilterService {
   ): { whereClause: string; params: any[] } {
     const params: any[] = [];
 
-    // Super admin and admin: no filtering (access all data)
-    if (role === 'super_admin' || role === 'admin') {
+    // Super admin, admin, and mdrrmo: no filtering (access all data)
+    if (role === 'super_admin' || role === 'admin' || role === 'mdrrmo') {
       return { whereClause: '', params };
     }
 
-    // MDRRMO, PNP, BFP: system-wide access
+    // PNP, BFP: system-wide access
     // Requirements: 6.2, 11.3
-    if (role === 'mdrrmo' || role === 'pnp' || role === 'bfp') {
+    if (role === 'pnp' || role === 'bfp') {
       return { whereClause: '', params };
     }
 
@@ -185,15 +185,27 @@ export class DataFilterService {
   ): { whereClause: string; params: any[] } {
     const params: any[] = [];
 
-    // Super admin and admin: no filtering (access all data)
-    if (role === 'super_admin' || role === 'admin') {
+    // Super admin, admin, and mdrrmo: no filtering (access all data)
+    if (role === 'super_admin' || role === 'admin' || role === 'mdrrmo') {
       return { whereClause: '', params };
     }
 
-    // MDRRMO, PNP, BFP: system-wide access for emergency response
+    // PNP: only see SOS alerts assigned to PNP or 'all'
     // Requirements: 4.1, 11.2
-    if (role === 'mdrrmo' || role === 'pnp' || role === 'bfp') {
-      return { whereClause: '', params };
+    if (role === 'pnp') {
+      return { 
+        whereClause: "(sa.target_agency = 'pnp' OR sa.target_agency = 'all')", 
+        params: [] 
+      };
+    }
+
+    // BFP: only see SOS alerts assigned to BFP or 'all'
+    // Requirements: 4.1, 11.2
+    if (role === 'bfp') {
+      return { 
+        whereClause: "(sa.target_agency = 'bfp' OR sa.target_agency = 'all')", 
+        params: [] 
+      };
     }
 
     // LGU Officer: filter by jurisdiction
@@ -227,14 +239,14 @@ export class DataFilterService {
   ): { whereClause: string; params: any[] } {
     const params: any[] = [];
 
-    // Super admin and admin: no filtering (access all data)
-    if (role === 'super_admin' || role === 'admin') {
+    // Super admin, admin, and mdrrmo: no filtering (access all data)
+    if (role === 'super_admin' || role === 'admin' || role === 'mdrrmo') {
       return { whereClause: '', params };
     }
 
-    // MDRRMO, PNP, BFP: no geographic filtering (system-wide access for emergency coordination)
+    // PNP, BFP: no geographic filtering (system-wide access for emergency coordination)
     // Requirements: 4.1, 11.1
-    if (role === 'mdrrmo' || role === 'pnp' || role === 'bfp') {
+    if (role === 'pnp' || role === 'bfp') {
       return { whereClause: '', params };
     }
 
@@ -267,13 +279,13 @@ export class DataFilterService {
     jurisdiction?: string,
     userId?: number
   ): Incident[] {
-    // Super admin and admin: no filtering
-    if (role === 'super_admin' || role === 'admin') {
+    // Super admin, admin, and mdrrmo: no filtering
+    if (role === 'super_admin' || role === 'admin' || role === 'mdrrmo') {
       return incidents;
     }
 
-    // MDRRMO, PNP: system-wide access
-    if (role === 'mdrrmo' || role === 'pnp') {
+    // PNP: system-wide access
+    if (role === 'pnp') {
       return incidents;
     }
 
@@ -333,14 +345,23 @@ export class DataFilterService {
     jurisdiction?: string,
     userId?: number
   ): SOSAlert[] {
-    // Super admin and admin: no filtering
-    if (role === 'super_admin' || role === 'admin') {
+    // Super admin, admin, and mdrrmo: no filtering
+    if (role === 'super_admin' || role === 'admin' || role === 'mdrrmo') {
       return alerts;
     }
 
-    // MDRRMO, PNP, BFP: system-wide access for emergency response
-    if (role === 'mdrrmo' || role === 'pnp' || role === 'bfp') {
-      return alerts;
+    // PNP: only see SOS alerts assigned to PNP or 'all'
+    if (role === 'pnp') {
+      return alerts.filter(alert => 
+        (alert as any).targetAgency === 'pnp' || (alert as any).targetAgency === 'all'
+      );
+    }
+
+    // BFP: only see SOS alerts assigned to BFP or 'all'
+    if (role === 'bfp') {
+      return alerts.filter(alert => 
+        (alert as any).targetAgency === 'bfp' || (alert as any).targetAgency === 'all'
+      );
     }
 
     // LGU Officer: filter by jurisdiction
@@ -372,13 +393,13 @@ export class DataFilterService {
     role: Role,
     jurisdiction?: string
   ): EvacuationCenter[] {
-    // Super admin and admin: no filtering
-    if (role === 'super_admin' || role === 'admin') {
+    // Super admin, admin, and mdrrmo: no filtering
+    if (role === 'super_admin' || role === 'admin' || role === 'mdrrmo') {
       return centers;
     }
 
-    // MDRRMO, PNP, BFP: system-wide access
-    if (role === 'mdrrmo' || role === 'pnp' || role === 'bfp') {
+    // PNP, BFP: system-wide access
+    if (role === 'pnp' || role === 'bfp') {
       return centers;
     }
 
@@ -442,13 +463,13 @@ export class DataFilterService {
   ): boolean {
     const { role, jurisdiction, userId } = context;
 
-    // Super admin and admin: always have access
-    if (role === 'super_admin' || role === 'admin') {
+    // Super admin, admin, and mdrrmo: always have access
+    if (role === 'super_admin' || role === 'admin' || role === 'mdrrmo') {
       return true;
     }
 
-    // MDRRMO, PNP, BFP: system-wide access
-    if (role === 'mdrrmo' || role === 'pnp' || role === 'bfp') {
+    // PNP, BFP: system-wide access
+    if (role === 'pnp' || role === 'bfp') {
       return true;
     }
 

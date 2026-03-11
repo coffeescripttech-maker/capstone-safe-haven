@@ -51,8 +51,10 @@ export default function UsersListPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('true'); // Default to show only active users
   const [showAddUser, setShowAddUser] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<UserData | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [newUserData, setNewUserData] = useState({
     email: '',
@@ -126,14 +128,19 @@ export default function UsersListPage() {
     loadUsers();
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to deactivate this user?')) {
-      return;
-    }
+  const handleDeleteClick = (user: UserData) => {
+    setUserToDelete(user);
+    setShowDeleteDialog(true);
+  };
+
+  const handleDelete = async (hardDelete: boolean) => {
+    if (!userToDelete) return;
 
     try {
-      await usersApi.delete(id);
-      toast.success('User deactivated successfully');
+      await usersApi.delete(userToDelete.id, hardDelete);
+      toast.success(hardDelete ? 'User permanently deleted' : 'User deactivated successfully');
+      setShowDeleteDialog(false);
+      setUserToDelete(null);
       loadUsers(true);
       loadStatistics();
     } catch (error) {
@@ -577,9 +584,9 @@ export default function UsersListPage() {
                             <Eye className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => handleDelete(user.id)}
+                            onClick={() => handleDeleteClick(user)}
                             className="p-2 text-error-600 hover:bg-error-50 rounded-lg transition-all"
-                            title="Deactivate User"
+                            title="Delete User"
                             disabled={!user.is_active}
                           >
                             <UserX className="w-4 h-4" />
@@ -794,6 +801,83 @@ export default function UsersListPage() {
                     Create User
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteDialog && userToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">Delete User</h2>
+              <p className="text-gray-600 mt-1">Choose how to delete this user</p>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div className="flex items-start gap-3">
+                  <User className="w-5 h-5 text-gray-500 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-gray-900">
+                      {userToDelete.first_name} {userToDelete.last_name}
+                    </p>
+                    <p className="text-sm text-gray-600">{userToDelete.email}</p>
+                    <p className="text-sm text-gray-600">{userToDelete.phone}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="bg-warning-50 border border-warning-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-warning-900 mb-2 flex items-center gap-2">
+                    <UserX className="w-4 h-4" />
+                    Soft Delete (Recommended)
+                  </h3>
+                  <p className="text-sm text-warning-800 mb-3">
+                    Deactivate the user account. The user cannot log in, but all data is preserved for audit purposes.
+                  </p>
+                  <button
+                    onClick={() => handleDelete(false)}
+                    className="w-full px-4 py-2.5 bg-warning-500 text-white rounded-lg hover:bg-warning-600 transition-all font-semibold"
+                  >
+                    Deactivate User
+                  </button>
+                </div>
+
+                <div className="bg-error-50 border border-error-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-error-900 mb-2 flex items-center gap-2">
+                    <XCircle className="w-4 h-4" />
+                    Hard Delete (Permanent)
+                  </h3>
+                  <p className="text-sm text-error-800 mb-3">
+                    Permanently remove the user and all related data from the database. This action cannot be undone!
+                  </p>
+                  <button
+                    onClick={() => {
+                      if (confirm('⚠️ Are you absolutely sure? This will PERMANENTLY delete all user data and cannot be undone!')) {
+                        handleDelete(true);
+                      }
+                    }}
+                    className="w-full px-4 py-2.5 bg-error-500 text-white rounded-lg hover:bg-error-600 transition-all font-semibold"
+                  >
+                    Permanently Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex justify-end">
+              <button
+                onClick={() => {
+                  setShowDeleteDialog(false);
+                  setUserToDelete(null);
+                }}
+                className="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all font-semibold"
+              >
+                Cancel
               </button>
             </div>
           </div>

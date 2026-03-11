@@ -421,9 +421,9 @@ export const usersApi = {
     return response.data;
   },
   
-  delete: async (id: number) => {
-    console.log('📡 Deleting user:', id);
-    const response = await api.delete(`/users/${id}`);
+  delete: async (id: number, hardDelete: boolean = false) => {
+    console.log('📡 Deleting user:', id, 'Hard delete:', hardDelete);
+    const response = await api.delete(`/users/${id}${hardDelete ? '?hard=true' : ''}`);
     console.log('📦 Delete response:', response.data);
     return response.data;
   },

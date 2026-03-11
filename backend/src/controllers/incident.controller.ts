@@ -79,7 +79,8 @@ class IncidentController {
         page: req.query.page ? parseInt(req.query.page as string) : 1,
         limit: req.query.limit ? parseInt(req.query.limit as string) : 20,
         userRole: req.user?.role,
-        userJurisdiction: req.user?.jurisdiction
+        userJurisdiction: req.user?.jurisdiction,
+        currentUserId: req.user?.id // For citizen filtering
       };
 
       const result = await incidentService.getIncidents(filters);

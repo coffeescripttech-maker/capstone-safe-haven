@@ -47,6 +47,7 @@ export interface IncidentFilters {
   limit?: number;
   userRole?: string;
   userJurisdiction?: string | null;
+  currentUserId?: number; // For citizen filtering
 }
 
 class IncidentService {
@@ -130,7 +131,8 @@ class IncidentService {
       page = 1,
       limit = 20,
       userRole,
-      userJurisdiction
+      userJurisdiction,
+      currentUserId
     } = filters;
 
     let query = `
@@ -161,6 +163,13 @@ class IncidentService {
     if (userRole && ['pnp', 'bfp', 'mdrrmo'].includes(userRole)) {
       query += ' AND assigned_user.role = ?';
       params.push(userRole);
+    }
+
+    // Citizens can only see their own incidents
+    // Requirements: Privacy and data access control
+    if (userRole === 'citizen' && currentUserId) {
+      query += ' AND ir.user_id = ?';
+      params.push(currentUserId);
     }
 
     if (type) {
@@ -235,6 +244,9 @@ class IncidentService {
       status: incident.status,
       createdAt: incident.created_at ? new Date(incident.created_at).toISOString() : null,
       updatedAt: incident.updated_at ? new Date(incident.updated_at).toISOString() : null,
+      // Always include reporter information
+      userName: incident.user_name,
+      userPhone: incident.user_phone,
     };
 
     // BFP role: full details for fire incidents, basic info for others
@@ -253,8 +265,6 @@ class IncidentService {
       photos: incident.photos ? JSON.parse(incident.photos) : [],
       assignedTo: incident.assigned_to,
       assignedAgency: (incident as any).assigned_agency || null,
-      userName: incident.user_name,
-      userPhone: incident.user_phone,
       // Add nested user object for frontend compatibility
       user: incident.user_name ? {
         firstName: incident.user_name.split(' ')[0] || '',

@@ -64,6 +64,7 @@ export const ReportIncidentScreen: React.FC = () => {
     { value: 'pnp' as TargetAgency, label: 'PNP', icon: '👮', description: 'Police matters' },
     { value: 'bfp' as TargetAgency, label: 'BFP', icon: '🚒', description: 'Fire & rescue' },
     { value: 'mdrrmo' as TargetAgency, label: 'MDRRMO', icon: '🆘', description: 'Disaster response' },
+    { value: 'lgu' as TargetAgency, label: 'LGU', icon: '🏛️', description: 'Local government' },
   ];
 
   // Auto-suggest agency based on incident type
@@ -72,7 +73,7 @@ export const ReportIncidentScreen: React.FC = () => {
     
     // Auto-suggest agency based on incident type
     const agencyMapping: Record<IncidentType, TargetAgency> = {
-      damage: 'mdrrmo',
+      damage: 'lgu',
       injury: 'bfp',
       missing_person: 'pnp',
       hazard: 'bfp',

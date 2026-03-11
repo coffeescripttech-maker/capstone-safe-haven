@@ -44,7 +44,8 @@ export default function CreateEmergencyContactPage() {
       setIsSubmitting(true);
       await emergencyContactsApi.create(formData);
       toast.success('Contact created successfully');
-      router.push('/emergency-contacts');
+      // Use window.location to force full page reload and clear cache
+      window.location.href = '/emergency-contacts';
     } catch (error) {
       console.error('Error creating contact:', error);
       toast.error(handleApiError(error));

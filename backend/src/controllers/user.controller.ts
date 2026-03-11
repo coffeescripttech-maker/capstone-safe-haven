@@ -108,7 +108,7 @@ export class UserController {
   }
 
   /**
-   * Delete user (soft delete)
+   * Delete user (soft delete or hard delete)
    * Validates role hierarchy permissions
    * Requirements: 2.2, 3.3, 11.4
    */
@@ -117,17 +117,18 @@ export class UserController {
       const id = parseInt(req.params.id);
       const actorRole = req.user?.role;
       const actorId = req.user?.id;
+      const hardDelete = req.query.hard === 'true'; // Check if hard delete requested
 
       // Prevent users from deleting themselves
       if (actorId === id) {
         throw new AppError('Cannot delete your own account', 403);
       }
 
-      await userService.deleteUser(id, actorRole);
+      await userService.deleteUser(id, actorRole, hardDelete);
       
       res.json({
         status: 'success',
-        message: 'User deactivated successfully'
+        message: hardDelete ? 'User permanently deleted' : 'User deactivated successfully'
       });
     } catch (error) {
       next(error);

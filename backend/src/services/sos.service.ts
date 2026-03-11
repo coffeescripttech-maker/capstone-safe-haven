@@ -351,14 +351,13 @@ class SOSService {
       let params: any[] = [];
 
       // Apply role-based filtering for target_agency
-      // Super admin and admin can see all alerts
+      // Super admin, admin, and mdrrmo can see all alerts
       // Other roles only see alerts targeted to them or 'all'
-      if (filters.userRole && filters.userRole !== 'super_admin' && filters.userRole !== 'admin') {
+      if (filters.userRole && filters.userRole !== 'super_admin' && filters.userRole !== 'admin' && filters.userRole !== 'mdrrmo') {
         // Map role to target_agency values they should see
         const roleAgencyMap: Record<string, string[]> = {
           'pnp': ['pnp', 'all'],
           'bfp': ['bfp', 'all'],
-          'mdrrmo': ['mdrrmo', 'all'],
           'lgu_officer': ['barangay', 'lgu', 'all']
         };
 
@@ -477,11 +476,10 @@ class SOSService {
       let params: any[] = [];
 
       // Apply role-based filtering for target_agency
-      if (filters?.userRole && filters.userRole !== 'super_admin' && filters.userRole !== 'admin') {
+      if (filters?.userRole && filters.userRole !== 'super_admin' && filters.userRole !== 'admin' && filters.userRole !== 'mdrrmo') {
         const roleAgencyMap: Record<string, string[]> = {
           'pnp': ['pnp', 'all'],
           'bfp': ['bfp', 'all'],
-          'mdrrmo': ['mdrrmo', 'all'],
           'lgu_officer': ['barangay', 'lgu', 'all']
         };
 

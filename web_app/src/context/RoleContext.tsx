@@ -135,7 +135,7 @@ const ROLE_DISPLAY_NAMES: Record<Role, string> = {
   admin: 'Administrator',
   pnp: 'PNP Officer',
   bfp: 'BFP Officer',
-  mdrrmo: 'MDRRMO Officer',
+  mdrrmo: 'MDRRMO',
   lgu_officer: 'LGU Officer',
   citizen: 'Citizen',
 };

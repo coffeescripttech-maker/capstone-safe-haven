@@ -148,6 +148,13 @@ export class AuditLoggerService {
     // Run asynchronously without blocking the request
     setImmediate(async () => {
       try {
+        // Skip audit log if userId is invalid (0 or negative)
+        // This happens when authentication fails before user is identified
+        if (!userId || userId <= 0) {
+          logger.warn('Skipping audit log for invalid user_id:', userId);
+          return;
+        }
+
         await db.query(
           `INSERT INTO audit_logs 
            (user_id, role, action, resource, resource_id, status, ip_address, user_agent) 

@@ -3,7 +3,7 @@
 export type IncidentType = 'damage' | 'injury' | 'missing_person' | 'hazard' | 'other';
 export type IncidentSeverity = 'low' | 'moderate' | 'high' | 'critical';
 export type IncidentStatus = 'pending' | 'verified' | 'in_progress' | 'resolved';
-export type TargetAgency = 'pnp' | 'bfp' | 'mdrrmo';
+export type TargetAgency = 'pnp' | 'bfp' | 'mdrrmo' | 'lgu';
 
 export interface IncidentReport {
   id: number;

@@ -13,6 +13,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { incidentService } from '../../services/incidents';
 import { IncidentReport } from '../../types/incident';
+import { useAuth } from '../../store/AuthContext';
 import { COLORS } from '../../constants/colors';
 import { SPACING } from '../../constants/spacing';
 import { TYPOGRAPHY } from '../../constants/typography';
@@ -22,14 +23,22 @@ type NavigationProp = NativeStackNavigationProp<any>;
 
 export const IncidentsListScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
+  const { user } = useAuth();
   const [incidents, setIncidents] = useState<IncidentReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadIncidents = async () => {
     try {
-      const response = await incidentService.getIncidents({ limit: 50 });
-      setIncidents(response.data);
+      // Citizens see only their own incidents
+      // Agency roles and admins see filtered incidents based on backend logic
+      if (user?.role === 'citizen') {
+        const response = await incidentService.getMyIncidents();
+        setIncidents(response);
+      } else {
+        const response = await incidentService.getIncidents({ limit: 50 });
+        setIncidents(response.data);
+      }
     } catch (error) {
       console.error('Error loading incidents:', error);
     } finally {

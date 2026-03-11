@@ -180,8 +180,8 @@ export class ContactGroupManager {
       `;
       const params: any[] = [];
 
-      // Requirement 17.2: Admin users can only see groups they created or within their jurisdiction
-      if (requestingUser.role === 'admin') {
+      // Requirement 17.2: Admin and MDRRMO users can only see groups they created or within their jurisdiction
+      if (requestingUser.role === 'admin' || requestingUser.role === 'mdrrmo') {
         query += ` WHERE created_by = ?`;
         params.push(requestingUser.id);
       }

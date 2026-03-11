@@ -255,8 +255,8 @@ export class AuthService {
     // Role-based token expiration
     // Requirements: 14.1, 14.2, 14.3
     let accessTokenExpiry: string;
-    if (role === 'super_admin' || role === 'admin') {
-      accessTokenExpiry = '4h'; // 4 hours for super_admin/admin
+    if (role === 'super_admin' || role === 'admin' || role === 'mdrrmo') {
+      accessTokenExpiry = '4h'; // 4 hours for super_admin/admin/mdrrmo
     } else if (role === 'pnp' || role === 'bfp' || role === 'mdrrmo') {
       accessTokenExpiry = '8h'; // 8 hours for agencies
     } else {

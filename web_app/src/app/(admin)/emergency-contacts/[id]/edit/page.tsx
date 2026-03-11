@@ -82,7 +82,8 @@ export default function EditEmergencyContactPage() {
       setIsSubmitting(true);
       await emergencyContactsApi.update(id, formData);
       toast.success('Contact updated successfully');
-      router.push('/emergency-contacts');
+      // Use window.location to force full page reload and clear cache
+      window.location.href = '/emergency-contacts';
     } catch (error) {
       console.error('Error updating contact:', error);
       toast.error(handleApiError(error));

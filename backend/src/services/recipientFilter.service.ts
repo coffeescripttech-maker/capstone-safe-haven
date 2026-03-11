@@ -123,8 +123,8 @@ export class RecipientFilter {
       params.push(...filters.barangays);
     }
 
-    // Apply jurisdiction restrictions for Admin users (Requirement 2.2)
-    if (requestingUser.role === 'admin' && requestingUser.jurisdiction) {
+    // Apply jurisdiction restrictions for Admin and MDRRMO users (Requirement 2.2)
+    if ((requestingUser.role === 'admin' || requestingUser.role === 'mdrrmo') && requestingUser.jurisdiction) {
       const jurisdictionParts = requestingUser.jurisdiction.split(':');
       const userProvince = jurisdictionParts[0] || null;
       const userCity = jurisdictionParts[1] || null;
@@ -243,8 +243,8 @@ export class RecipientFilter {
       params.push(...filters.barangays);
     }
 
-    // Apply jurisdiction restrictions for Admin users
-    if (requestingUser.role === 'admin' && requestingUser.jurisdiction) {
+    // Apply jurisdiction restrictions for Admin and MDRRMO users
+    if ((requestingUser.role === 'admin' || requestingUser.role === 'mdrrmo') && requestingUser.jurisdiction) {
       const jurisdictionParts = requestingUser.jurisdiction.split(':');
       const userProvince = jurisdictionParts[0] || null;
       const userCity = jurisdictionParts[1] || null;
@@ -396,8 +396,8 @@ export class RecipientFilter {
       return { isValid: true };
     }
 
-    // Admin users must have jurisdiction restrictions (Requirement 9.2)
-    if (user.role === 'admin') {
+    // Admin and MDRRMO users must have jurisdiction restrictions (Requirement 9.2)
+    if (user.role === 'admin' || user.role === 'mdrrmo') {
       if (!user.jurisdiction) {
         return {
           isValid: false,

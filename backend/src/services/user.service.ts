@@ -225,7 +225,7 @@ export class UserService {
   async getUserById(id: number) {
     try {
       const [users] = await db.query(
-        `SELECT u.id, u.email, u.phone, u.first_name, u.last_name, u.role,
+        `SELECT u.id, u.email, u.phone, u.first_name, u.last_name, u.role, u.jurisdiction,
                 u.is_verified, u.is_active, u.created_at, u.updated_at, u.last_login,
                 p.address, p.city, p.province, p.barangay, p.blood_type,
                 p.medical_conditions, p.emergency_contact_name, p.emergency_contact_phone,
@@ -252,7 +252,7 @@ export class UserService {
    * Validates role modification permissions based on role hierarchy
    * Requirements: 1.5, 12.4
    */
-  async updateUser(id: number, data: UpdateUserData, actorRole?: string) {
+  async updateUser(id: number, data: any, actorRole?: string) {
     const targetUser = await this.getUserById(id);
 
     // If role is being modified, validate permissions
@@ -290,14 +290,15 @@ export class UserService {
     const updates: string[] = [];
     const params: any[] = [];
 
-    if (data.firstName) {
+    // Handle both camelCase and snake_case field names
+    if (data.first_name || data.firstName) {
       updates.push('first_name = ?');
-      params.push(data.firstName);
+      params.push(data.first_name || data.firstName);
     }
 
-    if (data.lastName) {
+    if (data.last_name || data.lastName) {
       updates.push('last_name = ?');
-      params.push(data.lastName);
+      params.push(data.last_name || data.lastName);
     }
 
     if (data.phone) {
@@ -310,36 +311,87 @@ export class UserService {
       params.push(data.role);
     }
 
+    if (data.jurisdiction !== undefined) {
+      updates.push('jurisdiction = ?');
+      params.push(data.jurisdiction || null);
+    }
+
     if (data.is_active !== undefined) {
       updates.push('is_active = ?');
       params.push(data.is_active);
     }
 
-    if (updates.length === 0) {
+    // Update profile fields if provided
+    const profileUpdates: string[] = [];
+    const profileParams: any[] = [];
+
+    if (data.city !== undefined) {
+      profileUpdates.push('city = ?');
+      profileParams.push(data.city || null);
+    }
+
+    if (data.province !== undefined) {
+      profileUpdates.push('province = ?');
+      profileParams.push(data.province || null);
+    }
+
+    if (data.barangay !== undefined) {
+      profileUpdates.push('barangay = ?');
+      profileParams.push(data.barangay || null);
+    }
+
+    if (updates.length === 0 && profileUpdates.length === 0) {
       return this.getUserById(id);
     }
 
-    updates.push('updated_at = NOW()');
-    params.push(id);
-
     try {
-      await db.query(
-        `UPDATE users SET ${updates.join(', ')} WHERE id = ?`,
-        params
-      );
+      // Update user table
+      if (updates.length > 0) {
+        updates.push('updated_at = NOW()');
+        params.push(id);
+        await db.query(
+          `UPDATE users SET ${updates.join(', ')} WHERE id = ?`,
+          params
+        );
+      }
+
+      // Update profile table
+      if (profileUpdates.length > 0) {
+        // Check if profile exists
+        const [existingProfile] = await db.query(
+          'SELECT user_id FROM user_profiles WHERE user_id = ?',
+          [id]
+        );
+
+        if ((existingProfile as any[]).length > 0) {
+          // Update existing profile
+          profileParams.push(id);
+          await db.query(
+            `UPDATE user_profiles SET ${profileUpdates.join(', ')} WHERE user_id = ?`,
+            profileParams
+          );
+        } else {
+          // Create new profile
+          await db.query(
+            `INSERT INTO user_profiles (user_id, city, province, barangay) VALUES (?, ?, ?, ?)`,
+            [id, data.city || null, data.province || null, data.barangay || null]
+          );
+        }
+      }
 
       return this.getUserById(id);
     } catch (error) {
+      console.error('Error updating user:', error);
       throw new AppError('Failed to update user', 500);
     }
   }
 
   /**
-   * Delete user (soft delete)
+   * Delete user (soft delete or hard delete)
    * Validates role hierarchy permissions
    * Requirements: 2.2, 3.3, 11.4
    */
-  async deleteUser(id: number, actorRole?: string) {
+  async deleteUser(id: number, actorRole?: string, hardDelete: boolean = false) {
     const targetUser = await this.getUserById(id);
 
     // If actor role is provided, validate permissions
@@ -357,13 +409,99 @@ export class UserService {
       }
     }
 
+    const connection = await db.getConnection();
+    
     try {
-      await db.query(
-        'UPDATE users SET is_active = FALSE, updated_at = NOW() WHERE id = ?',
-        [id]
-      );
+      if (hardDelete) {
+        // Start transaction for hard delete
+        await connection.beginTransaction();
+        
+        console.log(`Starting hard delete for user ${id}`);
+        
+        // First, let's check if there are any groups created by this user
+        const [groupCheck] = await connection.query('SELECT COUNT(*) as count FROM `groups` WHERE created_by = ?', [id]);
+        const groupCount = (groupCheck as any)[0].count;
+        console.log(`User ${id} has created ${groupCount} groups`);
+        
+        // Helper function to safely delete from table
+        const safeDelete = async (table: string, column: string = 'user_id') => {
+          try {
+            const [result] = await connection.query(`DELETE FROM \`${table}\` WHERE ${column} = ?`, [id]);
+            const affectedRows = (result as any).affectedRows;
+            console.log(`✓ Deleted from ${table}:`, affectedRows, 'rows');
+            return affectedRows;
+          } catch (err: any) {
+            // Log the actual error for debugging
+            console.error(`✗ Error deleting from ${table}:`, err.code, err.message);
+            // Don't throw - continue with other deletions
+            return 0;
+          }
+        };
+
+        // Helper function to safely update table
+        const safeUpdate = async (table: string, column: string) => {
+          try {
+            const [result] = await connection.query(`UPDATE ${table} SET ${column} = NULL WHERE ${column} = ?`, [id]);
+            console.log(`Updated ${table}:`, (result as any).affectedRows, 'rows');
+          } catch (err: any) {
+            console.log(`Skip update ${table}:`, err.code);
+          }
+        };
+        
+        // Delete related records (order matters for foreign keys)
+        // Delete group-related tables first (in correct order)
+        await safeDelete('group_alerts'); // Delete alerts that reference user_id
+        await safeDelete('location_shares'); // Delete location shares
+        await safeDelete('group_members'); // Then delete group members
+        await safeDelete('groups', 'created_by'); // Finally delete groups created by user
+        
+        await safeDelete('user_profiles');
+        await safeDelete('user_permissions');
+        await safeDelete('token_blacklist');
+        await safeDelete('audit_logs');
+        await safeDelete('shared_locations');
+        await safeDelete('location_history');
+        await safeDelete('password_reset_tokens');
+        await safeDelete('offline_queue');
+        await safeDelete('sms_blast_analytics');
+        
+        // Update tables with SET NULL constraints
+        await safeUpdate('notifications', 'user_id');
+        await safeUpdate('sms_queue', 'user_id');
+        await safeUpdate('sos_alerts', 'responder_id');
+        
+        // Delete user-created content
+        await safeDelete('sos_alerts');
+        await safeDelete('incident_reports'); // Correct table name
+        await safeDelete('sms_blasts');
+        await safeDelete('sms_templates', 'created_by');
+        await safeDelete('contact_groups', 'created_by');
+        await safeDelete('disaster_alerts', 'created_by');
+        
+        // Finally, delete the user
+        await connection.query('DELETE FROM users WHERE id = ?', [id]);
+        console.log(`Deleted user ${id} from users table`);
+        
+        // Commit transaction
+        await connection.commit();
+        console.log(`Hard delete completed for user ${id}`);
+      } else {
+        // Soft delete - just deactivate
+        await connection.query(
+          'UPDATE users SET is_active = FALSE, updated_at = NOW() WHERE id = ?',
+          [id]
+        );
+        console.log(`Soft deleted user ${id}`);
+      }
     } catch (error) {
+      // Rollback transaction on error
+      if (hardDelete) {
+        await connection.rollback();
+      }
+      console.error('Error deleting user:', error);
       throw new AppError('Failed to delete user', 500);
+    } finally {
+      connection.release();
     }
   }
 
@@ -503,11 +641,15 @@ export class UserService {
       first_name: row.first_name,
       last_name: row.last_name,
       role: row.role,
+      jurisdiction: row.jurisdiction,
       is_verified: Boolean(row.is_verified),
       is_active: Boolean(row.is_active),
       created_at: row.created_at,
       updated_at: row.updated_at,
       last_login: row.last_login,
+      city: row.city,
+      province: row.province,
+      barangay: row.barangay,
       profile: {
         address: row.address,
         city: row.city,

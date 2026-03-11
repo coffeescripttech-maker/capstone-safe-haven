@@ -197,8 +197,8 @@ export class SMSAuthMiddleware {
       return true;
     }
 
-    // Requirement 9.2: Admin users are restricted to their jurisdiction
-    if (user.role === 'admin') {
+    // Requirement 9.2: Admin and MDRRMO users are restricted to their jurisdiction
+    if (user.role === 'admin' || user.role === 'mdrrmo') {
       // If no jurisdiction is set, deny access
       if (!user.jurisdiction) {
         return false;

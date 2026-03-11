@@ -2,11 +2,13 @@
 
 ## What Was Done
 
-Added `ngrok-skip-browser-warning: true` header to all API requests in the web app. This bypasses ngrok's browser warning page when accessing the backend through ngrok tunnels.
+Added `ngrok-skip-browser-warning: true` header to all API requests in both the web app and mobile app. This bypasses ngrok's browser warning page when accessing the backend through ngrok tunnels.
 
 ## Files Modified
 
-### 1. ✅ SafeHaven API Client
+### Web App
+
+#### 1. ✅ SafeHaven API Client
 **File:** `web_app/src/lib/safehaven-api.ts`
 
 ```typescript
@@ -20,7 +22,7 @@ const api: AxiosInstance = axios.create({
 });
 ```
 
-### 2. ✅ SMS Blast API Client
+#### 2. ✅ SMS Blast API Client
 **File:** `web_app/src/lib/sms-blast-api.ts`
 
 ```typescript
@@ -33,6 +35,24 @@ private getHeaders(): HeadersInit {
   };
 }
 ```
+
+### Mobile App
+
+#### 3. ✅ API Service
+**File:** `mobile/src/services/api.ts`
+
+```typescript
+const api: AxiosInstance = axios.create({
+  baseURL: API_CONFIG.BASE_URL,
+  timeout: API_CONFIG.TIMEOUT,
+  headers: {
+    'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': 'true', // Skip ngrok browser warning page
+  },
+});
+```
+
+**Note:** The auth service (`mobile/src/services/auth.ts`) uses the same `api` instance, so all authentication requests automatically include the header.
 
 ## What This Fixes
 
@@ -132,11 +152,11 @@ Request Headers:
 
 ## Mobile App
 
-The mobile app already has this header configured in:
-- `mobile/src/services/api.ts`
-- `mobile/src/services/auth.ts`
+The mobile app now has the ngrok header configured in:
+- ✅ `mobile/src/services/api.ts` - Main API client
+- ✅ `mobile/src/services/auth.ts` - Uses the same API instance
 
-So both web and mobile apps now work seamlessly with ngrok tunnels.
+All API requests from the mobile app (auth, incidents, SOS, alerts, etc.) will automatically include the ngrok header.
 
 ## Production Deployment
 
