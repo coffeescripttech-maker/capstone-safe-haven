@@ -112,7 +112,7 @@ export class SMSAuthMiddleware {
    * Middleware factory to check if user has required role for SMS blast operations
    * Requirements: 9.1, 9.2, 9.3
    */
-  requireRole(...allowedRoles: Array<'super_admin' | 'admin'>): (
+  requireRole(...allowedRoles: Array<'super_admin' | 'admin' | 'mdrrmo'>): (
     req: SMSAuthRequest,
     res: Response,
     next: NextFunction
@@ -127,8 +127,8 @@ export class SMSAuthMiddleware {
         const { id: userId, role, email } = req.user;
 
         // Requirement 9.1: Regular users cannot access SMS blast functionality
-        if (role === 'citizen' || role === 'pnp' || role === 'bfp' || 
-            role === 'mdrrmo' || role === 'lgu_officer') {
+        // MDRRMO, Admin, and Super Admin have access to SMS blast
+        if (role === 'citizen' || role === 'pnp' || role === 'bfp' || role === 'lgu_officer') {
           await this.logUnauthorizedAccess(
             userId,
             role,
@@ -138,11 +138,11 @@ export class SMSAuthMiddleware {
             'Regular user attempted to access SMS blast functionality'
           );
           
-          throw new AppError('Insufficient permissions - SMS blast access restricted to Admins and Superadmins', 403);
+          throw new AppError('Insufficient permissions - SMS blast access restricted to MDRRMO, Admins and Superadmins', 403);
         }
 
         // Check if user's role is in the allowed roles list
-        if (!allowedRoles.includes(role as 'super_admin' | 'admin')) {
+        if (!allowedRoles.includes(role as 'super_admin' | 'admin' | 'mdrrmo')) {
           await this.logUnauthorizedAccess(
             userId,
             role,
@@ -341,7 +341,7 @@ export const smsAuthMiddleware = new SMSAuthMiddleware();
 export const authenticateSMS = (req: SMSAuthRequest, res: Response, next: NextFunction) =>
   smsAuthMiddleware.authenticate(req, res, next);
 
-export const requireSMSRole = (...roles: Array<'super_admin' | 'admin'>) =>
+export const requireSMSRole = (...roles: Array<'super_admin' | 'admin' | 'mdrrmo'>) =>
   smsAuthMiddleware.requireRole(...roles);
 
 export const enforceSMSJurisdiction = (

@@ -126,7 +126,58 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
     setIsRefreshing(false);
   };
 
-  const criticalAlerts = alerts.filter(a => a.severity === 'critical');
+  // Helper function to calculate distance between two coordinates
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c; // Distance in km
+  };
+
+  // Helper function to format time ago
+  const formatTimeAgo = (dateString: string): string => {
+    const now = new Date();
+    const alertTime = new Date(dateString);
+    const diffMs = now.getTime() - alertTime.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
+  };
+
+  // Filter critical alerts by location and sort by time
+  const criticalAlerts = alerts
+    .filter(a => a.severity === 'critical')
+    .filter(a => {
+      // If alert has location data and user has location
+      if (a.latitude && a.longitude && location) {
+        const distance = calculateDistance(
+          location.latitude,
+          location.longitude,
+          a.latitude,
+          a.longitude
+        );
+        // Show alerts within radius (alert's radiusKm or default 100km)
+        const alertRadius = a.radiusKm || 100;
+        return distance <= alertRadius;
+      }
+      // If no location data, show all critical alerts (fallback)
+      return true;
+    })
+    .sort((a, b) => {
+      // Sort by most recent first
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
   const activeAlerts = alerts.filter(a => a.isActive);
 
   // Format date and time
@@ -275,27 +326,116 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
         </TouchableOpacity>
       )} */}
 
-      {/* Critical Alerts */}
-      {criticalAlerts.length > 0 && (
-        <View style={styles.criticalSection}>
-          <View style={styles.criticalHeader}>
-            <AlertTriangle color={COLORS.white} size={24} strokeWidth={2.5} />
-            <Text style={styles.criticalTitle}>CRITICAL ALERTS</Text>
+      {/* Critical Alerts - Modern Card Design */}
+      <View style={styles.criticalSection}>
+        <View style={styles.criticalSectionHeader}>
+          <View style={styles.criticalHeaderLeft}>
+            <View style={styles.criticalIconBadge}>
+              <AlertTriangle color={COLORS.error} size={20} strokeWidth={2.5} />
+            </View>
+            <Text style={styles.criticalSectionTitle}>Critical Alerts</Text>
           </View>
-          {criticalAlerts.slice(0, 2).map((alert, index) => (
-            <TouchableOpacity
-              key={`${alert.id}-${alert.alertType}-${index}`}
-              style={styles.criticalAlert}
-              onPress={() => navigation.navigate('Alerts')}
-            >
-              <Text style={styles.criticalAlertTitle} numberOfLines={2}>
-                {alert.title}
-              </Text>
-              <Text style={styles.criticalAlertType}>{alert.alertType?.toUpperCase()}</Text>
-            </TouchableOpacity>
-          ))}
+          {criticalAlerts.length > 0 && (
+            <View style={styles.criticalCountBadge}>
+              <Text style={styles.criticalCountText}>{criticalAlerts.length}</Text>
+            </View>
+          )}
         </View>
-      )}
+
+        {criticalAlerts.length > 0 ? (
+          <View style={styles.criticalAlertsContainer}>
+            {criticalAlerts.slice(0, 2).map((alert, index) => {
+              // Calculate distance if location available
+              let distance: number | null = null;
+              if (alert.latitude && alert.longitude && location) {
+                distance = calculateDistance(
+                  location.latitude,
+                  location.longitude,
+                  alert.latitude,
+                  alert.longitude
+                );
+              }
+
+              // Format time ago
+              const timeAgo = formatTimeAgo(alert.createdAt);
+
+              return (
+                <TouchableOpacity
+                  key={`${alert.id}-${alert.alertType}-${index}`}
+                  style={styles.criticalAlertCard}
+                  onPress={() => navigation.navigate('Alerts')}
+                >
+                  {/* Alert Type Badge */}
+                  <View style={styles.alertTypeBadge}>
+                    <Text style={styles.alertTypeBadgeText}>
+                      {alert.alertType?.toUpperCase()}
+                    </Text>
+                  </View>
+
+                  {/* Alert Content */}
+                  <View style={styles.criticalAlertContent}>
+                    <View style={styles.criticalAlertHeader}>
+                      <Text style={styles.criticalAlertTitle} numberOfLines={2}>
+                        {alert.title}
+                      </Text>
+                    </View>
+                    
+                    {/* Meta Information */}
+                    <View style={styles.criticalAlertMeta}>
+                      <View style={styles.metaItem}>
+                        <Clock color={COLORS.textSecondary} size={14} strokeWidth={2} />
+                        <Text style={styles.metaText}>{timeAgo}</Text>
+                      </View>
+                      
+                      {distance !== null && (
+                        <View style={styles.metaItem}>
+                          <MapPin color={COLORS.textSecondary} size={14} strokeWidth={2} />
+                          <Text style={styles.metaText}>{distance.toFixed(1)} km away</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Affected Areas */}
+                    {alert.affectedAreas && alert.affectedAreas.length > 0 && (
+                      <View style={styles.affectedAreasContainer}>
+                        <Text style={styles.affectedAreasLabel}>Affected areas:</Text>
+                        <Text style={styles.affectedAreasText} numberOfLines={1}>
+                          {alert.affectedAreas.join(', ')}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Severity Indicator */}
+                  <View style={styles.severityIndicator} />
+                </TouchableOpacity>
+              );
+            })}
+
+            {criticalAlerts.length > 2 && (
+              <TouchableOpacity
+                style={styles.viewAllButton}
+                onPress={() => navigation.navigate('Alerts')}
+              >
+                <Text style={styles.viewAllText}>
+                  View all {criticalAlerts.length} critical alerts
+                </Text>
+                <ChevronRight color={COLORS.primary} size={18} strokeWidth={2} />
+              </TouchableOpacity>
+            )}
+          </View>
+        ) : (
+          <View style={styles.noCriticalAlerts}>
+            <View style={styles.noAlertsIconContainer}>
+              <Shield color={COLORS.success} size={40} strokeWidth={2} />
+            </View>
+            <Text style={styles.noAlertsTitle}>All Clear!</Text>
+            <Text style={styles.noAlertsSubtitle}>
+              No critical alerts in your area at the moment
+            </Text>
+          </View>
+        )}
+      </View>
 
       {/* Quick Stats */}
       <View style={styles.statsGrid}>
@@ -745,43 +885,184 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   criticalSection: {
-    margin: SPACING.md,
-    backgroundColor: COLORS.error,
-    borderRadius: 16,
-    padding: SPACING.md,
-    shadowColor: COLORS.error,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
+    marginHorizontal: SPACING.md,
+    marginTop: SPACING.md,
+    marginBottom: SPACING.sm,
   },
-  criticalHeader: {
+  criticalSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  criticalHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: SPACING.sm,
     gap: SPACING.sm,
   },
-  criticalTitle: {
-    fontSize: TYPOGRAPHY.sizes.md,
+  criticalIconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  criticalSectionTitle: {
+    fontSize: TYPOGRAPHY.sizes.lg,
+    fontWeight: TYPOGRAPHY.weights.bold,
+    color: COLORS.text,
+  },
+  criticalCountBadge: {
+    backgroundColor: COLORS.error,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    borderRadius: 12,
+    minWidth: 28,
+    alignItems: 'center',
+  },
+  criticalCountText: {
+    fontSize: TYPOGRAPHY.sizes.xs,
     fontWeight: TYPOGRAPHY.weights.bold,
     color: COLORS.white,
   },
-  criticalAlert: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    padding: SPACING.sm,
-    borderRadius: SPACING.borderRadius,
-    marginTop: SPACING.sm,
+  criticalAlertsContainer: {
+    gap: SPACING.sm,
+  },
+  criticalAlertCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    padding: SPACING.md,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.error,
+    position: 'relative',
+  },
+  alertTypeBadge: {
+    position: 'absolute',
+    top: SPACING.md,
+    right: SPACING.md,
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  alertTypeBadgeText: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    fontWeight: TYPOGRAPHY.weights.bold,
+    color: COLORS.error,
+  },
+  criticalAlertContent: {
+    paddingRight: 80,
+  },
+  criticalAlertHeader: {
+    marginBottom: SPACING.sm,
   },
   criticalAlertTitle: {
-    fontSize: TYPOGRAPHY.sizes.sm,
-    fontWeight: TYPOGRAPHY.weights.semibold,
-    color: COLORS.white,
+    fontSize: TYPOGRAPHY.sizes.md,
+    fontWeight: TYPOGRAPHY.weights.bold,
+    color: COLORS.text,
+    lineHeight: 20,
+  },
+  criticalAlertMeta: {
+    flexDirection: 'row',
+    gap: SPACING.md,
     marginBottom: SPACING.xs,
   },
-  criticalAlertType: {
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metaText: {
     fontSize: TYPOGRAPHY.sizes.xs,
-    color: COLORS.white,
-    opacity: 0.9,
+    color: COLORS.textSecondary,
+    fontWeight: TYPOGRAPHY.weights.medium,
+  },
+  affectedAreasContainer: {
+    marginTop: SPACING.xs,
+    paddingTop: SPACING.xs,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  affectedAreasLabel: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    color: COLORS.textSecondary,
+    fontWeight: TYPOGRAPHY.weights.semibold,
+    marginBottom: 2,
+  },
+  affectedAreasText: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    color: COLORS.text,
+    fontWeight: TYPOGRAPHY.weights.medium,
+  },
+  severityIndicator: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.error,
+    marginTop: SPACING.md,
+    marginRight: SPACING.md,
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    padding: SPACING.md,
+    marginTop: SPACING.xs,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: SPACING.xs,
+  },
+  viewAllText: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    fontWeight: TYPOGRAPHY.weights.semibold,
+    color: COLORS.primary,
+  },
+  noCriticalAlerts: {
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    padding: SPACING.xl,
+    alignItems: 'center',
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  noAlertsIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#ECFDF5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.md,
+  },
+  noAlertsTitle: {
+    fontSize: TYPOGRAPHY.sizes.lg,
+    fontWeight: TYPOGRAPHY.weights.bold,
+    color: COLORS.text,
+    marginBottom: SPACING.xs,
+  },
+  noAlertsSubtitle: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
   },
   statsGrid: {
     flexDirection: 'row',

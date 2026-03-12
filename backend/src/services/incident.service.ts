@@ -159,9 +159,10 @@ class IncidentService {
     }
 
     // Filter by assigned agency for agency roles (PNP, BFP, MDRRMO)
+    // Each agency only sees incidents assigned to them
     // Super admin and admin see all incidents
     if (userRole && ['pnp', 'bfp', 'mdrrmo'].includes(userRole)) {
-      query += ' AND assigned_user.role = ?';
+      query += ' AND (assigned_user.role = ? OR ir.assigned_to IS NULL)';
       params.push(userRole);
     }
 

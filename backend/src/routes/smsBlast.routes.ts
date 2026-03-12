@@ -32,13 +32,13 @@ const smsBlastController = new SMSBlastController();
  * - 8.6: Rate limiting enforcement
  * - 14.1: Spending limit enforcement
  * 
- * Access: Admin and Superadmin only
+ * Access: MDRRMO, Admin and Superadmin
  * Rate Limit: 20 requests per 15 minutes
  */
 router.post(
   '/',
   authenticateSMS,
-  requireSMSRole('admin', 'super_admin'),
+  requireSMSRole('mdrrmo', 'admin', 'super_admin'),
   createUpdateLimiter,
   (req: SMSAuthRequest, res, next) => smsBlastController.createSMSBlast(req, res, next)
 );
@@ -47,12 +47,12 @@ router.post(
  * POST /api/sms-blast/estimate
  * Estimate recipient count and cost before sending
  * 
- * Access: Admin and Superadmin only
+ * Access: MDRRMO, Admin and Superadmin
  */
 router.post(
   '/estimate',
   authenticateSMS,
-  requireSMSRole('admin', 'super_admin'),
+  requireSMSRole('mdrrmo', 'admin', 'super_admin'),
   (req: SMSAuthRequest, res, next) => smsBlastController.estimateRecipients(req, res, next)
 );
 
@@ -62,12 +62,12 @@ router.post(
  * 
  * Requirements: 4.6, 11.1
  * 
- * Access: Admin and Superadmin
+ * Access: MDRRMO, Admin and Superadmin
  */
 router.get(
   '/credits/balance',
   authenticateSMS,
-  requireSMSRole('admin', 'super_admin'),
+  requireSMSRole('mdrrmo', 'admin', 'super_admin'),
   (req: SMSAuthRequest, res, next) => smsBlastController.getCreditBalance(req, res, next)
 );
 
@@ -93,12 +93,12 @@ router.post(
  * 
  * Requirements: 6.1, 18.4
  * 
- * Access: Admin and Superadmin
+ * Access: MDRRMO, Admin and Superadmin
  */
 router.get(
   '/templates',
   authenticateSMS,
-  requireSMSRole('admin', 'super_admin'),
+  requireSMSRole('mdrrmo', 'admin', 'super_admin'),
   (req: SMSAuthRequest, res, next) => smsBlastController.listTemplates(req, res, next)
 );
 
@@ -108,12 +108,12 @@ router.get(
  * 
  * Requirements: 17.1, 17.2
  * 
- * Access: Admin and Superadmin (Admins restricted to their jurisdiction)
+ * Access: MDRRMO, Admin and Superadmin (restricted to their jurisdiction)
  */
 router.post(
   '/contact-groups',
   authenticateSMS,
-  requireSMSRole('admin', 'super_admin'),
+  requireSMSRole('mdrrmo', 'admin', 'super_admin'),
   createUpdateLimiter,
   (req: SMSAuthRequest, res, next) => smsBlastController.createContactGroup(req, res, next)
 );
@@ -124,12 +124,12 @@ router.post(
  * 
  * Requirements: 17.1
  * 
- * Access: Admin and Superadmin
+ * Access: MDRRMO, Admin and Superadmin
  */
 router.get(
   '/contact-groups',
   authenticateSMS,
-  requireSMSRole('admin', 'super_admin'),
+  requireSMSRole('mdrrmo', 'admin', 'super_admin'),
   (req: SMSAuthRequest, res, next) => smsBlastController.listContactGroups(req, res, next)
 );
 
@@ -154,12 +154,12 @@ router.get(
  * 
  * Requirements: 16.2, 16.4
  * 
- * Access: Admin and Superadmin (Admins can only view their own blasts)
+ * Access: MDRRMO, Admin and Superadmin (can only view their own blasts unless Superadmin)
  */
 router.get(
   '/history',
   authenticateSMS,
-  requireSMSRole('admin', 'super_admin'),
+  requireSMSRole('mdrrmo', 'admin', 'super_admin'),
   (req: SMSAuthRequest, res, next) => smsBlastController.getSMSBlastHistory(req, res, next)
 );
 
@@ -169,12 +169,12 @@ router.get(
  * 
  * Requirements: 16.1, 16.2
  * 
- * Access: Admin and Superadmin
+ * Access: MDRRMO, Admin and Superadmin
  */
 router.get(
   '/dashboard/statistics',
   authenticateSMS,
-  requireSMSRole('admin', 'super_admin'),
+  requireSMSRole('mdrrmo', 'admin', 'super_admin'),
   (req: SMSAuthRequest, res, next) => smsBlastController.getDashboardStatistics(req, res, next)
 );
 
@@ -184,12 +184,12 @@ router.get(
  * 
  * Requirement: 16.4
  * 
- * Access: Admin and Superadmin
+ * Access: MDRRMO, Admin and Superadmin
  */
 router.get(
   '/dashboard/filtered',
   authenticateSMS,
-  requireSMSRole('admin', 'super_admin'),
+  requireSMSRole('mdrrmo', 'admin', 'super_admin'),
   (req: SMSAuthRequest, res, next) => smsBlastController.getFilteredDashboard(req, res, next)
 );
 
@@ -214,12 +214,12 @@ router.get(
  * 
  * Requirements: 11.6, 14.4
  * 
- * Access: Admin and Superadmin
+ * Access: MDRRMO, Admin and Superadmin
  */
 router.get(
   '/dashboard/credit-usage',
   authenticateSMS,
-  requireSMSRole('admin', 'super_admin'),
+  requireSMSRole('mdrrmo', 'admin', 'super_admin'),
   (req: SMSAuthRequest, res, next) => smsBlastController.getCreditUsageReport(req, res, next)
 );
 
@@ -229,12 +229,12 @@ router.get(
  * 
  * Requirement: 12.5
  * 
- * Access: Admin and Superadmin (can only view their own blasts unless Superadmin)
+ * Access: MDRRMO, Admin and Superadmin (can only view their own blasts unless Superadmin)
  */
 router.get(
   '/:blastId',
   authenticateSMS,
-  requireSMSRole('admin', 'super_admin'),
+  requireSMSRole('mdrrmo', 'admin', 'super_admin'),
   (req: SMSAuthRequest, res, next) => smsBlastController.getSMSBlastStatus(req, res, next)
 );
 

@@ -107,12 +107,12 @@ export const alertAutomationService = {
     try {
       const template = rule.alert_template;
       
-      // Create alert
+      // Create alert (auto-approved for immediate visibility)
       const [result] = await connection.query<any>(
         `INSERT INTO disaster_alerts 
         (alert_type, severity, title, description, source, source_data, affected_areas, 
          latitude, longitude, radius_km, start_time, is_active, created_by, auto_approved)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 1, 1, 0)`,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 1, 1, 1)`,
         [
           template.alert_type,
           template.severity,
@@ -156,12 +156,12 @@ export const alertAutomationService = {
       const template = rule.alert_template;
       const radiusKm = rule.conditions.radius_km || 100;
       
-      // Create alert
+      // Create alert (auto-approved for immediate visibility)
       const [result] = await connection.query<any>(
         `INSERT INTO disaster_alerts 
         (alert_type, severity, title, description, source, source_data, affected_areas,
          latitude, longitude, radius_km, start_time, is_active, created_by, auto_approved)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 1, 1, 0)`,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 1, 1, 1)`,
         [
           template.alert_type,
           template.severity,

@@ -94,7 +94,7 @@ const navItems: NavItem[] = [
     icon: <PageIcon />,
     name: "SMS Blast",
     path: "/sms-blast",
-    requiredRoles: ['super_admin', 'admin'], // SMS blast - admin and superadmin only
+    requiredRoles: ['super_admin', 'admin', 'mdrrmo'], // SMS blast - admin, mdrrmo and superadmin
   },
   {
     icon: <UserCircleIcon />,
