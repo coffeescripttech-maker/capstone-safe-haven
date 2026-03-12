@@ -69,6 +69,7 @@ export default function SendSMSBlastPage() {
   // Preview state
   const [showPreview, setShowPreview] = useState(false);
   const [recipientCount, setRecipientCount] = useState(0);
+  const [recipientDetails, setRecipientDetails] = useState<Array<{name: string, phone: string}>>([]);
   const [estimatedCost, setEstimatedCost] = useState(0);
   const [characterCount, setCharacterCount] = useState(0);
   const [smsPartCount, setSmsPartCount] = useState(0);
@@ -167,6 +168,7 @@ export default function SendSMSBlastPage() {
     // Only estimate if at least one filter is selected
     if (selectedProvinces.length === 0 && selectedContactGroups.length === 0) {
       setRecipientCount(0);
+      setRecipientDetails([]);
       setEstimatedCost(0);
       return;
     }
@@ -185,7 +187,9 @@ export default function SendSMSBlastPage() {
       });
 
       const count = data.data?.recipientCount || 0;
+      const recipients = data.data?.recipients || [];
       setRecipientCount(count);
+      setRecipientDetails(recipients);
       
       // Recalculate cost with new recipient count
       const cost = smsPartCount * count;
@@ -194,6 +198,7 @@ export default function SendSMSBlastPage() {
       console.error('Error estimating recipients:', error);
       // Don't show error toast, just keep count at 0
       setRecipientCount(0);
+      setRecipientDetails([]);
     }
   };
 
@@ -488,7 +493,7 @@ export default function SendSMSBlastPage() {
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                 <div className="flex items-start gap-3">
                   <Users className="w-5 h-5 text-blue-600 mt-0.5" />
-                  <div>
+                  <div className="flex-1">
                     <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
                       Estimated Recipients
                     </p>
@@ -501,6 +506,31 @@ export default function SendSMSBlastPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Display recipient phone numbers */}
+              {recipientDetails.length > 0 && (
+                <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    Recipients List ({recipientDetails.length})
+                  </p>
+                  <div className="max-h-64 overflow-y-auto space-y-2">
+                    {recipientDetails.map((recipient, index) => (
+                      <div 
+                        key={index}
+                        className="flex items-center justify-between text-sm py-2 px-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700"
+                      >
+                        <span className="text-gray-900 dark:text-white font-medium">
+                          {recipient.name || 'Unknown'}
+                        </span>
+                        <span className="text-gray-600 dark:text-gray-400 font-mono">
+                          {recipient.phone}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

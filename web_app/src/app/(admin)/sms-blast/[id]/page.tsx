@@ -34,7 +34,7 @@ interface BlastDetails {
   completedAt?: string;
   scheduledTime?: string;
   language: 'en' | 'fil';
-  priority?: 'critical' | 'high' | 'normal'; // Made optional since API might not return it
+  priority?: 'critical' | 'high' | 'normal';
   createdBy?: {
     id: string;
     name: string;
@@ -45,6 +45,14 @@ interface BlastDetails {
     cities?: string[];
     barangays?: string[];
   };
+  recipients?: Array<{
+    name: string;
+    phone: string;
+    status: 'queued' | 'processing' | 'sent' | 'delivered' | 'failed';
+    sentAt?: string;
+    deliveredAt?: string;
+    error?: string;
+  }>;
 }
 
 export default function BlastDetailsPage() {
@@ -55,6 +63,7 @@ export default function BlastDetailsPage() {
   const [blast, setBlast] = useState<BlastDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [recipientFilter, setRecipientFilter] = useState<'all' | 'delivered' | 'sent' | 'failed'>('all');
 
   useEffect(() => {
     loadBlastDetails();
@@ -323,6 +332,116 @@ export default function BlastDetailsPage() {
               )}
             </div>
           </div>
+
+          {/* Recipients List */}
+          {blast.recipients && blast.recipients.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Recipients ({blast.recipients.length})
+              </h2>
+              
+              {/* Filter tabs */}
+              <div className="flex gap-2 mb-4 overflow-x-auto">
+                <button
+                  onClick={() => setRecipientFilter('all')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    recipientFilter === 'all'
+                      ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300'
+                      : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  All ({blast.recipients.length})
+                </button>
+                <button
+                  onClick={() => setRecipientFilter('delivered')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    recipientFilter === 'delivered'
+                      ? 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-300'
+                      : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  Delivered ({blast.recipients.filter(r => r.status === 'delivered').length})
+                </button>
+                <button
+                  onClick={() => setRecipientFilter('sent')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    recipientFilter === 'sent'
+                      ? 'bg-info-100 text-info-700 dark:bg-info-900/30 dark:text-info-300'
+                      : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  Sent ({blast.recipients.filter(r => r.status === 'sent').length})
+                </button>
+                <button
+                  onClick={() => setRecipientFilter('failed')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    recipientFilter === 'failed'
+                      ? 'bg-emergency-100 text-emergency-700 dark:bg-emergency-900/30 dark:text-emergency-300'
+                      : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  Failed ({blast.recipients.filter(r => r.status === 'failed').length})
+                </button>
+              </div>
+
+              {/* Recipients table */}
+              <div className="max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg">
+                <table className="w-full">
+                  <thead className="bg-gray-50 dark:bg-gray-900 sticky top-0">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Name
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Phone Number
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Time
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {blast.recipients
+                      .filter(r => recipientFilter === 'all' || r.status === recipientFilter)
+                      .map((recipient, index) => (
+                        <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                          <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                            {recipient.name}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
+                            {recipient.phone}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              recipient.status === 'delivered' 
+                                ? 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-300'
+                                : recipient.status === 'sent'
+                                ? 'bg-info-100 text-info-700 dark:bg-info-900/30 dark:text-info-300'
+                                : recipient.status === 'failed'
+                                ? 'bg-emergency-100 text-emergency-700 dark:bg-emergency-900/30 dark:text-emergency-300'
+                                : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                            }`}>
+                              {recipient.status.charAt(0).toUpperCase() + recipient.status.slice(1)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+                            {recipient.deliveredAt 
+                              ? new Date(recipient.deliveredAt).toLocaleString()
+                              : recipient.sentAt
+                              ? new Date(recipient.sentAt).toLocaleString()
+                              : '-'}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Sidebar */}

@@ -157,15 +157,16 @@ export class SMSBlastController {
       
       await connection.query(
         `INSERT INTO sms_blasts (
-          id, user_id, message, template_id, language,
+          id, user_id, message, template_id, language, recipient_filters,
           recipient_count, estimated_cost, status, scheduled_time, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
         [
           blastId,
           user.id,
           composedMessage.content,
           templateId || null,
           language,
+          JSON.stringify(filters),
           recipients.length,
           costEstimate.totalCredits,
           status,
@@ -302,7 +303,7 @@ export class SMSBlastController {
 
       // Get blast details
       const [blastRows] = await pool.query<any[]>(
-        `SELECT id, user_id, message, template_id, language, recipient_count,
+        `SELECT id, user_id, message, template_id, language, recipient_filters, recipient_count,
                 estimated_cost, actual_cost, status, scheduled_time, created_at, completed_at
          FROM sms_blasts
          WHERE id = ?`,
@@ -350,6 +351,47 @@ export class SMSBlastController {
       // Calculate pending count (queued + processing)
       const pendingCount = stats.queued + stats.processing;
 
+      // Get list of recipients with their delivery status
+      const [recipientRows] = await pool.query<any[]>(
+        `SELECT 
+          sj.phone_number,
+          sj.status,
+          sj.sent_at,
+          sj.delivered_at,
+          sj.error_message,
+          u.first_name,
+          u.last_name
+         FROM sms_jobs sj
+         LEFT JOIN users u ON sj.recipient_id = u.id
+         WHERE sj.blast_id = ?
+         ORDER BY sj.status DESC, sj.sent_at DESC`,
+        [blastId]
+      );
+
+      // Format recipients list
+      const recipients = recipientRows.map((row: any) => ({
+        name: row.first_name && row.last_name 
+          ? `${row.first_name} ${row.last_name}`.trim() 
+          : 'Unknown',
+        phone: row.phone_number,
+        status: row.status,
+        sentAt: row.sent_at,
+        deliveredAt: row.delivered_at,
+        error: row.error_message
+      }));
+
+      // Parse recipient filters from JSON
+      let recipientFilters = null;
+      if (blast.recipient_filters) {
+        try {
+          recipientFilters = typeof blast.recipient_filters === 'string' 
+            ? JSON.parse(blast.recipient_filters)
+            : blast.recipient_filters;
+        } catch (e) {
+          console.error('Error parsing recipient_filters:', e);
+        }
+      }
+
       // Requirement 12.5: Return blast status with delivery statistics
       res.status(200).json({
         status: 'success',
@@ -359,6 +401,7 @@ export class SMSBlastController {
           message: blast.message,
           templateId: blast.template_id,
           language: blast.language,
+          recipientFilters: recipientFilters,
           recipientCount: blast.recipient_count,
           estimatedCost: parseFloat(blast.estimated_cost),
           actualCost: blast.actual_cost ? parseFloat(blast.actual_cost) : null,
@@ -373,7 +416,8 @@ export class SMSBlastController {
             pendingCount: pendingCount,
             queuedCount: stats.queued,
             processingCount: stats.processing
-          }
+          },
+          recipients: recipients
         }
       });
     } catch (error) {
@@ -1252,9 +1296,10 @@ export class SMSBlastController {
         throw new AppError('Recipient filters are required', 400);
       }
 
-      // Count recipients matching the filters
+      // Get full recipient list (not just count) so we can show names and phone numbers
       const user = req.user!;
-      const recipientCount = await recipientFilter.countRecipients(filters, user);
+      const recipients = await recipientFilter.getRecipients(filters, user);
+      const recipientCount = recipients.length;
 
       // Estimate cost if message is provided
       let estimatedCost = 0;
@@ -1288,10 +1333,17 @@ export class SMSBlastController {
         }
       }
 
+      // Format recipients for display (name and phone number)
+      const recipientDetails = recipients.map(r => ({
+        name: r.name,
+        phone: r.phoneNumber
+      }));
+
       res.status(200).json({
         status: 'success',
         data: {
           recipientCount,
+          recipients: recipientDetails,
           estimatedCost,
           smsPartCount,
           characterCount
