@@ -112,7 +112,7 @@ export class SMSAuthMiddleware {
    * Middleware factory to check if user has required role for SMS blast operations
    * Requirements: 9.1, 9.2, 9.3
    */
-  requireRole(...allowedRoles: Array<'super_admin' | 'admin' | 'mdrrmo'>): (
+  requireRole(...allowedRoles: Array<'super_admin' | 'admin' | 'mdrrmo' | 'pnp' | 'bfp' | 'lgu_officer'>): (
     req: SMSAuthRequest,
     res: Response,
     next: NextFunction
@@ -126,23 +126,23 @@ export class SMSAuthMiddleware {
 
         const { id: userId, role, email } = req.user;
 
-        // Requirement 9.1: Regular users cannot access SMS blast functionality
-        // MDRRMO, Admin, and Super Admin have access to SMS blast
-        if (role === 'citizen' || role === 'pnp' || role === 'bfp' || role === 'lgu_officer') {
+        // Requirement 9.1: Only citizens cannot access SMS blast functionality
+        // All other roles (MDRRMO, Admin, Super Admin, PNP, BFP, LGU Officer) have access
+        if (role === 'citizen') {
           await this.logUnauthorizedAccess(
             userId,
             role,
             `access_sms_blast_${req.method}_${req.path}`,
             req.ip || 'unknown',
             req.headers['user-agent'] || 'unknown',
-            'Regular user attempted to access SMS blast functionality'
+            'Citizen role cannot access SMS blast functionality'
           );
           
-          throw new AppError('Insufficient permissions - SMS blast access restricted to MDRRMO, Admins and Superadmins', 403);
+          throw new AppError('Insufficient permissions - SMS blast access restricted to government agencies only', 403);
         }
 
         // Check if user's role is in the allowed roles list
-        if (!allowedRoles.includes(role as 'super_admin' | 'admin' | 'mdrrmo')) {
+        if (!allowedRoles.includes(role as 'super_admin' | 'admin' | 'mdrrmo' | 'pnp' | 'bfp' | 'lgu_officer')) {
           await this.logUnauthorizedAccess(
             userId,
             role,
@@ -197,8 +197,8 @@ export class SMSAuthMiddleware {
       return true;
     }
 
-    // Requirement 9.2: Admin and MDRRMO users are restricted to their jurisdiction
-    if (user.role === 'admin' || user.role === 'mdrrmo') {
+    // Requirement 9.2: Admin, MDRRMO, PNP, BFP, and LGU Officer users are restricted to their jurisdiction
+    if (user.role === 'admin' || user.role === 'mdrrmo' || user.role === 'pnp' || user.role === 'bfp' || user.role === 'lgu_officer') {
       // If no jurisdiction is set, deny access
       if (!user.jurisdiction) {
         return false;
@@ -341,7 +341,7 @@ export const smsAuthMiddleware = new SMSAuthMiddleware();
 export const authenticateSMS = (req: SMSAuthRequest, res: Response, next: NextFunction) =>
   smsAuthMiddleware.authenticate(req, res, next);
 
-export const requireSMSRole = (...roles: Array<'super_admin' | 'admin' | 'mdrrmo'>) =>
+export const requireSMSRole = (...roles: Array<'super_admin' | 'admin' | 'mdrrmo' | 'pnp' | 'bfp' | 'lgu_officer'>) =>
   smsAuthMiddleware.requireRole(...roles);
 
 export const enforceSMSJurisdiction = (

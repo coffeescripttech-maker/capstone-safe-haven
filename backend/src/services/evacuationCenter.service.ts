@@ -171,7 +171,7 @@ export class EvacuationCenterService {
 
     if (is_active !== undefined) {
       query += ` AND is_active = ?`;
-      params.push(is_active);
+      params.push(is_active ? 1 : 0);
     }
 
     query += ` ORDER BY name ASC`;
@@ -210,7 +210,7 @@ export class EvacuationCenterService {
       }
       if (is_active !== undefined) {
         countQuery += ` AND is_active = ?`;
-        countParams.push(is_active);
+        countParams.push(is_active ? 1 : 0);
       }
 
       const [countResult] = await db.query(countQuery, countParams);

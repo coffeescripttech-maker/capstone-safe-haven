@@ -40,13 +40,22 @@ export const weatherService = {
   // Get weather for major Philippine cities
   async getPhilippinesWeather(): Promise<WeatherData[]> {
     const cities = [
-      { name: 'Manila', lat: 14.5995, lon: 120.9842 },
-      { name: 'Cebu City', lat: 10.3157, lon: 123.8854 },
-      { name: 'Davao City', lat: 7.1907, lon: 125.4553 },
-      { name: 'Quezon City', lat: 14.6760, lon: 121.0437 },
-      { name: 'Baguio', lat: 16.4023, lon: 120.5960 },
-      { name: 'Iloilo City', lat: 10.7202, lon: 122.5621 },
-        { name: 'Legazpi City', lat: 13.1391, lon: 123.7438 }
+      // { name: 'Manila', lat: 14.5995, lon: 120.9842 },
+      // { name: 'Cebu City', lat: 10.3157, lon: 123.8854 },
+      // { name: 'Davao City', lat: 7.1907, lon: 125.4553 },
+      // { name: 'Quezon City', lat: 14.6760, lon: 121.0437 },
+      // { name: 'Baguio', lat: 16.4023, lon: 120.5960 },
+      // { name: 'Iloilo City', lat: 10.7202, lon: 122.5621 },
+      // { name: 'Legazpi City', lat: 13.1391, lon: 123.7438 },
+      // Pangasinan cities for environmental monitoring
+   
+   { name: 'Libertad, Tayug', lat: 16.0305, lon: 120.7442 },
+      { name: 'Dagupan City', lat: 16.0433, lon: 120.3397 },
+{ name: 'San Carlos City', lat: 15.9294, lon: 120.3417 },
+{ name: 'Urdaneta City', lat: 15.9761, lon: 120.5711 },
+{ name: 'Alaminos City', lat: 16.1581, lon: 119.9819 },
+{ name: 'Lingayen', lat: 16.0194, lon: 120.2286 }
+
     ];
     
     try {
