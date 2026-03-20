@@ -53,7 +53,7 @@ class WebSocketService {
       console.log('✅ [WebSocket] Auth token found and cleaned:', token.substring(0, 20) + '...');
 
       // Extract base URL (remove /api/v1)
-      const wsUrl = 'https://safe-haven-backend-api.onrender.com';
+      const wsUrl = API_CONFIG.BASE_URL.replace('/api/v1', '');
       
       console.log('🔌 [WebSocket] Connection Details:');
       console.log('   API URL:', API_CONFIG.BASE_URL);
@@ -64,6 +64,9 @@ class WebSocketService {
       // Create socket connection
       this.socket = io(wsUrl, {
         path: '/ws',
+        auth: {
+          token: token  // Pass token in auth object for Socket.IO v3+
+        },
         transports: ['websocket', 'polling'],
         reconnection: true,
         reconnectionAttempts: this.maxReconnectAttempts,
@@ -75,17 +78,13 @@ class WebSocketService {
 
       this.setupEventHandlers();
 
-      // Authenticate after connection
+      // Connection event handlers
       this.socket.on('connect', () => {
         console.log('✅ [WebSocket] CONNECTED SUCCESSFULLY!');
         console.log('   Socket ID:', this.socket?.id);
         console.log('   Transport:', this.socket?.io.engine.transport.name);
         this.reconnectAttempts = 0;
         this.isConnecting = false;
-        
-        // Authenticate
-        console.log('🔐 [WebSocket] Sending authentication...');
-        this.socket!.emit('authenticate', token);
       });
 
       this.socket.on('authenticated', (data: any) => {
