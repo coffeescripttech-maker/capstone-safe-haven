@@ -396,68 +396,8 @@ export class RecipientFilter {
       return { isValid: true };
     }
 
-    // Admin, MDRRMO, PNP, BFP, LGU Officer, and LGU users must have jurisdiction restrictions (Requirement 9.2)
+    // All government agency roles have access (no jurisdiction restrictions for now)
     if (user.role === 'admin' || user.role === 'mdrrmo' || user.role === 'pnp' || user.role === 'bfp' || user.role === 'lgu_officer' || user.role === 'lgu') {
-      if (!user.jurisdiction) {
-        return {
-          isValid: false,
-          error: 'User has no jurisdiction assigned'
-        };
-      }
-
-      // Parse jurisdiction
-      const jurisdictionParts = user.jurisdiction.split(':');
-      const userProvince = jurisdictionParts[0] || null;
-      const userCity = jurisdictionParts[1] || null;
-      const userBarangay = jurisdictionParts[2] || null;
-
-      // Validate province filters
-      if (filters.provinces && filters.provinces.length > 0) {
-        const hasAccess = filters.provinces.every(province => 
-          userProvince === province
-        );
-        if (!hasAccess) {
-          return {
-            isValid: false,
-            error: 'Access denied - province outside your jurisdiction'
-          };
-        }
-      }
-
-      // Validate city filters
-      if (filters.cities && filters.cities.length > 0) {
-        if (!userCity) {
-          // User has province-level jurisdiction, can access any city in their province
-          return { isValid: true };
-        }
-        const hasAccess = filters.cities.every(city => 
-          userCity === city
-        );
-        if (!hasAccess) {
-          return {
-            isValid: false,
-            error: 'Access denied - city outside your jurisdiction'
-          };
-        }
-      }
-
-      // Validate barangay filters
-      if (filters.barangays && filters.barangays.length > 0) {
-        if (!userBarangay) {
-          // User has city or province-level jurisdiction, can access any barangay
-          return { isValid: true };
-        }
-        const hasAccess = filters.barangays.every(barangay => 
-          userBarangay === barangay
-        );
-        if (!hasAccess) {
-          return {
-            isValid: false,
-            error: 'Access denied - barangay outside your jurisdiction'
-          };
-        }
-      }
-
       return { isValid: true };
     }
 
