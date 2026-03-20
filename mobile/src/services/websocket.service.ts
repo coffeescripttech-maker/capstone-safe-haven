@@ -53,7 +53,7 @@ class WebSocketService {
       console.log('✅ [WebSocket] Auth token found and cleaned:', token.substring(0, 20) + '...');
 
       // Extract base URL (remove /api/v1)
-      const wsUrl = API_CONFIG.BASE_URL.replace('/api/v1', '');
+      const wsUrl = 'https://safe-haven-backend-api.onrender.com';
       
       console.log('🔌 [WebSocket] Connection Details:');
       console.log('   API URL:', API_CONFIG.BASE_URL);

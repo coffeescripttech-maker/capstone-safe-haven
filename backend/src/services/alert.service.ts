@@ -157,6 +157,9 @@ export class AlertService {
       }
     }
 
+    // Broadcast alert via WebSocket to all connected clients
+    websocketService.broadcastNewAlert(alert);
+
     return result;
   }
 

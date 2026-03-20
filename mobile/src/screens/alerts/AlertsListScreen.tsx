@@ -33,16 +33,18 @@ export const AlertsListScreen: React.FC = () => {
   const [lastUpdate, setLastUpdate] = useState<string>('');
 
   useEffect(() => {
+    // Initial load and clear badges
     loadAlerts();
     loadLastUpdate();
-  }, [location, selectedType, selectedSeverity]);
-
-  // Clear badges when screen is focused (separate effect to avoid dependency issues)
-  useEffect(() => {
     clearBadge();
     clearBadgeCounter('alerts_tab');
     clearBadgeCounter('header');
   }, []); // Run only once when component mounts
+
+  // Reload when filters change
+  useEffect(() => {
+    loadAlerts();
+  }, [selectedType, selectedSeverity]);
 
   const loadLastUpdate = async () => {
     const timestamp = await cacheService.getTimestamp(CACHE_KEYS.ALERTS);

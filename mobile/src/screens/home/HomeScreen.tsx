@@ -7,6 +7,7 @@ import { useAlerts } from '../../store/AlertContext';
 import { useLocation } from '../../store/LocationContext';
 import { useNotifications } from '../../store/NotificationContext';
 import { useBadgeCounter } from '../../store/BadgeContext';
+import { websocketService } from '../../services/websocket.service';
 import { NotificationManager } from '../../services/notifications/NotificationManager';
 import { badgeCounterService } from '../../services/notifications/BadgeCounterService';
 import { ProtectedComponent } from '../../components/common/ProtectedComponent';
@@ -43,7 +44,7 @@ type Props = BottomTabScreenProps<MainTabParamList, 'Home'>;
 
 export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const { user } = useAuth();
-  const { alerts } = useAlerts();
+  const { alerts, fetchAlerts } = useAlerts();
   const { location, requestPermission, hasPermission } = useLocation();
   const { hasPermission: hasNotificationPermission, requestPermission: requestNotificationPermission } = useNotifications();
   const { updateBadgeCount } = useBadgeCounter();
@@ -53,6 +54,25 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const [locationName, setLocationName] = useState<string>('Fetching location...');
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [isLoadingWeather, setIsLoadingWeather] = useState(false);
+  const [alertUpdateTrigger, setAlertUpdateTrigger] = useState(0);
+
+  // Listen for real-time alert updates via WebSocket
+  useEffect(() => {
+    console.log('🏠 [HomeScreen] Setting up WebSocket listener for new alerts');
+    
+    const unsubscribe = websocketService.on('new_alert', (data) => {
+      console.log('🏠 [HomeScreen] Received new alert via WebSocket:', data);
+      // Trigger re-render by updating state
+      setAlertUpdateTrigger(prev => prev + 1);
+    });
+
+    return () => {
+      console.log('🏠 [HomeScreen] Cleaning up WebSocket listener');
+      if (unsubscribe && typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
+  }, []);
 
   // Update time every second
   useEffect(() => {
