@@ -421,7 +421,7 @@ export default function IncidentNotificationBell() {
                   >
                     <div className="flex items-start gap-3">
                       {/* Severity Indicator */}
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${getSeverityColor(incident.severity)}`}>
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${getSeverityColor(incident.severity || 'moderate')}`}>
                         <AlertTriangle className="w-5 h-5" />
                       </div>
 
@@ -429,15 +429,15 @@ export default function IncidentNotificationBell() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">
-                            {incident.title}
+                            {incident.title || 'Untitled Incident'}
                           </span>
                           <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 flex-shrink-0">
-                            {getTypeIcon(incident.incidentType)} {incident.incidentType.replace('_', ' ')}
+                            {getTypeIcon(incident.incidentType || 'other')} {(incident.incidentType || 'other').replace('_', ' ')}
                           </span>
                         </div>
                         
                         <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-2">
-                          {incident.description}
+                          {incident.description || 'No description provided'}
                         </p>
 
                         <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-500">
@@ -451,8 +451,8 @@ export default function IncidentNotificationBell() {
                               Location available
                             </div>
                           )}
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getSeverityColor(incident.severity)}`}>
-                            {incident.severity}
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getSeverityColor(incident.severity || 'moderate')}`}>
+                            {incident.severity || 'moderate'}
                           </span>
                         </div>
                       </div>

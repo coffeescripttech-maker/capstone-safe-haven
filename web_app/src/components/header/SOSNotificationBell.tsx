@@ -170,8 +170,9 @@ export default function SOSNotificationBell() {
       try {
         console.log('🔍 [SOS Bell] Fetching initial pending SOS alerts...');
         
+        // SOS alerts use 'sent' status for new/pending alerts, not 'pending'
         const response = await sosApi.getAll({ 
-          status: 'pending',
+          status: 'sent',  // ✅ Correct status for new SOS alerts
           limit: 50
         });
         
@@ -179,7 +180,7 @@ export default function SOSNotificationBell() {
           const paginatedData = response.data;
           const alerts = paginatedData.data || [];
           
-          console.log(`🔍 [SOS Bell] Found ${alerts.length} pending SOS alerts`);
+          console.log(`🔍 [SOS Bell] Found ${alerts.length} pending SOS alerts (status='sent')`);
           
           // Set initial alerts and count
           setNewAlerts(alerts.slice(0, 10)); // Show last 10
