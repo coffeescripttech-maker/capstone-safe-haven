@@ -2,6 +2,7 @@ import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import pool from '../config/database';
 import { dataFilterService } from './dataFilter.service';
 import notificationService from './notification.service';
+import { websocketService } from './websocket.service';
 import { logger } from '../utils/logger';
 
 export interface IncidentReport extends RowDataPacket {
@@ -115,6 +116,31 @@ class IncidentService {
         logger.error('Error sending incident notification:', error);
         // Don't fail the incident creation if notification fails
       }
+    }
+
+    // Broadcast new incident via WebSocket for real-time notifications
+    try {
+      websocketService.broadcastNewIncident({
+        id: incident.id,
+        userId: incident.user_id,
+        incidentType: incident.incident_type,
+        title: incident.title,
+        description: incident.description,
+        severity: incident.severity,
+        status: incident.status,
+        latitude: incident.latitude,
+        longitude: incident.longitude,
+        address: incident.address,
+        assignedTo: incident.assigned_to,
+        targetAgency,
+        createdAt: incident.created_at,
+        userName: incident.user_name,
+        userPhone: incident.user_phone
+      });
+      logger.info(`✅ WebSocket broadcast sent for incident ${result.insertId}`);
+    } catch (error) {
+      logger.error('Error broadcasting incident via WebSocket:', error);
+      // Don't fail the incident creation if WebSocket broadcast fails
     }
 
     return incident;

@@ -17,7 +17,7 @@ import { AppError } from '../middleware/errorHandler';
 export interface User {
   id: number;
   email: string;
-  role: 'super_admin' | 'admin' | 'pnp' | 'bfp' | 'mdrrmo' | 'lgu_officer' | 'citizen';
+  role: 'super_admin' | 'admin' | 'pnp' | 'bfp' | 'mdrrmo' | 'lgu_officer' | 'lgu' | 'citizen';
   jurisdiction?: string | null;
 }
 

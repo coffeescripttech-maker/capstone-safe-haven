@@ -5,6 +5,7 @@ import { Bell, AlertOctagon, X, Eye, Clock, MapPin } from 'lucide-react';
 import { sosApi } from '@/lib/safehaven-api';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
+import { io, Socket } from 'socket.io-client';
 
 interface SOSAlert {
   id: number;
@@ -26,19 +27,108 @@ export default function SOSNotificationBell() {
   const [newAlerts, setNewAlerts] = useState<SOSAlert[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [lastCheckTime, setLastCheckTime] = useState<Date>(new Date());
+  const [wsConnected, setWsConnected] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const socketRef = useRef<Socket | null>(null);
 
-  // Poll for new SOS alerts every 10 seconds
+  // Initialize WebSocket connection with comprehensive logging
   useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.warn('🔴 [SOS WebSocket] No token found in localStorage');
+      return;
+    }
+
+    console.log('🔵 [SOS WebSocket] Initializing connection...');
+    console.log('🔵 [SOS WebSocket] API URL:', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001');
+
+    // Connect to WebSocket server
+    const socket = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001', {
+      auth: { token },
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5
+    });
+
+    socket.on('connect', () => {
+      console.log('✅ [SOS WebSocket] Connected successfully!');
+      console.log('✅ [SOS WebSocket] Socket ID:', socket.id);
+      setWsConnected(true);
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.log('❌ [SOS WebSocket] Disconnected:', reason);
+      setWsConnected(false);
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('🔴 [SOS WebSocket] Connection error:', error.message);
+      console.error('🔴 [SOS WebSocket] Error details:', error);
+      setWsConnected(false);
+    });
+
+    socket.on('error', (error) => {
+      console.error('🔴 [SOS WebSocket] Socket error:', error);
+    });
+
+    // Listen for new SOS events
+    socket.on('new_sos', (payload: any) => {
+      console.log('🚨 [SOS WebSocket] New SOS alert received!');
+      console.log('🚨 [SOS WebSocket] Payload:', payload);
+      
+      const alert = payload.data;
+      
+      // Add to notifications list
+      setNewAlerts(prev => {
+        const updated = [alert, ...prev].slice(0, 10);
+        console.log('🚨 [SOS WebSocket] Updated alerts list:', updated.length, 'alerts');
+        return updated;
+      });
+      
+      setUnreadCount(prev => {
+        const newCount = prev + 1;
+        console.log('🚨 [SOS WebSocket] Unread count:', newCount);
+        return newCount;
+      });
+      
+      // Play notification sound
+      console.log('🔊 [SOS WebSocket] Playing notification sound...');
+      playNotificationSound();
+    });
+
+    // Log all events for debugging
+    socket.onAny((eventName, ...args) => {
+      console.log(`📡 [SOS WebSocket] Event received: ${eventName}`, args);
+    });
+
+    socketRef.current = socket;
+
+    return () => {
+      console.log('🔵 [SOS WebSocket] Cleaning up connection...');
+      socket.disconnect();
+    };
+  }, []);
+
+  // Poll for new SOS alerts every 30 seconds (fallback for WebSocket)
+  useEffect(() => {
+    console.log('🔵 [SOS Polling] Starting polling fallback...');
     checkForNewAlerts();
     
+    // Increase polling interval to 30 seconds since WebSocket provides real-time updates
     const interval = setInterval(() => {
+      if (!wsConnected) {
+        console.log('⚠️ [SOS Polling] WebSocket disconnected, using polling fallback');
+      }
       checkForNewAlerts();
-    }, 10000); // Check every 10 seconds
+    }, 30000); // Check every 30 seconds as fallback
 
-    return () => clearInterval(interval);
-  }, [lastCheckTime]);
+    return () => {
+      console.log('🔵 [SOS Polling] Stopping polling...');
+      clearInterval(interval);
+    };
+  }, [lastCheckTime, wsConnected]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -54,10 +144,12 @@ export default function SOSNotificationBell() {
 
   const checkForNewAlerts = async () => {
     try {
+      console.log('🔍 [SOS Polling] Checking for new alerts...');
       const response = await sosApi.getAll({ status: 'sent' });
       
       if (response.status === 'success' && response.data) {
         const alerts = response.data.alerts || [];
+        console.log('🔍 [SOS Polling] Found', alerts.length, 'total alerts');
         
         // Filter alerts created after last check
         const newAlertsFound = alerts.filter((alert: SOSAlert) => {
@@ -65,7 +157,11 @@ export default function SOSNotificationBell() {
           return alertTime > lastCheckTime;
         });
 
+        console.log('🔍 [SOS Polling] Found', newAlertsFound.length, 'new alerts since', lastCheckTime);
+
         if (newAlertsFound.length > 0) {
+          console.log('🚨 [SOS Polling] New alerts found!', newAlertsFound);
+          
           // Play notification sound
           playNotificationSound();
           
@@ -75,7 +171,7 @@ export default function SOSNotificationBell() {
         }
       }
     } catch (error) {
-      console.error('Error checking for new SOS alerts:', error);
+      console.error('🔴 [SOS Polling] Error checking for new SOS alerts:', error);
     }
   };
 
@@ -164,8 +260,15 @@ export default function SOSNotificationBell() {
         onClick={handleBellClick}
         className="relative flex items-center justify-center w-10 h-10 text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-error-50 hover:text-error-600 hover:border-error-300 transition-all duration-200 shadow-sm hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-error-900/20 dark:hover:text-error-400"
         aria-label="SOS Notifications"
+        title={wsConnected ? 'SOS Notifications (WebSocket Connected)' : 'SOS Notifications (Polling Mode)'}
       >
         <Bell className="w-5 h-5" />
+        
+        {/* WebSocket Connection Indicator */}
+        <span 
+          className={`absolute bottom-0 right-0 w-2 h-2 rounded-full ${wsConnected ? 'bg-green-500' : 'bg-gray-400'}`}
+          title={wsConnected ? 'Real-time connected' : 'Polling mode'}
+        />
         
         {/* Unread Badge */}
         {unreadCount > 0 && (

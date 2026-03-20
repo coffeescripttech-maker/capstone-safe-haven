@@ -5,6 +5,7 @@ import { FileText, AlertTriangle, X, Eye, Clock, MapPin } from 'lucide-react';
 import { incidentsApi } from '@/lib/safehaven-api';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
+import { io, Socket } from 'socket.io-client';
 
 interface Incident {
   id: number;
@@ -30,14 +31,60 @@ export default function IncidentNotificationBell() {
   const [lastCheckTime, setLastCheckTime] = useState<Date>(new Date());
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const socketRef = useRef<Socket | null>(null);
 
-  // Poll for new incident reports every 15 seconds
+  // Initialize WebSocket connection
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    // Connect to WebSocket server
+    const socket = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001', {
+      auth: { token },
+      transports: ['websocket', 'polling']
+    });
+
+    socket.on('connect', () => {
+      console.log('✅ WebSocket connected for incident notifications');
+    });
+
+    socket.on('disconnect', () => {
+      console.log('❌ WebSocket disconnected');
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('WebSocket connection error:', error);
+    });
+
+    // Listen for new incident events
+    socket.on('new_incident', (payload: any) => {
+      console.log('🔔 New incident received via WebSocket:', payload);
+      
+      const incident = payload.data;
+      
+      // Add to notifications list
+      setNewIncidents(prev => [incident, ...prev].slice(0, 10));
+      setUnreadCount(prev => prev + 1);
+      
+      // Play notification sound
+      playNotificationSound();
+    });
+
+    socketRef.current = socket;
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
+  // Poll for new incident reports every 15 seconds (fallback for WebSocket)
   useEffect(() => {
     checkForNewIncidents();
     
+    // Increase polling interval to 30 seconds since WebSocket provides real-time updates
     const interval = setInterval(() => {
       checkForNewIncidents();
-    }, 15000); // Check every 15 seconds
+    }, 30000); // Check every 30 seconds as fallback
 
     return () => clearInterval(interval);
   }, [lastCheckTime]);
