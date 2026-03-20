@@ -27,8 +27,8 @@ export const API_CONFIG = {
 
     
     // 'https://margert-unespousable-asley.ngrok-free.dev/api/v1'
-      // 'https://safe-haven-backend-api.onrender.com/api/v1'
-    'http://192.168.43.25:3001/api/v1'
+      'https://safe-haven-backend-api.onrender.com/api/v1'
+    // 'http://192.168.43.25:3001/api/v1'
     // // 'https://safe-haven-backend-api.onrender.com/api/v1'
   ),
   

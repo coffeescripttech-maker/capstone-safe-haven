@@ -9,6 +9,15 @@ import { useAlerts } from './AlertContext';
 import { useBadgeCounter } from './BadgeContext';
 import * as Notifications from 'expo-notifications';
 
+// Configure how notifications should be handled when app is in foreground
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
+
 interface RealtimeContextType {
   isConnected: boolean;
   reconnectAttempts: number;
@@ -24,6 +33,37 @@ export const RealtimeProvider: React.FC<{ children: ReactNode }> = ({ children }
   const { updateBadgeCount } = useBadgeCounter();
   const [isConnected, setIsConnected] = useState(false);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
+
+  // Request notification permissions on mount
+  useEffect(() => {
+    const requestPermissions = async () => {
+      try {
+        console.log('🔔 [RealtimeContext] Requesting notification permissions...');
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        console.log('   Existing permission status:', existingStatus);
+        
+        let finalStatus = existingStatus;
+        
+        if (existingStatus !== 'granted') {
+          console.log('   Requesting new permissions...');
+          const { status } = await Notifications.requestPermissionsAsync();
+          finalStatus = status;
+          console.log('   New permission status:', finalStatus);
+        }
+        
+        if (finalStatus !== 'granted') {
+          console.warn('⚠️ [RealtimeContext] Notification permissions not granted!');
+          console.warn('   Push notifications will not work.');
+        } else {
+          console.log('✅ [RealtimeContext] Notification permissions granted!');
+        }
+      } catch (error) {
+        console.error('❌ [RealtimeContext] Failed to request notification permissions:', error);
+      }
+    };
+
+    requestPermissions();
+  }, []);
 
   // Connect to WebSocket when user is authenticated
   useEffect(() => {
@@ -61,9 +101,19 @@ export const RealtimeProvider: React.FC<{ children: ReactNode }> = ({ children }
       
       // Send local push notification if app is in background or inactive
       const appState = AppState.currentState;
+      console.log('📱 [Push Notification] App state:', appState);
+      
       if (appState === 'background' || appState === 'inactive') {
         try {
-          await Notifications.scheduleNotificationAsync({
+          console.log('📱 [Push Notification] Scheduling notification...');
+          console.log('   Alert:', {
+            severity: alert.severity,
+            alertType: alert.alertType,
+            title: alert.title,
+            id: alert.id
+          });
+          
+          const notificationId = await Notifications.scheduleNotificationAsync({
             content: {
               title: `🚨 ${alert.severity?.toUpperCase() || 'ALERT'}: ${alert.alertType || 'Emergency'}`,
               body: alert.title || 'New emergency alert in your area',
@@ -79,9 +129,10 @@ export const RealtimeProvider: React.FC<{ children: ReactNode }> = ({ children }
             },
             trigger: null, // Send immediately
           });
-          console.log('📱 Push notification sent for new alert');
+          console.log('✅ [Push Notification] Notification scheduled successfully! ID:', notificationId);
         } catch (error) {
-          console.error('❌ Failed to send push notification:', error);
+          console.error('❌ [Push Notification] Failed to schedule notification:', error);
+          console.error('   Error details:', JSON.stringify(error, null, 2));
         }
       } else {
         console.log('📱 App is active, skipping push notification (showing in-app instead)');

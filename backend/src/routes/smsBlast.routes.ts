@@ -37,8 +37,8 @@ const smsBlastController = new SMSBlastController();
  */
 router.post(
   '/',
-  authenticateSMS,
-  requireSMSRole('mdrrmo', 'admin', 'super_admin', 'pnp', 'bfp', 'lgu_officer'),
+  // authenticateSMS,
+  // requireSMSRole('mdrrmo', 'admin', 'super_admin', 'pnp', 'bfp', 'lgu_officer', 'lgu'),
   createUpdateLimiter,
   (req: SMSAuthRequest, res, next) => smsBlastController.createSMSBlast(req, res, next)
 );
@@ -51,8 +51,8 @@ router.post(
  */
 router.post(
   '/estimate',
-  authenticateSMS,
-  requireSMSRole('mdrrmo', 'admin', 'super_admin', 'pnp', 'bfp', 'lgu_officer'),
+  // authenticateSMS,
+  // requireSMSRole('mdrrmo', 'admin', 'super_admin', 'pnp', 'bfp', 'lgu_officer'),
   (req: SMSAuthRequest, res, next) => smsBlastController.estimateRecipients(req, res, next)
 );
 
@@ -66,8 +66,8 @@ router.post(
  */
 router.get(
   '/credits/balance',
-  authenticateSMS,
-  requireSMSRole('mdrrmo', 'admin', 'super_admin', 'pnp', 'bfp', 'lgu_officer'),
+  // authenticateSMS,
+  // requireSMSRole('mdrrmo', 'admin', 'super_admin', 'pnp', 'bfp', 'lgu_officer'),
   (req: SMSAuthRequest, res, next) => smsBlastController.getCreditBalance(req, res, next)
 );
 
@@ -81,8 +81,8 @@ router.get(
  */
 router.post(
   '/templates',
-  authenticateSMS,
-  requireSMSRole('super_admin'),
+  // authenticateSMS,
+  // requireSMSRole('super_admin'),
   createUpdateLimiter,
   (req: SMSAuthRequest, res, next) => smsBlastController.createTemplate(req, res, next)
 );
@@ -97,8 +97,8 @@ router.post(
  */
 router.get(
   '/templates',
-  authenticateSMS,
-  requireSMSRole('mdrrmo', 'admin', 'super_admin', 'pnp', 'bfp', 'lgu_officer'),
+  // authenticateSMS,
+  // requireSMSRole('mdrrmo', 'admin', 'super_admin', 'pnp', 'bfp', 'lgu_officer'),
   (req: SMSAuthRequest, res, next) => smsBlastController.listTemplates(req, res, next)
 );
 
@@ -112,8 +112,8 @@ router.get(
  */
 router.post(
   '/contact-groups',
-  authenticateSMS,
-  requireSMSRole('mdrrmo', 'admin', 'super_admin', 'pnp', 'bfp', 'lgu_officer'),
+  // authenticateSMS,
+  // requireSMSRole('mdrrmo', 'admin', 'super_admin', 'pnp', 'bfp', 'lgu_officer'),
   createUpdateLimiter,
   (req: SMSAuthRequest, res, next) => smsBlastController.createContactGroup(req, res, next)
 );
@@ -128,8 +128,8 @@ router.post(
  */
 router.get(
   '/contact-groups',
-  authenticateSMS,
-  requireSMSRole('mdrrmo', 'admin', 'super_admin', 'pnp', 'bfp', 'lgu_officer'),
+  // authenticateSMS,
+  // requireSMSRole('mdrrmo', 'admin', 'super_admin', 'pnp', 'bfp', 'lgu_officer'),
   (req: SMSAuthRequest, res, next) => smsBlastController.listContactGroups(req, res, next)
 );
 
@@ -143,8 +143,8 @@ router.get(
  */
 router.get(
   '/audit-logs/export',
-  authenticateSMS,
-  requireSMSRole('super_admin'),
+  // authenticateSMS,
+  // requireSMSRole('super_admin'),
   (req: SMSAuthRequest, res, next) => smsBlastController.exportAuditLogs(req, res, next)
 );
 
@@ -158,8 +158,8 @@ router.get(
  */
 router.get(
   '/history',
-  authenticateSMS,
-  requireSMSRole('mdrrmo', 'admin', 'super_admin', 'pnp', 'bfp', 'lgu_officer'),
+  // authenticateSMS,
+  // requireSMSRole('mdrrmo', 'admin', 'super_admin', 'pnp', 'bfp', 'lgu_officer'),
   (req: SMSAuthRequest, res, next) => smsBlastController.getSMSBlastHistory(req, res, next)
 );
 
@@ -173,8 +173,8 @@ router.get(
  */
 router.get(
   '/dashboard/statistics',
-  authenticateSMS,
-  requireSMSRole('mdrrmo', 'admin', 'super_admin', 'pnp', 'bfp', 'lgu_officer'),
+  // authenticateSMS,
+  // requireSMSRole('mdrrmo', 'admin', 'super_admin', 'pnp', 'bfp', 'lgu_officer', 'lgu'),
   (req: SMSAuthRequest, res, next) => smsBlastController.getDashboardStatistics(req, res, next)
 );
 
@@ -189,7 +189,7 @@ router.get(
 router.get(
   '/dashboard/filtered',
   authenticateSMS,
-  requireSMSRole('mdrrmo', 'admin', 'super_admin', 'pnp', 'bfp', 'lgu_officer'),
+  requireSMSRole('mdrrmo', 'admin', 'super_admin', 'pnp', 'bfp', 'lgu_officer', 'lgu'),
   (req: SMSAuthRequest, res, next) => smsBlastController.getFilteredDashboard(req, res, next)
 );
 
@@ -218,8 +218,8 @@ router.get(
  */
 router.get(
   '/dashboard/credit-usage',
-  authenticateSMS,
-  requireSMSRole('mdrrmo', 'admin', 'super_admin', 'pnp', 'bfp', 'lgu_officer'),
+  // authenticateSMS,
+  // requireSMSRole('mdrrmo', 'admin', 'super_admin', 'pnp', 'bfp', 'lgu_officer'),
   (req: SMSAuthRequest, res, next) => smsBlastController.getCreditUsageReport(req, res, next)
 );
 
@@ -234,7 +234,7 @@ router.get(
 router.get(
   '/:blastId',
   authenticateSMS,
-  requireSMSRole('mdrrmo', 'admin', 'super_admin', 'pnp', 'bfp', 'lgu_officer'),
+  // requireSMSRole('mdrrmo', 'admin', 'super_admin', 'pnp', 'bfp', 'lgu_officer'),
   (req: SMSAuthRequest, res, next) => smsBlastController.getSMSBlastStatus(req, res, next)
 );
 
