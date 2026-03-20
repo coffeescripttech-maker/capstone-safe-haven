@@ -133,6 +133,52 @@ export default function SOSNotificationBell() {
       
       const alert = payload.data;
       
+      // Check if this alert is relevant to the current user's role
+      // Backend already filters by target_agency, but we double-check here
+      const userStr = localStorage.getItem('safehaven_user');
+      let shouldShow = true;
+      
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          const userRole = user.role;
+          const targetAgency = alert.target_agency || 'all';
+          
+          // Super admin and admin see all alerts
+          if (userRole === 'super_admin' || userRole === 'admin') {
+            shouldShow = true;
+          }
+          // MDRRMO sees mdrrmo and all
+          else if (userRole === 'mdrrmo') {
+            shouldShow = targetAgency === 'mdrrmo' || targetAgency === 'all';
+          }
+          // PNP sees pnp and all
+          else if (userRole === 'pnp') {
+            shouldShow = targetAgency === 'pnp' || targetAgency === 'all';
+          }
+          // BFP sees bfp and all
+          else if (userRole === 'bfp') {
+            shouldShow = targetAgency === 'bfp' || targetAgency === 'all';
+          }
+          // LGU officer sees barangay, lgu, and all
+          else if (userRole === 'lgu_officer') {
+            shouldShow = targetAgency === 'barangay' || targetAgency === 'lgu' || targetAgency === 'all';
+          }
+          else {
+            shouldShow = false;
+          }
+          
+          console.log(`🔍 [SOS WebSocket] Role check: ${userRole} | Target: ${targetAgency} | Show: ${shouldShow}`);
+        } catch (e) {
+          console.error('🔴 [SOS WebSocket] Error parsing user data:', e);
+        }
+      }
+      
+      if (!shouldShow) {
+        console.log('⚠️ [SOS WebSocket] Alert not relevant to user role, skipping notification');
+        return;
+      }
+      
       // Add to notifications list
       setNewAlerts(prev => {
         const updated = [alert, ...prev].slice(0, 10);
@@ -164,13 +210,30 @@ export default function SOSNotificationBell() {
     };
   }, []);
 
-  // Initial fetch of pending SOS alerts on mount
+  // Initial fetch of pending SOS alerts on mount (with role-based filtering)
   useEffect(() => {
     const fetchInitialAlerts = async () => {
       try {
         console.log('🔍 [SOS Bell] Fetching initial pending SOS alerts...');
         
+        // Get user info from localStorage for role-based filtering
+        const userStr = localStorage.getItem('safehaven_user');
+        let userRole = undefined;
+        let userJurisdiction = undefined;
+        
+        if (userStr) {
+          try {
+            const user = JSON.parse(userStr);
+            userRole = user.role;
+            userJurisdiction = user.jurisdiction;
+            console.log('🔍 [SOS Bell] User role:', userRole, '| Jurisdiction:', userJurisdiction);
+          } catch (e) {
+            console.error('🔴 [SOS Bell] Error parsing user data:', e);
+          }
+        }
+        
         // SOS alerts use 'sent' status for new/pending alerts, not 'pending'
+        // Backend will automatically filter based on role and target_agency
         const response = await sosApi.getAll({ 
           status: 'sent',  // ✅ Correct status for new SOS alerts
           limit: 50
@@ -178,9 +241,9 @@ export default function SOSNotificationBell() {
         
         if (response.status === 'success' && response.data) {
           const paginatedData = response.data;
-          const alerts = paginatedData.data || [];
+          const alerts = paginatedData.alerts || paginatedData.data || [];
           
-          console.log(`🔍 [SOS Bell] Found ${alerts.length} pending SOS alerts (status='sent')`);
+          console.log(`🔍 [SOS Bell] Found ${alerts.length} pending SOS alerts (status='sent', role-filtered)`);
           
           // Set initial alerts and count
           setNewAlerts(alerts.slice(0, 10)); // Show last 10

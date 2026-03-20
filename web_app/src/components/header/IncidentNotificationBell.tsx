@@ -135,6 +135,48 @@ export default function IncidentNotificationBell() {
       
       const incident = payload.data;
       
+      // Check if this incident is relevant to the current user's role
+      // Backend already filters by assigned_agency, but we double-check here
+      const userStr = localStorage.getItem('safehaven_user');
+      let shouldShow = true;
+      
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          const userRole = user.role;
+          const assignedAgency = incident.assignedAgency || incident.assigned_agency;
+          
+          // Super admin and admin see all incidents
+          if (userRole === 'super_admin' || userRole === 'admin') {
+            shouldShow = true;
+          }
+          // Citizens only see their own incidents
+          else if (userRole === 'citizen') {
+            shouldShow = incident.userId === user.id || incident.user_id === user.id;
+          }
+          // Agency roles (PNP, BFP, MDRRMO) see incidents assigned to them or unassigned
+          else if (['pnp', 'bfp', 'mdrrmo'].includes(userRole)) {
+            shouldShow = !assignedAgency || assignedAgency === userRole;
+          }
+          // LGU officer sees all incidents in their jurisdiction
+          else if (userRole === 'lgu_officer') {
+            shouldShow = true; // Backend handles jurisdiction filtering
+          }
+          else {
+            shouldShow = false;
+          }
+          
+          console.log(`🔍 [Incident WebSocket] Role check: ${userRole} | Assigned: ${assignedAgency || 'none'} | Show: ${shouldShow}`);
+        } catch (e) {
+          console.error('🔴 [Incident WebSocket] Error parsing user data:', e);
+        }
+      }
+      
+      if (!shouldShow) {
+        console.log('⚠️ [Incident WebSocket] Incident not relevant to user role, skipping notification');
+        return;
+      }
+      
       // Add to notifications list
       setNewIncidents(prev => {
         const updated = [incident, ...prev].slice(0, 10);
@@ -166,12 +208,29 @@ export default function IncidentNotificationBell() {
     };
   }, []);
 
-  // Initial fetch of pending incidents on mount
+  // Initial fetch of pending incidents on mount (with role-based filtering)
   useEffect(() => {
     const fetchInitialIncidents = async () => {
       try {
         console.log('🔍 [Incident Bell] Fetching initial pending incidents...');
         
+        // Get user info from localStorage for role-based filtering
+        const userStr = localStorage.getItem('safehaven_user');
+        let userRole = undefined;
+        let userJurisdiction = undefined;
+        
+        if (userStr) {
+          try {
+            const user = JSON.parse(userStr);
+            userRole = user.role;
+            userJurisdiction = user.jurisdiction;
+            console.log('🔍 [Incident Bell] User role:', userRole, '| Jurisdiction:', userJurisdiction);
+          } catch (e) {
+            console.error('🔴 [Incident Bell] Error parsing user data:', e);
+          }
+        }
+        
+        // Backend will automatically filter based on role and assigned_agency
         const response = await incidentsApi.getAll({ 
           status: 'pending',
           limit: 50
@@ -181,7 +240,7 @@ export default function IncidentNotificationBell() {
           const paginatedData = response.data;
           const incidents = paginatedData.data || [];
           
-          console.log(`🔍 [Incident Bell] Found ${incidents.length} pending incidents`);
+          console.log(`🔍 [Incident Bell] Found ${incidents.length} pending incidents (role-filtered)`);
           
           // Set initial incidents and count
           setNewIncidents(incidents.slice(0, 10)); // Show last 10

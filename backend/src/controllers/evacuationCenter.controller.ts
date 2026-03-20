@@ -5,6 +5,31 @@ import { AppError } from '../middleware/errorHandler';
 
 const centerService = new EvacuationCenterService();
 
+// Transform snake_case to camelCase for mobile app compatibility
+const transformCenter = (center: any) => {
+  return {
+    id: center.id,
+    name: center.name,
+    address: center.address,
+    city: center.city,
+    province: center.province,
+    barangay: center.barangay,
+    latitude: center.latitude,
+    longitude: center.longitude,
+    capacity: center.capacity,
+    currentOccupancy: center.current_occupancy,
+    occupancyPercentage: center.occupancy_percentage,
+    isFull: center.is_full,
+    contactPerson: center.contact_person,
+    contactNumber: center.contact_number,
+    facilities: center.facilities,
+    isActive: center.is_active,
+    distance: center.distance,
+    createdAt: center.created_at,
+    updatedAt: center.updated_at
+  };
+};
+
 export class EvacuationCenterController {
   /**
    * Create new evacuation center (Admin only)
@@ -15,7 +40,7 @@ export class EvacuationCenterController {
       
       res.status(201).json({
         status: 'success',
-        data: center
+        data: transformCenter(center)
       });
     } catch (error) {
       next(error);
@@ -48,7 +73,12 @@ export class EvacuationCenterController {
       
       res.json({
         status: 'success',
-        data: result
+        data: {
+          data: result.centers.map(transformCenter),
+          total: result.total,
+          page: result.page,
+          limit: result.limit
+        }
       });
     } catch (error) {
       next(error);
@@ -72,7 +102,7 @@ export class EvacuationCenterController {
       
       res.json({
         status: 'success',
-        data: centers
+        data: centers.map(transformCenter)
       });
     } catch (error) {
       next(error);
@@ -99,7 +129,7 @@ export class EvacuationCenterController {
       
       res.json({
         status: 'success',
-        data: centers
+        data: centers.map(transformCenter)
       });
     } catch (error) {
       next(error);
@@ -122,7 +152,7 @@ export class EvacuationCenterController {
       
       res.json({
         status: 'success',
-        data: center
+        data: transformCenter(center)
       });
     } catch (error) {
       next(error);
@@ -139,7 +169,7 @@ export class EvacuationCenterController {
       
       res.json({
         status: 'success',
-        data: center
+        data: transformCenter(center)
       });
     } catch (error) {
       next(error);
@@ -162,7 +192,7 @@ export class EvacuationCenterController {
       
       res.json({
         status: 'success',
-        data: center
+        data: transformCenter(center)
       });
     } catch (error) {
       next(error);
