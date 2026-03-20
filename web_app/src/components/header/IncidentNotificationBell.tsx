@@ -43,10 +43,10 @@ export default function IncidentNotificationBell() {
     }
 
     console.log('🔵 [Incident WebSocket] Initializing connection...');
-    console.log('🔵 [Incident WebSocket] API URL:', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001');
+    console.log('🔵 [Incident WebSocket] API URL:', process.env.NEXT_PUBLIC_API_URL || 'https://safe-haven-backend-api.onrender.com');
 
     // Connect to WebSocket server
-    const socket = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001', {
+    const socket = io(process.env.NEXT_PUBLIC_API_URL || 'https://safe-haven-backend-api.onrender.com', {
       auth: { token },
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -113,24 +113,19 @@ export default function IncidentNotificationBell() {
     };
   }, []);
 
-  // Poll for new incident reports every 30 seconds (fallback for WebSocket)
+  // Poll for new incident reports - DISABLED (using WebSocket only)
+  // Polling is commented out to rely entirely on WebSocket for real-time updates
+  /*
   useEffect(() => {
-    console.log('🔵 [Incident Polling] Starting polling fallback...');
     checkForNewIncidents();
     
-    // Increase polling interval to 30 seconds since WebSocket provides real-time updates
     const interval = setInterval(() => {
-      if (!wsConnected) {
-        console.log('⚠️ [Incident Polling] WebSocket disconnected, using polling fallback');
-      }
       checkForNewIncidents();
-    }, 30000); // Check every 30 seconds as fallback
+    }, 30000);
 
-    return () => {
-      console.log('🔵 [Incident Polling] Stopping polling...');
-      clearInterval(interval);
-    };
+    return () => clearInterval(interval);
   }, [lastCheckTime, wsConnected]);
+  */
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -146,7 +141,11 @@ export default function IncidentNotificationBell() {
 
   const checkForNewIncidents = async () => {
     try {
-      console.log('🔍 [Incident Polling] Checking for new incidents...');
+      // Only log if WebSocket is disconnected (using polling as fallback)
+      if (!wsConnected) {
+        console.log('🔍 [Incident Polling] Checking for new incidents (WebSocket disconnected)...');
+      }
+      
       // Fetch pending incidents (all severities - responders need to see everything)
       const response = await incidentsApi.getAll({ 
         status: 'pending',
@@ -156,7 +155,10 @@ export default function IncidentNotificationBell() {
       if (response.status === 'success' && response.data) {
         const paginatedData = response.data;
         const incidents = paginatedData.data || [];
-        console.log('🔍 [Incident Polling] Found', incidents.length, 'total incidents');
+        
+        if (!wsConnected) {
+          console.log('🔍 [Incident Polling] Found', incidents.length, 'total incidents');
+        }
         
         // Filter incidents created after last check
         // Show ALL severity levels - responders need to be aware of all reports
@@ -166,10 +168,14 @@ export default function IncidentNotificationBell() {
           return isNew; // No severity filter - show all
         });
 
-        console.log('🔍 [Incident Polling] Found', newIncidentsFound.length, 'new incidents since', lastCheckTime);
+        if (!wsConnected && newIncidentsFound.length > 0) {
+          console.log('🔍 [Incident Polling] Found', newIncidentsFound.length, 'new incidents since', lastCheckTime);
+        }
 
         if (newIncidentsFound.length > 0) {
-          console.log('🔔 [Incident Polling] New incidents found!', newIncidentsFound);
+          if (!wsConnected) {
+            console.log('� [Incident Polling] New incidents found!', newIncidentsFound);
+          }
           
           // Play notification sound
           playNotificationSound();

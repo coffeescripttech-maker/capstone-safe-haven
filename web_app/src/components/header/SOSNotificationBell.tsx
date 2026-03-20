@@ -41,10 +41,10 @@ export default function SOSNotificationBell() {
     }
 
     console.log('🔵 [SOS WebSocket] Initializing connection...');
-    console.log('🔵 [SOS WebSocket] API URL:', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001');
+    console.log('🔵 [SOS WebSocket] API URL:', process.env.NEXT_PUBLIC_API_URL || 'https://safe-haven-backend-api.onrender.com');
 
     // Connect to WebSocket server
-    const socket = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001', {
+    const socket = io(process.env.NEXT_PUBLIC_API_URL || 'https://safe-haven-backend-api.onrender.com', {
       auth: { token },
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -111,24 +111,25 @@ export default function SOSNotificationBell() {
     };
   }, []);
 
+  // POLLING DISABLED - Using WebSocket only for real-time updates
   // Poll for new SOS alerts every 30 seconds (fallback for WebSocket)
-  useEffect(() => {
-    console.log('🔵 [SOS Polling] Starting polling fallback...');
-    checkForNewAlerts();
-    
-    // Increase polling interval to 30 seconds since WebSocket provides real-time updates
-    const interval = setInterval(() => {
-      if (!wsConnected) {
-        console.log('⚠️ [SOS Polling] WebSocket disconnected, using polling fallback');
-      }
-      checkForNewAlerts();
-    }, 30000); // Check every 30 seconds as fallback
-
-    return () => {
-      console.log('🔵 [SOS Polling] Stopping polling...');
-      clearInterval(interval);
-    };
-  }, [lastCheckTime, wsConnected]);
+  // useEffect(() => {
+  //   console.log('🔵 [SOS Polling] Starting polling fallback...');
+  //   checkForNewAlerts();
+  //   
+  //   // Increase polling interval to 30 seconds since WebSocket provides real-time updates
+  //   const interval = setInterval(() => {
+  //     if (!wsConnected) {
+  //       console.log('⚠️ [SOS Polling] WebSocket disconnected, using polling fallback');
+  //     }
+  //     checkForNewAlerts();
+  //   }, 30000); // Check every 30 seconds as fallback
+  //
+  //   return () => {
+  //     console.log('🔵 [SOS Polling] Stopping polling...');
+  //     clearInterval(interval);
+  //   };
+  // }, [lastCheckTime, wsConnected]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
