@@ -396,12 +396,12 @@ export class RecipientFilter {
       return { isValid: true };
     }
 
-    // Admin and MDRRMO users must have jurisdiction restrictions (Requirement 9.2)
-    if (user.role === 'admin' || user.role === 'mdrrmo') {
+    // Admin, MDRRMO, PNP, BFP, LGU Officer, and LGU users must have jurisdiction restrictions (Requirement 9.2)
+    if (user.role === 'admin' || user.role === 'mdrrmo' || user.role === 'pnp' || user.role === 'bfp' || user.role === 'lgu_officer' || user.role === 'lgu') {
       if (!user.jurisdiction) {
         return {
           isValid: false,
-          error: 'Admin user has no jurisdiction assigned'
+          error: 'User has no jurisdiction assigned'
         };
       }
 
@@ -461,10 +461,10 @@ export class RecipientFilter {
       return { isValid: true };
     }
 
-    // Other roles don't have SMS blast access
+    // Citizens don't have SMS blast access
     return {
       isValid: false,
-      error: 'Insufficient permissions for SMS blast operations'
+      error: 'Insufficient permissions - SMS blast access restricted to government agencies only'
     };
   }
 
