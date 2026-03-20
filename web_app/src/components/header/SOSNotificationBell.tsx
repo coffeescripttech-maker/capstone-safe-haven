@@ -164,6 +164,35 @@ export default function SOSNotificationBell() {
     };
   }, []);
 
+  // Initial fetch of pending SOS alerts on mount
+  useEffect(() => {
+    const fetchInitialAlerts = async () => {
+      try {
+        console.log('🔍 [SOS Bell] Fetching initial pending SOS alerts...');
+        
+        const response = await sosApi.getAll({ 
+          status: 'pending',
+          limit: 50
+        });
+        
+        if (response.status === 'success' && response.data) {
+          const paginatedData = response.data;
+          const alerts = paginatedData.data || [];
+          
+          console.log(`🔍 [SOS Bell] Found ${alerts.length} pending SOS alerts`);
+          
+          // Set initial alerts and count
+          setNewAlerts(alerts.slice(0, 10)); // Show last 10
+          setUnreadCount(alerts.length);
+        }
+      } catch (error) {
+        console.error('🔴 [SOS Bell] Error fetching initial alerts:', error);
+      }
+    };
+
+    fetchInitialAlerts();
+  }, []);
+
   // POLLING DISABLED - Using WebSocket only for real-time updates
   // Poll for new SOS alerts every 30 seconds (fallback for WebSocket)
   // useEffect(() => {

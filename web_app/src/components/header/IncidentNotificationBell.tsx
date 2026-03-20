@@ -166,6 +166,35 @@ export default function IncidentNotificationBell() {
     };
   }, []);
 
+  // Initial fetch of pending incidents on mount
+  useEffect(() => {
+    const fetchInitialIncidents = async () => {
+      try {
+        console.log('🔍 [Incident Bell] Fetching initial pending incidents...');
+        
+        const response = await incidentsApi.getAll({ 
+          status: 'pending',
+          limit: 50
+        });
+        
+        if (response.status === 'success' && response.data) {
+          const paginatedData = response.data;
+          const incidents = paginatedData.data || [];
+          
+          console.log(`🔍 [Incident Bell] Found ${incidents.length} pending incidents`);
+          
+          // Set initial incidents and count
+          setNewIncidents(incidents.slice(0, 10)); // Show last 10
+          setUnreadCount(incidents.length);
+        }
+      } catch (error) {
+        console.error('🔴 [Incident Bell] Error fetching initial incidents:', error);
+      }
+    };
+
+    fetchInitialIncidents();
+  }, []);
+
   // Poll for new incident reports - DISABLED (using WebSocket only)
   // Polling is commented out to rely entirely on WebSocket for real-time updates
   /*
