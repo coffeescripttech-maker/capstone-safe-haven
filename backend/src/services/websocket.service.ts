@@ -43,38 +43,47 @@ class WebSocketService {
   private handleConnection(socket: AuthenticatedSocket): void {
     logger.info(`🔌 New WebSocket connection: ${socket.id}`);
 
-    // Authenticate user
-    socket.on('authenticate', async (token: string) => {
-      try {
-        logger.info(`🔐 Attempting to authenticate socket ${socket.id}`);
-        logger.info(`   Token (first 50 chars): ${token.substring(0, 50)}...`);
-        logger.info(`   JWT_SECRET exists: ${!!process.env.JWT_SECRET}`);
-        
-        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
-        
-        logger.info(`✅ Token verified successfully`);
-        logger.info(`   Decoded payload:`, decoded);
-        
-        socket.userId = decoded.id;
-        socket.userRole = decoded.role;
+    // Check for token in handshake auth (modern socket.io approach)
+    const token = socket.handshake.auth?.token;
+    
+    if (!token) {
+      logger.error(`❌ No token provided in handshake for socket ${socket.id}`);
+      socket.emit('auth_error', { message: 'Authentication token required' });
+      socket.disconnect();
+      return;
+    }
 
-        // Track connected user
-        if (!this.connectedUsers.has(decoded.id)) {
-          this.connectedUsers.set(decoded.id, new Set());
-        }
-        this.connectedUsers.get(decoded.id)!.add(socket.id);
+    // Authenticate user immediately on connection
+    try {
+      logger.info(`🔐 Attempting to authenticate socket ${socket.id}`);
+      logger.info(`   Token (first 50 chars): ${token.substring(0, 50)}...`);
+      logger.info(`   JWT_SECRET exists: ${!!process.env.JWT_SECRET}`);
+      
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+      
+      logger.info(`✅ Token verified successfully`);
+      logger.info(`   Decoded payload:`, decoded);
+      
+      socket.userId = decoded.id;
+      socket.userRole = decoded.role;
 
-        socket.emit('authenticated', { userId: decoded.id, user: { id: decoded.id, email: decoded.email, role: decoded.role } });
-        logger.info(`✅ User ${decoded.id} (${decoded.email}) authenticated on socket ${socket.id}`);
-      } catch (error: any) {
-        logger.error('❌ WebSocket authentication failed');
-        logger.error(`   Error name: ${error.name}`);
-        logger.error(`   Error message: ${error.message}`);
-        logger.error(`   Full error:`, error);
-        socket.emit('auth_error', { message: 'Authentication failed', error: error.message });
-        socket.disconnect();
+      // Track connected user
+      if (!this.connectedUsers.has(decoded.id)) {
+        this.connectedUsers.set(decoded.id, new Set());
       }
-    });
+      this.connectedUsers.get(decoded.id)!.add(socket.id);
+
+      socket.emit('authenticated', { userId: decoded.id, user: { id: decoded.id, email: decoded.email, role: decoded.role } });
+      logger.info(`✅ User ${decoded.id} (${decoded.email}) authenticated on socket ${socket.id}`);
+    } catch (error: any) {
+      logger.error('❌ WebSocket authentication failed');
+      logger.error(`   Error name: ${error.name}`);
+      logger.error(`   Error message: ${error.message}`);
+      logger.error(`   Full error:`, error);
+      socket.emit('auth_error', { message: 'Authentication failed', error: error.message });
+      socket.disconnect();
+      return;
+    }
 
     // Handle disconnection
     socket.on('disconnect', () => {

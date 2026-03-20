@@ -36,17 +36,36 @@ export default function IncidentNotificationBell() {
 
   // Initialize WebSocket connection with comprehensive logging
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🔵 [Incident WebSocket] INITIALIZATION STARTED');
+    console.log('═══════════════════════════════════════════════════════');
+    
+    const token = localStorage.getItem('safehaven_token');
+    console.log('🔍 [Incident WebSocket] Token check:', token ? `Found (${token.substring(0, 20)}...)` : '❌ NOT FOUND');
+    
     if (!token) {
-      console.warn('🔴 [Incident WebSocket] No token found in localStorage');
+      console.error('🔴 [Incident WebSocket] CRITICAL: No authentication token found in localStorage');
+      console.error('🔴 [Incident WebSocket] Please login first to establish WebSocket connection');
       return;
     }
 
-    console.log('🔵 [Incident WebSocket] Initializing connection...');
-    console.log('🔵 [Incident WebSocket] API URL:', process.env.NEXT_PUBLIC_API_URL || 'https://safe-haven-backend-api.onrender.com');
+    // Get WebSocket URL (remove /api/v1 suffix if present)
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://safe-haven-backend-api.onrender.com';
+    const wsUrl = apiUrl.replace('/api/v1', '');
+    
+    console.log('🔍 [Incident WebSocket] Environment Configuration:');
+    console.log('   📍 NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL || 'NOT SET (using default)');
+    console.log('   📍 Raw API URL:', apiUrl);
+    console.log('   📍 WebSocket URL:', wsUrl);
+    console.log('   📍 Protocol:', wsUrl.startsWith('https') ? 'WSS (Secure)' : 'WS (Insecure)');
+    console.log('   📍 Transports:', ['websocket', 'polling']);
+    console.log('   📍 Reconnection:', 'Enabled (5 attempts, 1s delay)');
 
     // Connect to WebSocket server
-    const socket = io(process.env.NEXT_PUBLIC_API_URL || 'https://safe-haven-backend-api.onrender.com', {
+    console.log('🔵 [Incident WebSocket] Attempting connection to:', wsUrl);
+    console.log('   📍 WebSocket Path: /ws');
+    const socket = io(wsUrl, {
+      path: '/ws',  // Backend WebSocket path
       auth: { token },
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -55,24 +74,58 @@ export default function IncidentNotificationBell() {
     });
 
     socket.on('connect', () => {
-      console.log('✅ [Incident WebSocket] Connected successfully!');
-      console.log('✅ [Incident WebSocket] Socket ID:', socket.id);
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('✅ [Incident WebSocket] CONNECTION SUCCESSFUL!');
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('✅ Socket ID:', socket.id);
+      console.log('✅ Transport:', socket.io.engine.transport.name);
+      console.log('✅ Connected to:', wsUrl);
+      console.log('✅ Listening for events: new_incident');
+      console.log('═══════════════════════════════════════════════════════');
       setWsConnected(true);
     });
 
     socket.on('disconnect', (reason) => {
-      console.log('❌ [Incident WebSocket] Disconnected:', reason);
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('❌ [Incident WebSocket] DISCONNECTED');
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('❌ Reason:', reason);
+      console.log('❌ Will reconnect:', socket.active ? 'Yes' : 'No');
+      console.log('═══════════════════════════════════════════════════════');
       setWsConnected(false);
     });
 
     socket.on('connect_error', (error) => {
-      console.error('🔴 [Incident WebSocket] Connection error:', error.message);
-      console.error('🔴 [Incident WebSocket] Error details:', error);
+      console.log('═══════════════════════════════════════════════════════');
+      console.error('🔴 [Incident WebSocket] CONNECTION ERROR');
+      console.log('═══════════════════════════════════════════════════════');
+      console.error('🔴 Error Type:', error.constructor.name);
+      console.error('🔴 Error Message:', error.message);
+      console.error('🔴 Error Details:', error);
+      console.error('🔴 Attempted URL:', wsUrl);
+      console.error('🔴 Transport:', socket.io.engine?.transport?.name || 'Unknown');
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('🔧 TROUBLESHOOTING TIPS:');
+      console.log('   1. Check if backend server is running');
+      console.log('   2. Verify NEXT_PUBLIC_API_URL in .env.local');
+      console.log('   3. Check CORS settings on backend');
+      console.log('   4. Verify JWT token is valid');
+      console.log('   5. Check network/firewall settings');
+      console.log('═══════════════════════════════════════════════════════');
       setWsConnected(false);
     });
 
     socket.on('error', (error) => {
       console.error('🔴 [Incident WebSocket] Socket error:', error);
+    });
+
+    socket.on('reconnect_attempt', (attemptNumber) => {
+      console.log(`🔄 [Incident WebSocket] Reconnection attempt ${attemptNumber}/5...`);
+    });
+
+    socket.on('reconnect_failed', () => {
+      console.error('🔴 [Incident WebSocket] Reconnection failed after 5 attempts');
+      console.error('🔴 [Incident WebSocket] Please refresh the page or check your connection');
     });
 
     // Listen for new incident events
