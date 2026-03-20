@@ -10,6 +10,7 @@ import { useAlerts } from '../../store/AlertContext';
 import { useLocation } from '../../store/LocationContext';
 import { useNotifications } from '../../store/NotificationContext';
 import { useNetwork } from '../../store/NetworkContext';
+import { useBadgeCounter } from '../../store/BadgeContext';
 import { cacheService, CACHE_KEYS } from '../../services/cache';
 import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
@@ -25,16 +26,23 @@ export const AlertsListScreen: React.FC = () => {
   const { location } = useLocation();
   const { clearBadge } = useNotifications();
   const { isOnline } = useNetwork();
+  const { clearBadge: clearBadgeCounter, updateBadgeCount } = useBadgeCounter();
   const [selectedType, setSelectedType] = useState<AlertType | 'all'>('all');
   const [selectedSeverity, setSelectedSeverity] = useState<AlertSeverity | 'all'>('all');
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc'); // Default: newest first
   const [lastUpdate, setLastUpdate] = useState<string>('');
 
   useEffect(() => {
     loadAlerts();
     loadLastUpdate();
-    // Clear badge when screen is focused
-    clearBadge();
   }, [location, selectedType, selectedSeverity]);
+
+  // Clear badges when screen is focused (separate effect to avoid dependency issues)
+  useEffect(() => {
+    clearBadge();
+    clearBadgeCounter('alerts_tab');
+    clearBadgeCounter('header');
+  }, []); // Run only once when component mounts
 
   const loadLastUpdate = async () => {
     const timestamp = await cacheService.getTimestamp(CACHE_KEYS.ALERTS);
@@ -113,6 +121,18 @@ export const AlertsListScreen: React.FC = () => {
     { value: 'low', label: 'Low' },
   ];
 
+  const sortOptions: Array<{ value: 'desc' | 'asc'; label: string; icon: string }> = [
+    { value: 'desc', label: 'Newest', icon: '📅' },
+    { value: 'asc', label: 'Oldest', icon: '📆' },
+  ];
+
+  // Sort alerts by creation date
+  const sortedAlerts = [...alerts].sort((a, b) => {
+    const dateA = new Date(a.createdAt || a.startTime).getTime();
+    const dateB = new Date(b.createdAt || b.startTime).getTime();
+    return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+  });
+
   if (isLoading && alerts.length === 0) {
     return <Loading fullScreen message="Loading alerts..." />;
   }
@@ -188,9 +208,38 @@ export const AlertsListScreen: React.FC = () => {
         />
       </View>
 
+      {/* Sort Options */}
+      <View style={styles.filterSection}>
+        <FlatList
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          data={sortOptions}
+          keyExtractor={(item) => item.value}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[
+                styles.sortChip,
+                sortOrder === item.value && styles.sortChipActive,
+              ]}
+              onPress={() => setSortOrder(item.value)}
+            >
+              <Text style={styles.sortIcon}>{item.icon}</Text>
+              <Text
+                style={[
+                  styles.sortText,
+                  sortOrder === item.value && styles.sortTextActive,
+                ]}
+              >
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          )}
+        />
+      </View>
+
       {/* Alerts List */}
       <FlatList
-        data={alerts}
+        data={sortedAlerts}
         keyExtractor={(item, index) => `${item.id}-${item.alertType}-${index}`}
         renderItem={({ item }) => (
           <AlertCard alert={item} onPress={() => handleAlertPress(item)} />
@@ -267,6 +316,33 @@ const styles = StyleSheet.create({
     fontWeight: TYPOGRAPHY.weights.medium,
   },
   severityTextActive: {
+    color: COLORS.white,
+  },
+  sortChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    marginRight: SPACING.sm,
+    borderRadius: 16,
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  sortChipActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  sortIcon: {
+    fontSize: 14,
+    marginRight: SPACING.xs,
+  },
+  sortText: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    color: COLORS.text,
+    fontWeight: TYPOGRAPHY.weights.medium,
+  },
+  sortTextActive: {
     color: COLORS.white,
   },
   list: {

@@ -8,6 +8,7 @@ import { TYPOGRAPHY } from '../../constants/typography';
 import { SPACING } from '../../constants/spacing';
 import { useNotifications } from '../../store/NotificationContext';
 import { useNavigation } from '@react-navigation/native';
+import ConnectedBadge from '../common/ConnectedBadge';
 
 interface CustomHeaderProps {
   showNotificationBell?: boolean;
@@ -36,20 +37,20 @@ export const CustomHeader: React.FC<CustomHeaderProps> = ({
       </View>
       
       {showNotificationBell && (
-        <TouchableOpacity 
-          style={styles.notificationButton}
-          onPress={handleNotificationPress}
-          activeOpacity={0.7}
-        >
-          <Bell color={COLORS.white} size={22} strokeWidth={2.5} />
-          {unreadCount > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        <View style={styles.notificationContainer}>
+          <TouchableOpacity 
+            style={styles.notificationButton}
+            onPress={handleNotificationPress}
+            activeOpacity={0.7}
+          >
+            <Bell color={COLORS.white} size={22} strokeWidth={2.5} />
+          </TouchableOpacity>
+          <ConnectedBadge 
+            location="header"
+            size="small"
+            position="top-right"
+          />
+        </View>
       )}
     </View>
   );
@@ -87,6 +88,9 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     letterSpacing: 0.5,
   },
+  notificationContainer: {
+    position: 'relative',
+  },
   notificationButton: {
     width: 40,
     height: 40,
@@ -94,25 +98,5 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
-  },
-  badge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: COLORS.error,
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-    borderWidth: 2,
-    borderColor: COLORS.white,
-  },
-  badgeText: {
-    color: COLORS.white,
-    fontSize: 10,
-    fontWeight: TYPOGRAPHY.weights.bold,
   },
 });

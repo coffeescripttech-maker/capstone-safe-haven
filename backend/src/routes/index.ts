@@ -15,6 +15,7 @@ import earthquakeRoutes from './earthquake.routes';
 import alertAutomationRoutes from './alertAutomation.routes';
 import smsBlastRoutes from './smsBlast.routes';
 import locationRoutes from './location.routes';
+import notificationRoutes from './notifications.routes';
 
 const router = Router();
 
@@ -34,5 +35,6 @@ router.use('/admin/earthquakes', earthquakeRoutes);
 router.use('/admin/alert-automation', alertAutomationRoutes);
 router.use('/sms-blast', smsBlastRoutes);
 router.use('/locations', locationRoutes);
+router.use('/notifications', notificationRoutes);
 
 export default router;

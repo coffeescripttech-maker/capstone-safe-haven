@@ -229,6 +229,10 @@ export const alertsApi = {
   },
   
   create: async (data: any) => {
+    // Use current timestamp - database will store as-is
+    // Mobile app will calculate relative time correctly
+    const now = new Date();
+    
     // Transform camelCase to snake_case for backend
     const backendData = {
       alert_type: data.type,
@@ -240,10 +244,13 @@ export const alertsApi = {
       latitude: data.latitude,
       longitude: data.longitude,
       radius_km: data.radius,
-      start_time: new Date().toISOString(),
+      start_time: now.toISOString(),
       end_time: null,
       metadata: data.actionRequired ? { action_required: data.actionRequired } : null,
     };
+    
+    console.log('Creating alert with start_time:', backendData.start_time);
+    
     const response = await api.post('/alerts', backendData);
     return response.data;
   },

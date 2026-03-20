@@ -40,6 +40,12 @@ api.interceptors.response.use(
   async (error: AxiosError<ErrorResponse>) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
+    // Handle NONE property errors specifically
+    if (error.message && error.message.includes('NONE')) {
+      console.warn('API NONE property error caught:', error.message);
+      return Promise.reject(new Error('Network request failed. Please check your connection and try again.'));
+    }
+
     // Log error details
     if (error.response) {
       console.log('API Error Response:', {
@@ -87,6 +93,11 @@ api.interceptors.response.use(
 
 // Helper function to handle API errors
 export const handleApiError = (error: unknown): string => {
+  // Handle NONE property errors specifically
+  if (error instanceof Error && error.message.includes('NONE')) {
+    return 'Network connection issue. Please check your connection and try again.';
+  }
+  
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<ErrorResponse>;
     
@@ -99,6 +110,10 @@ export const handleApiError = (error: unknown): string => {
     }
     
     if (axiosError.message) {
+      // Handle NONE property errors in axios messages
+      if (axiosError.message.includes('NONE')) {
+        return 'Network connection issue. Please check your connection and try again.';
+      }
       return axiosError.message;
     }
   }

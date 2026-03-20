@@ -1,6 +1,8 @@
 import db from '../config/database';
 import { AppError } from '../middleware/errorHandler';
 import notificationService from './notification.service';
+import { websocketService } from './websocket.service';
+import { toPhilippineTime, getCurrentPhilippineTime } from '../utils/timezone';
 
 interface CreateAlertDto {
   alert_type: string;
@@ -217,6 +219,17 @@ export class AlertService {
     const needsApproval = creatorRole === 'lgu_officer';
     const status = needsApproval ? 'pending_approval' : 'approved';
 
+    // Convert start_time to Philippine time if it's in UTC
+    // The web app sends UTC time, we need to store it as Philippine time
+    const philippineStartTime = toPhilippineTime(start_time);
+    const philippineEndTime = end_time ? toPhilippineTime(end_time) : null;
+
+    // Log timezone debugging info
+    console.log('[Alert Creation] Timezone Debug:');
+    console.log('  Received start_time (UTC):', start_time);
+    console.log('  Converted to Philippine time:', philippineStartTime);
+    console.log('  Current Philippine time:', getCurrentPhilippineTime());
+
     try {
       const [result] = await db.query(
         `INSERT INTO disaster_alerts 
@@ -233,8 +246,8 @@ export class AlertService {
           latitude || null,
           longitude || null,
           radius_km || null,
-          start_time,
-          end_time || null,
+          philippineStartTime,
+          philippineEndTime,
           metadata ? JSON.stringify(metadata) : null,
           createdBy,
           status
@@ -242,7 +255,12 @@ export class AlertService {
       );
 
       const alertId = (result as any).insertId;
-      return this.getAlertById(alertId);
+      const alert = await this.getAlertById(alertId);
+      
+      // Broadcast new alert via WebSocket
+      websocketService.broadcastNewAlert(alert);
+      
+      return alert;
     } catch (error) {
       throw new AppError('Failed to create alert', 500);
     }
@@ -445,12 +463,12 @@ export class AlertService {
 
     if (data.start_time) {
       updates.push('start_time = ?');
-      params.push(data.start_time);
+      params.push(toPhilippineTime(data.start_time));
     }
 
     if (data.end_time !== undefined) {
       updates.push('end_time = ?');
-      params.push(data.end_time);
+      params.push(data.end_time ? toPhilippineTime(data.end_time) : null);
     }
 
     if (data.metadata !== undefined) {
@@ -472,6 +490,9 @@ export class AlertService {
       );
 
       const updatedAlert = await this.getAlertById(id);
+
+      // Broadcast alert update via WebSocket
+      websocketService.broadcastAlertUpdate(updatedAlert);
 
       // If severity was upgraded, send update notifications
       if (severityUpgraded) {
@@ -611,7 +632,10 @@ export class AlertService {
 
       const approvedAlert = await this.getAlertById(id);
 
-      // Broadcast the approved alert
+      // Broadcast the approved alert via WebSocket
+      websocketService.broadcastNewAlert(approvedAlert);
+
+      // Broadcast the approved alert via push/SMS
       await this.broadcastAlert(id);
 
       return approvedAlert;

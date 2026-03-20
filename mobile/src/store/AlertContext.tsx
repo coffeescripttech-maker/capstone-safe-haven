@@ -38,6 +38,9 @@ export const AlertProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     // Clear old cache on mount to ensure fresh structure
     cacheService.remove(CACHE_KEYS.ALERTS);
     
+    // Initial fetch of alerts
+    fetchAlerts();
+    
     // Auto-refresh alerts
     const interval = setInterval(() => {
       refreshAlerts();

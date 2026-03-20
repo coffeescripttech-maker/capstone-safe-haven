@@ -6,7 +6,11 @@ import { useAuth } from '../../store/AuthContext';
 import { useAlerts } from '../../store/AlertContext';
 import { useLocation } from '../../store/LocationContext';
 import { useNotifications } from '../../store/NotificationContext';
+import { useBadgeCounter } from '../../store/BadgeContext';
+import { NotificationManager } from '../../services/notifications/NotificationManager';
+import { badgeCounterService } from '../../services/notifications/BadgeCounterService';
 import { ProtectedComponent } from '../../components/common/ProtectedComponent';
+import ConnectedBadge from '../../components/common/ConnectedBadge';
 import { centersService } from '../../services/centers';
 import { weatherService, WeatherData } from '../../services/weather';
 import { geocodingService } from '../../services/geocoding';
@@ -42,6 +46,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const { alerts } = useAlerts();
   const { location, requestPermission, hasPermission } = useLocation();
   const { hasPermission: hasNotificationPermission, requestPermission: requestNotificationPermission } = useNotifications();
+  const { updateBadgeCount } = useBadgeCounter();
   const [nearestCenter, setNearestCenter] = useState<EvacuationCenter | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -143,6 +148,12 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const formatTimeAgo = (dateString: string): string => {
     const now = new Date();
     const alertTime = new Date(dateString);
+    
+    // Check if date is valid
+    if (isNaN(alertTime.getTime())) {
+      return 'Unknown time';
+    }
+    
     const diffMs = now.getTime() - alertTime.getTime();
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
@@ -151,7 +162,11 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
     if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
-    return `${diffDays}d ago`;
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays}d ago`;
+    
+    // For older dates, show the actual date
+    return alertTime.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
   // Filter critical alerts by location and sort by time
@@ -179,6 +194,11 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
     });
 
   const activeAlerts = alerts.filter(a => a.isActive);
+
+  // Update home cards badge count based on critical alerts
+  useEffect(() => {
+    updateBadgeCount('home_cards', criticalAlerts.length);
+  }, [criticalAlerts.length]); // Remove updateBadgeCount from dependencies
 
   // Format date and time
   const formatDate = (date: Date) => {
@@ -332,14 +352,19 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.criticalHeaderLeft}>
             <View style={styles.criticalIconBadge}>
               <AlertTriangle color={COLORS.error} size={20} strokeWidth={2.5} />
+              {/* <ConnectedBadge 
+                location="home_cards"
+                size="small"
+                position="top-right"re
+              /> */}
             </View>
             <Text style={styles.criticalSectionTitle}>Critical Alerts</Text>
           </View>
-          {criticalAlerts.length > 0 && (
+          {/* {criticalAlerts.length > 0 && (
             <View style={styles.criticalCountBadge}>
               <Text style={styles.criticalCountText}>{criticalAlerts.length}</Text>
             </View>
-          )}
+          )} */}
         </View>
 
         {criticalAlerts.length > 0 ? (
@@ -357,13 +382,16 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
               }
 
               // Format time ago
-              const timeAgo = formatTimeAgo(alert.createdAt);
+              const timeAgo = formatTimeAgo(alert.startTime || alert.createdAt);
 
               return (
                 <TouchableOpacity
                   key={`${alert.id}-${alert.alertType}-${index}`}
                   style={styles.criticalAlertCard}
-                  onPress={() => navigation.navigate('Alerts')}
+                  onPress={() => navigation.navigate('Alerts', {
+                    screen: 'AlertDetails',
+                    params: { alertId: alert.id }
+                  })}
                 >
                   {/* Alert Type Badge */}
                   <View style={styles.alertTypeBadge}>
@@ -393,6 +421,22 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
                           <Text style={styles.metaText}>{distance.toFixed(1)} km away</Text>
                         </View>
                       )}
+                    </View>
+
+                    {/* Debug: Show start_time timestamp */}
+                    <View style={styles.debugTimestamp}>
+                      <Text style={styles.debugTimestampText}>
+                        Start: {new Date(alert.startTime || alert.createdAt).toLocaleString('en-PH', { 
+                          timeZone: 'Asia/Manila',
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                          hour12: true
+                        })}
+                      </Text>
                     </View>
 
                     {/* Affected Areas */}
@@ -907,6 +951,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEE2E2',
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
   },
   criticalSectionTitle: {
     fontSize: TYPOGRAPHY.sizes.lg,
@@ -1001,6 +1046,17 @@ const styles = StyleSheet.create({
     fontSize: TYPOGRAPHY.sizes.xs,
     color: COLORS.text,
     fontWeight: TYPOGRAPHY.weights.medium,
+  },
+  debugTimestamp: {
+    marginTop: SPACING.xs,
+    paddingTop: SPACING.xs,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  debugTimestampText: {
+    fontSize: 10,
+    color: COLORS.textSecondary,
+    fontFamily: 'monospace',
   },
   severityIndicator: {
     position: 'absolute',

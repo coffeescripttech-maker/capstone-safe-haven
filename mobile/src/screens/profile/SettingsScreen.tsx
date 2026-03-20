@@ -1,16 +1,74 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Switch, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { SPACING } from '../../constants/spacing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { notificationSettingsManager } from '../../services/notifications/NotificationSettingsManager';
+import { audioAlertService } from '../../services/notifications/AudioAlertService';
+import { hapticFeedbackService } from '../../services/notifications/HapticFeedbackService';
 
 export const SettingsScreen: React.FC = () => {
   const [notifications, setNotifications] = useState(true);
   const [locationSharing, setLocationSharing] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [vibrationEnabled, setVibrationEnabled] = useState(true);
+
+  // Load notification settings on component mount
+  useEffect(() => {
+    loadNotificationSettings();
+  }, []);
+
+  const loadNotificationSettings = async () => {
+    try {
+      const settings = await notificationSettingsManager.getSettings();
+      setSoundEnabled(settings.soundEnabled);
+      setVibrationEnabled(settings.vibrationEnabled);
+    } catch (error) {
+      console.error('Error loading notification settings:', error);
+    }
+  };
+
+  const handleSoundToggle = async (enabled: boolean) => {
+    try {
+      setSoundEnabled(enabled);
+      await notificationSettingsManager.setSoundEnabled(enabled);
+      audioAlertService.setEnabled(enabled);
+    } catch (error) {
+      console.error('Error updating sound setting:', error);
+      setSoundEnabled(!enabled); // Revert on error
+    }
+  };
+
+  const handleVibrationToggle = async (enabled: boolean) => {
+    try {
+      setVibrationEnabled(enabled);
+      await notificationSettingsManager.setVibrationEnabled(enabled);
+      hapticFeedbackService.setEnabled(enabled);
+    } catch (error) {
+      console.error('Error updating vibration setting:', error);
+      setVibrationEnabled(!enabled); // Revert on error
+    }
+  };
+
+  const handlePreviewSound = async () => {
+    try {
+      await notificationSettingsManager.previewSound('high');
+    } catch (error) {
+      console.error('Error previewing sound:', error);
+      Alert.alert('Error', 'Failed to preview sound');
+    }
+  };
+
+  const handlePreviewVibration = async () => {
+    try {
+      await notificationSettingsManager.previewVibration('high');
+    } catch (error) {
+      console.error('Error previewing vibration:', error);
+      Alert.alert('Error', 'Failed to preview vibration');
+    }
+  };
 
   const handleClearCache = () => {
     Alert.alert(
@@ -58,7 +116,23 @@ export const SettingsScreen: React.FC = () => {
               <Text style={styles.settingDescription}>Play sound for notifications</Text>
             </View>
           </View>
-          <Switch value={soundEnabled} onValueChange={setSoundEnabled} trackColor={{ false: COLORS.border, true: COLORS.primary }} thumbColor={COLORS.white} />
+          <View style={styles.settingControls}>
+            <TouchableOpacity 
+              style={styles.previewButton} 
+              onPress={handlePreviewSound}
+              disabled={!soundEnabled}
+            >
+              <Text style={[styles.previewText, !soundEnabled && styles.previewTextDisabled]}>
+                Test
+              </Text>
+            </TouchableOpacity>
+            <Switch 
+              value={soundEnabled} 
+              onValueChange={handleSoundToggle} 
+              trackColor={{ false: COLORS.border, true: COLORS.primary }} 
+              thumbColor={COLORS.white} 
+            />
+          </View>
         </View>
 
         <View style={styles.settingItem}>
@@ -69,7 +143,23 @@ export const SettingsScreen: React.FC = () => {
               <Text style={styles.settingDescription}>Vibrate for notifications</Text>
             </View>
           </View>
-          <Switch value={vibrationEnabled} onValueChange={setVibrationEnabled} trackColor={{ false: COLORS.border, true: COLORS.primary }} thumbColor={COLORS.white} />
+          <View style={styles.settingControls}>
+            <TouchableOpacity 
+              style={styles.previewButton} 
+              onPress={handlePreviewVibration}
+              disabled={!vibrationEnabled}
+            >
+              <Text style={[styles.previewText, !vibrationEnabled && styles.previewTextDisabled]}>
+                Test
+              </Text>
+            </TouchableOpacity>
+            <Switch 
+              value={vibrationEnabled} 
+              onValueChange={handleVibrationToggle} 
+              trackColor={{ false: COLORS.border, true: COLORS.primary }} 
+              thumbColor={COLORS.white} 
+            />
+          </View>
         </View>
       </View>
 
@@ -124,6 +214,23 @@ const styles = StyleSheet.create({
   settingText: { marginLeft: SPACING.md, flex: 1 },
   settingLabel: { fontSize: TYPOGRAPHY.sizes.md, fontWeight: TYPOGRAPHY.weights.semibold, color: COLORS.text },
   settingDescription: { fontSize: TYPOGRAPHY.sizes.xs, color: COLORS.textSecondary, marginTop: 2 },
+  settingControls: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  previewButton: { 
+    backgroundColor: COLORS.primary, 
+    paddingHorizontal: SPACING.sm, 
+    paddingVertical: SPACING.xs, 
+    borderRadius: 6,
+    minWidth: 40,
+    alignItems: 'center',
+  },
+  previewText: { 
+    fontSize: TYPOGRAPHY.sizes.xs, 
+    fontWeight: TYPOGRAPHY.weights.semibold, 
+    color: COLORS.white 
+  },
+  previewTextDisabled: { 
+    color: COLORS.textSecondary 
+  },
   menuItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.white, padding: SPACING.md, borderRadius: SPACING.borderRadius, marginBottom: SPACING.sm, shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
   menuText: { flex: 1, fontSize: TYPOGRAPHY.sizes.md, fontWeight: TYPOGRAPHY.weights.medium, marginLeft: SPACING.md },
   infoItem: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: COLORS.white, padding: SPACING.md, borderRadius: SPACING.borderRadius, marginBottom: SPACING.sm },

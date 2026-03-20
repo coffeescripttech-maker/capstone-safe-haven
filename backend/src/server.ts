@@ -1,4 +1,5 @@
 import express, { Application } from 'express';
+import { createServer } from 'http';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -9,16 +10,18 @@ import { logger } from './utils/logger';
 import { generalLimiter } from './middleware/rateLimiter';
 import routes from './routes';
 import { alertAutomationService } from './services/alertAutomation.service';
+import { websocketService } from './services/websocket.service';
 
 dotenv.config();
 
 const app: Application = express();
+const httpServer = createServer(app);
 const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+  origin:  '*',
   credentials: true
 }));
 app.use(compression());
@@ -50,10 +53,14 @@ app.use((_req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
+// Initialize WebSocket
+websocketService.initialize(httpServer);
+
 // Start server
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   logger.info(`SafeHaven API Server running on port ${PORT}`);
   logger.info(`Environment: ${process.env.NODE_ENV}`);
+  logger.info(`WebSocket server ready at ws://localhost:${PORT}/ws`);
   
   // Start Alert Automation Monitoring
   // Runs every 5 minutes to check weather and earthquake data

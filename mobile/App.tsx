@@ -81,8 +81,11 @@ let AuthProvider: any;
 let RoleProvider: any;
 let LocationProvider: any;
 let AlertProvider: any;
+let BadgeProvider: any;
 let RootNavigator: any;
 let OfflineBanner: any;
+let ForegroundNotificationProvider: any;
+let RealtimeProvider: any;
 let COLORS: any;
 
 try {
@@ -92,8 +95,11 @@ try {
   RoleProvider = require('./src/store/RoleContext').RoleProvider;
   LocationProvider = require('./src/store/LocationContext').LocationProvider;
   AlertProvider = require('./src/store/AlertContext').AlertProvider;
+  BadgeProvider = require('./src/store/BadgeContext').BadgeProvider;
   RootNavigator = require('./src/navigation/RootNavigator').RootNavigator;
   OfflineBanner = require('./src/components/common/OfflineBanner').OfflineBanner;
+  ForegroundNotificationProvider = require('./src/store/ForegroundNotificationProvider').ForegroundNotificationProvider;
+  RealtimeProvider = require('./src/store/RealtimeContext').RealtimeProvider;
   COLORS = require('./src/constants/colors').COLORS;
   console.log('✅ All modules loaded successfully');
 } catch (error) {
@@ -101,8 +107,14 @@ try {
   throw error;
 }
 
-// Skip NotificationProvider entirely
-const NotificationProvider = ({ children }: any) => <>{children}</>;
+// Skip NotificationProvider entirely - use ForegroundNotificationProvider instead
+const NotificationProvider = ({ children }: any) => (
+  <ForegroundNotificationProvider>
+    <BadgeProvider>
+      {children}
+    </BadgeProvider>
+  </ForegroundNotificationProvider>
+);
 
 export default function App() {
   console.log('🚀 App starting...');
@@ -117,8 +129,10 @@ export default function App() {
               <LocationProvider>
                 <AlertProvider>
                   <NotificationProvider>
-                    <RootNavigator />
-                    <OfflineBanner />
+                    <RealtimeProvider>
+                      <RootNavigator />
+                      <OfflineBanner />
+                    </RealtimeProvider>
                   </NotificationProvider>
                 </AlertProvider>
               </LocationProvider>

@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, Bell, Building2, Menu } from 'lucide-react-native';
 import { COLORS } from '../../constants/colors';
 import { SOSButton } from '../home/SOSButton';
+import ConnectedBadge from '../common/ConnectedBadge';
 
 export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation }) => {
   const insets = useSafeAreaInsets();
@@ -106,6 +107,13 @@ export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
             >
               <View style={styles.iconContainer}>
                 <IconComponent />
+                {route.name === 'Alerts' && (
+                  <ConnectedBadge 
+                    location="alerts_tab"
+                    size="small"
+                    position="top-right"
+                  />
+                )}
               </View>
               <Text style={[styles.label, isFocused && styles.labelFocused]}>
                 {typeof label === 'string' ? label : route.name}
@@ -157,6 +165,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
   },
   label: {
     fontSize: 10,

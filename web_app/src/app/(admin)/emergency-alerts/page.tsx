@@ -46,6 +46,7 @@ export default function AlertsPage() {
   const [filter, setFilter] = useState<'all' | AlertType>('all');
   const [severityFilter, setSeverityFilter] = useState<'all' | AlertSeverity>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc'); // Default: newest first
 
   useEffect(() => {
     loadAlerts();
@@ -130,6 +131,11 @@ export default function AlertsPage() {
     if (searchQuery && !alert.title.toLowerCase().includes(searchQuery.toLowerCase()) && 
         !alert.description.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
+  }).sort((a, b) => {
+    // Sort by creation date
+    const dateA = new Date(a.createdAt).getTime();
+    const dateB = new Date(b.createdAt).getTime();
+    return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
   });
 
   if (isLoading) {
@@ -213,7 +219,7 @@ export default function AlertsPage() {
           <Filter className="w-5 h-5 text-gray-500" />
           <h2 className="text-lg font-bold text-gray-900">Filters</h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Search */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -267,6 +273,21 @@ export default function AlertsPage() {
               <option value="high">🟠 High</option>
               <option value="moderate">🟡 Moderate</option>
               <option value="low">🟢 Low</option>
+            </select>
+          </div>
+
+          {/* Sort Order */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Sort by Date
+            </label>
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as 'desc' | 'asc')}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
+            >
+              <option value="desc">📅 Newest First</option>
+              <option value="asc">📅 Oldest First</option>
             </select>
           </div>
         </div>
