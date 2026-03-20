@@ -4,6 +4,7 @@ import pool from '../config/database';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { logger } from '../utils/logger';
 import { dataFilterService } from './dataFilter.service';
+import { websocketService } from './websocket.service';
 
 export interface SOSAlert {
   id: number;
@@ -75,6 +76,10 @@ class SOSService {
       );
 
       const sosAlert = rows[0] as SOSAlert;
+
+      // Broadcast new SOS via WebSocket for real-time notifications
+      websocketService.broadcastNewSOS(sosAlert);
+      logger.info(`📢 WebSocket broadcast sent for new SOS alert: ${sosId}`);
 
       // Send notifications asynchronously (don't wait) based on target agency
       this.sendNotifications(sosId, data).catch(error => {
