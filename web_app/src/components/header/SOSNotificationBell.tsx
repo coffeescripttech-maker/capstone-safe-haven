@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Bell, AlertOctagon, X, Eye, Clock, MapPin } from 'lucide-react';
 import { sosApi } from '@/lib/safehaven-api';
 import { useRouter } from 'next/navigation';

@@ -29,65 +29,108 @@ export default function IncidentNotificationBell() {
   const [newIncidents, setNewIncidents] = useState<Incident[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [lastCheckTime, setLastCheckTime] = useState<Date>(new Date());
+  const [wsConnected, setWsConnected] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
-  // Initialize WebSocket connection
+  // Initialize WebSocket connection with comprehensive logging
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) return;
+    if (!token) {
+      console.warn('🔴 [Incident WebSocket] No token found in localStorage');
+      return;
+    }
+
+    console.log('🔵 [Incident WebSocket] Initializing connection...');
+    console.log('🔵 [Incident WebSocket] API URL:', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001');
 
     // Connect to WebSocket server
     const socket = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001', {
       auth: { token },
-      transports: ['websocket', 'polling']
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5
     });
 
     socket.on('connect', () => {
-      console.log('✅ WebSocket connected for incident notifications');
+      console.log('✅ [Incident WebSocket] Connected successfully!');
+      console.log('✅ [Incident WebSocket] Socket ID:', socket.id);
+      setWsConnected(true);
     });
 
-    socket.on('disconnect', () => {
-      console.log('❌ WebSocket disconnected');
+    socket.on('disconnect', (reason) => {
+      console.log('❌ [Incident WebSocket] Disconnected:', reason);
+      setWsConnected(false);
     });
 
     socket.on('connect_error', (error) => {
-      console.error('WebSocket connection error:', error);
+      console.error('🔴 [Incident WebSocket] Connection error:', error.message);
+      console.error('🔴 [Incident WebSocket] Error details:', error);
+      setWsConnected(false);
+    });
+
+    socket.on('error', (error) => {
+      console.error('🔴 [Incident WebSocket] Socket error:', error);
     });
 
     // Listen for new incident events
     socket.on('new_incident', (payload: any) => {
-      console.log('🔔 New incident received via WebSocket:', payload);
+      console.log('🔔 [Incident WebSocket] New incident received!');
+      console.log('🔔 [Incident WebSocket] Payload:', payload);
       
       const incident = payload.data;
       
       // Add to notifications list
-      setNewIncidents(prev => [incident, ...prev].slice(0, 10));
-      setUnreadCount(prev => prev + 1);
+      setNewIncidents(prev => {
+        const updated = [incident, ...prev].slice(0, 10);
+        console.log('🔔 [Incident WebSocket] Updated incidents list:', updated.length, 'incidents');
+        return updated;
+      });
+      
+      setUnreadCount(prev => {
+        const newCount = prev + 1;
+        console.log('🔔 [Incident WebSocket] Unread count:', newCount);
+        return newCount;
+      });
       
       // Play notification sound
+      console.log('🔊 [Incident WebSocket] Playing notification sound...');
       playNotificationSound();
+    });
+
+    // Log all events for debugging
+    socket.onAny((eventName, ...args) => {
+      console.log(`📡 [Incident WebSocket] Event received: ${eventName}`, args);
     });
 
     socketRef.current = socket;
 
     return () => {
+      console.log('🔵 [Incident WebSocket] Cleaning up connection...');
       socket.disconnect();
     };
   }, []);
 
-  // Poll for new incident reports every 15 seconds (fallback for WebSocket)
+  // Poll for new incident reports every 30 seconds (fallback for WebSocket)
   useEffect(() => {
+    console.log('🔵 [Incident Polling] Starting polling fallback...');
     checkForNewIncidents();
     
     // Increase polling interval to 30 seconds since WebSocket provides real-time updates
     const interval = setInterval(() => {
+      if (!wsConnected) {
+        console.log('⚠️ [Incident Polling] WebSocket disconnected, using polling fallback');
+      }
       checkForNewIncidents();
     }, 30000); // Check every 30 seconds as fallback
 
-    return () => clearInterval(interval);
-  }, [lastCheckTime]);
+    return () => {
+      console.log('🔵 [Incident Polling] Stopping polling...');
+      clearInterval(interval);
+    };
+  }, [lastCheckTime, wsConnected]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -103,6 +146,7 @@ export default function IncidentNotificationBell() {
 
   const checkForNewIncidents = async () => {
     try {
+      console.log('🔍 [Incident Polling] Checking for new incidents...');
       // Fetch pending incidents (all severities - responders need to see everything)
       const response = await incidentsApi.getAll({ 
         status: 'pending',
@@ -112,6 +156,7 @@ export default function IncidentNotificationBell() {
       if (response.status === 'success' && response.data) {
         const paginatedData = response.data;
         const incidents = paginatedData.data || [];
+        console.log('🔍 [Incident Polling] Found', incidents.length, 'total incidents');
         
         // Filter incidents created after last check
         // Show ALL severity levels - responders need to be aware of all reports
@@ -121,7 +166,11 @@ export default function IncidentNotificationBell() {
           return isNew; // No severity filter - show all
         });
 
+        console.log('🔍 [Incident Polling] Found', newIncidentsFound.length, 'new incidents since', lastCheckTime);
+
         if (newIncidentsFound.length > 0) {
+          console.log('🔔 [Incident Polling] New incidents found!', newIncidentsFound);
+          
           // Play notification sound
           playNotificationSound();
           
@@ -131,7 +180,7 @@ export default function IncidentNotificationBell() {
         }
       }
     } catch (error) {
-      console.error('Error checking for new incidents:', error);
+      console.error('🔴 [Incident Polling] Error checking for new incidents:', error);
     }
   };
 
@@ -220,8 +269,15 @@ export default function IncidentNotificationBell() {
         onClick={handleBellClick}
         className="relative flex items-center justify-center w-10 h-10 text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-orange-50 hover:text-orange-600 hover:border-orange-300 transition-all duration-200 shadow-sm hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-orange-900/20 dark:hover:text-orange-400"
         aria-label="Incident Notifications"
+        title={wsConnected ? 'Incident Notifications (WebSocket Connected)' : 'Incident Notifications (Polling Mode)'}
       >
         <FileText className="w-5 h-5" />
+        
+        {/* WebSocket Connection Indicator */}
+        <span 
+          className={`absolute bottom-0 right-0 w-2 h-2 rounded-full ${wsConnected ? 'bg-green-500' : 'bg-gray-400'}`}
+          title={wsConnected ? 'Real-time connected' : 'Polling mode'}
+        />
         
         {/* Unread Badge */}
         {unreadCount > 0 && (
