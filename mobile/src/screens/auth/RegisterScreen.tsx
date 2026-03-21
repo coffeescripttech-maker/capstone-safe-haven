@@ -11,6 +11,7 @@ import { SPACING } from '../../constants/spacing';
 import { validateEmail, validatePhoneNumber, validatePassword } from '../../utils/validation';
 import { AuthStackParamList } from '../../types/navigation';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Eye, EyeOff } from 'lucide-react-native';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
@@ -30,6 +31,8 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const updateField = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -208,9 +211,17 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
             value={formData.password}
             onChangeText={(value) => updateField('password', value)}
             error={errors.password}
-            secureTextEntry
+            secureTextEntry={!showPassword}
             autoCapitalize="none"
             autoComplete="password-new"
+            rightIcon={
+              showPassword ? (
+                <EyeOff color={COLORS.textSecondary} size={20} strokeWidth={2} />
+              ) : (
+                <Eye color={COLORS.textSecondary} size={20} strokeWidth={2} />
+              )
+            }
+            onRightIconPress={() => setShowPassword(!showPassword)}
           />
 
           <Input
@@ -219,8 +230,16 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
             value={formData.confirmPassword}
             onChangeText={(value) => updateField('confirmPassword', value)}
             error={errors.confirmPassword}
-            secureTextEntry
+            secureTextEntry={!showConfirmPassword}
             autoCapitalize="none"
+            rightIcon={
+              showConfirmPassword ? (
+                <EyeOff color={COLORS.textSecondary} size={20} strokeWidth={2} />
+              ) : (
+                <Eye color={COLORS.textSecondary} size={20} strokeWidth={2} />
+              )
+            }
+            onRightIconPress={() => setShowConfirmPassword(!showConfirmPassword)}
           />
 
           <Button

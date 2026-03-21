@@ -5,6 +5,7 @@ import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { logger } from '../utils/logger';
 import { dataFilterService } from './dataFilter.service';
 import { websocketService } from './websocket.service';
+import { toPhilippineTime } from '../utils/timezone';
 
 export interface SOSAlert {
   id: number;
@@ -314,6 +315,16 @@ class SOSService {
     }
   }
 
+  // Format SOS alert with timezone conversion
+  private formatSOSAlert(alert: any): any {
+    return {
+      ...alert,
+      created_at: alert.created_at ? toPhilippineTime(alert.created_at) : null,
+      updated_at: alert.updated_at ? toPhilippineTime(alert.updated_at) : null,
+      response_time: alert.response_time ? toPhilippineTime(alert.response_time) : null,
+    };
+  }
+
   // Get SOS alert by ID
   async getSOSAlertById(id: number): Promise<SOSAlert | null> {
     try {
@@ -328,7 +339,9 @@ class SOSService {
         [id]
       );
 
-      return rows.length > 0 ? rows[0] as SOSAlert : null;
+      if (rows.length === 0) return null;
+      
+      return this.formatSOSAlert(rows[0]) as SOSAlert;
     } catch (error) {
       logger.error('Error getting SOS alert:', error);
       throw error;
@@ -431,8 +444,11 @@ class SOSService {
         [...params, limit, offset]
       );
 
+      // Format alerts with timezone conversion
+      const formattedAlerts = rows.map(alert => this.formatSOSAlert(alert));
+
       return {
-        alerts: rows as SOSAlert[],
+        alerts: formattedAlerts as SOSAlert[],
         total
       };
     } catch (error) {

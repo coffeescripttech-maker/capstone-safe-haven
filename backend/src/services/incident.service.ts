@@ -4,6 +4,7 @@ import { dataFilterService } from './dataFilter.service';
 import notificationService from './notification.service';
 import { websocketService } from './websocket.service';
 import { logger } from '../utils/logger';
+import { toPhilippineTime } from '../utils/timezone';
 
 export interface IncidentReport extends RowDataPacket {
   id: number;
@@ -269,8 +270,8 @@ class IncidentService {
       latitude: incident.latitude ? Number(incident.latitude) : null,
       longitude: incident.longitude ? Number(incident.longitude) : null,
       status: incident.status,
-      createdAt: incident.created_at ? new Date(incident.created_at).toISOString() : null,
-      updatedAt: incident.updated_at ? new Date(incident.updated_at).toISOString() : null,
+      createdAt: incident.created_at ? toPhilippineTime(incident.created_at) : null,
+      updatedAt: incident.updated_at ? toPhilippineTime(incident.updated_at) : null,
       // Always include reporter information
       userName: incident.user_name,
       userPhone: incident.user_phone,
@@ -347,8 +348,8 @@ class IncidentService {
       status: incident.status,
       photos: incident.photos ? JSON.parse(incident.photos) : [],
       assignedTo: incident.assigned_to,
-      createdAt: incident.created_at ? new Date(incident.created_at).toISOString() : null,
-      updatedAt: incident.updated_at ? new Date(incident.updated_at).toISOString() : null,
+      createdAt: incident.created_at ? toPhilippineTime(incident.created_at) : null,
+      updatedAt: incident.updated_at ? toPhilippineTime(incident.updated_at) : null,
     }));
   }
 

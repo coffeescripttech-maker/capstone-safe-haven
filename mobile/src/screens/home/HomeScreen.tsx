@@ -12,6 +12,7 @@ import { NotificationManager } from '../../services/notifications/NotificationMa
 import { badgeCounterService } from '../../services/notifications/BadgeCounterService';
 import { ProtectedComponent } from '../../components/common/ProtectedComponent';
 import ConnectedBadge from '../../components/common/ConnectedBadge';
+import { Avatar } from '../../components/common/Avatar';
 import { centersService } from '../../services/centers';
 import { weatherService, WeatherData } from '../../services/weather';
 import { geocodingService } from '../../services/geocoding';
@@ -251,9 +252,12 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
       <View style={styles.dateTimeLocationCard}>
         {/* Welcome Message */}
         <View style={styles.welcomeInWidget}>
-          <View style={styles.welcomeIconSmall}>
-            <Shield color={COLORS.primary} size={20} strokeWidth={2.5} />
-          </View>
+          <Avatar
+            firstName={user?.firstName}
+            lastName={user?.lastName}
+            size="medium"
+            style={styles.welcomeAvatar}
+          />
           <View style={styles.welcomeTextSmall}>
             <Text style={styles.greetingSmall}>Hello, {user?.firstName}! 👋</Text>
             <View style={styles.subtitleRowSmall}>
@@ -694,41 +698,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F0F9FF',
-    padding: SPACING.md,
-    borderRadius: 12,
+    padding: SPACING.lg,
+    borderRadius: 16,
     marginBottom: SPACING.md,
     borderWidth: 1,
     borderColor: '#DBEAFE',
+    gap: SPACING.md,
   },
-  welcomeIconSmall: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#EFF6FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: SPACING.sm,
-    borderWidth: 1.5,
-    borderColor: '#DBEAFE',
+  welcomeAvatar: {
+    borderWidth: 2,
+    borderColor: COLORS.primary,
   },
   welcomeTextSmall: {
     flex: 1,
+    justifyContent: 'center',
   },
   greetingSmall: {
-    fontSize: TYPOGRAPHY.sizes.md,
+    fontSize: TYPOGRAPHY.sizes.lg,
     fontWeight: TYPOGRAPHY.weights.bold,
     color: COLORS.text,
-    marginBottom: 2,
+    marginBottom: 4,
+    lineHeight: 22,
   },
   subtitleRowSmall: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   subtitleSmall: {
-    fontSize: TYPOGRAPHY.sizes.xs,
+    fontSize: TYPOGRAPHY.sizes.sm,
     color: COLORS.textSecondary,
     fontWeight: TYPOGRAPHY.weights.medium,
+    lineHeight: 18,
   },
   dateTimeSection: {
     marginBottom: SPACING.md,

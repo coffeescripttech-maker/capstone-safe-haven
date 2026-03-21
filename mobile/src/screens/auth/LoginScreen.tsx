@@ -11,6 +11,7 @@ import { SPACING } from '../../constants/spacing';
 import { validateEmail } from '../../utils/validation';
 import { AuthStackParamList } from '../../types/navigation';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Eye, EyeOff } from 'lucide-react-native';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
@@ -96,6 +97,14 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
             secureTextEntry={!showPassword}
             autoCapitalize="none"
             autoComplete="password"
+            rightIcon={
+              showPassword ? (
+                <EyeOff color={COLORS.textSecondary} size={20} strokeWidth={2} />
+              ) : (
+                <Eye color={COLORS.textSecondary} size={20} strokeWidth={2} />
+              )
+            }
+            onRightIconPress={() => setShowPassword(!showPassword)}
           />
 
           <Button

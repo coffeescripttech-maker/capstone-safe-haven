@@ -6,6 +6,7 @@ import { useAuth } from '../../store/AuthContext';
 import { useRole } from '../../store/RoleContext';
 import { ProtectedComponent } from '../../components/common/ProtectedComponent';
 import { Button } from '../../components/common/Button';
+import { Avatar } from '../../components/common/Avatar';
 import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { SPACING } from '../../constants/spacing';
@@ -46,11 +47,12 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
     <ScrollView style={styles.container}>
       {/* Profile Header */}
       <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {user?.firstName?.[0]}{user?.lastName?.[0]}
-          </Text>
-        </View>
+        <Avatar
+          firstName={user?.firstName}
+          lastName={user?.lastName}
+          size="xlarge"
+          style={styles.profileAvatar}
+        />
         <Text style={styles.name}>
           {user?.firstName} {user?.lastName}
         </Text>
@@ -288,19 +290,15 @@ const styles = StyleSheet.create({
     padding: SPACING.xl,
     alignItems: 'center',
   },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: COLORS.white,
-    alignItems: 'center',
-    justifyContent: 'center',
+  profileAvatar: {
     marginBottom: SPACING.md,
-  },
-  avatarText: {
-    fontSize: 32,
-    fontWeight: TYPOGRAPHY.weights.bold,
-    color: COLORS.primary,
+    borderWidth: 4,
+    borderColor: COLORS.white,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
   },
   name: {
     fontSize: TYPOGRAPHY.sizes.xl,
