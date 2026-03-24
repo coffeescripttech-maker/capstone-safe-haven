@@ -185,12 +185,15 @@ class IncidentService {
       }
     }
 
-    // Filter by assigned agency for agency roles (PNP, BFP, MDRRMO)
+    // Filter by assigned agency for agency roles (PNP, BFP, MDRRMO/admin)
     // Each agency only sees incidents assigned to them
-    // Super admin and admin see all incidents
-    if (userRole && ['pnp', 'bfp', 'mdrrmo'].includes(userRole)) {
-      query += ' AND (assigned_user.role = ? OR ir.assigned_to IS NULL)';
-      params.push(userRole);
+    // Super admin sees all incidents
+    if (userRole && ['pnp', 'bfp', 'mdrrmo', 'admin'].includes(userRole)) {
+      query += ' AND (assigned_user.role = ? OR assigned_user.role = ? OR ir.assigned_to IS NULL)';
+      // Support both mdrrmo and admin roles
+      const primaryRole = userRole;
+      const alternateRole = userRole === 'mdrrmo' ? 'admin' : 'mdrrmo';
+      params.push(primaryRole, alternateRole);
     }
 
     // Citizens can only see their own incidents

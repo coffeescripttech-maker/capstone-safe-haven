@@ -133,10 +133,9 @@ export default function SOSNotificationBell() {
       
       const alert = payload.data;
       
-      // Check if this alert is relevant to the current user's role
-      // Backend already filters by target_agency, but we double-check here
+      // STRICT role-based filtering: Only show alerts targeted to user's role or 'all'
       const userStr = localStorage.getItem('safehaven_user');
-      let shouldShow = true;
+      let shouldShow = false;
       
       if (userStr) {
         try {
@@ -144,31 +143,34 @@ export default function SOSNotificationBell() {
           const userRole = user.role;
           const targetAgency = alert.target_agency || 'all';
           
-          // Super admin and admin see all alerts
-          if (userRole === 'super_admin' || userRole === 'admin') {
+          console.log(`🔍 [SOS WebSocket] Checking visibility - User Role: ${userRole} | Target Agency: ${targetAgency}`);
+          
+          // ONLY super_admin sees ALL alerts
+          if (userRole === 'super_admin') {
             shouldShow = true;
+            console.log(`✅ [SOS WebSocket] Super admin - showing all alerts`);
           }
-          // MDRRMO sees mdrrmo and all
-          else if (userRole === 'mdrrmo') {
-            shouldShow = targetAgency === 'mdrrmo' || targetAgency === 'all';
+          // Each agency (including MDRRMO/admin) ONLY sees alerts targeted to them or 'all'
+          else if (userRole === 'mdrrmo' || userRole === 'admin' ) {
+            shouldShow = targetAgency === 'mdrrmo' || targetAgency === 'admin' || targetAgency === 'all';
+            console.log(`${shouldShow ? '✅' : '❌'} [SOS WebSocket] MDRRMO/Admin - ${shouldShow ? 'showing' : 'hiding'} alert`);
           }
-          // PNP sees pnp and all
           else if (userRole === 'pnp') {
             shouldShow = targetAgency === 'pnp' || targetAgency === 'all';
+            console.log(`${shouldShow ? '✅' : '❌'} [SOS WebSocket] PNP - ${shouldShow ? 'showing' : 'hiding'} alert`);
           }
-          // BFP sees bfp and all
           else if (userRole === 'bfp') {
             shouldShow = targetAgency === 'bfp' || targetAgency === 'all';
+            console.log(`${shouldShow ? '✅' : '❌'} [SOS WebSocket] BFP - ${shouldShow ? 'showing' : 'hiding'} alert`);
           }
-          // LGU officer sees barangay, lgu, and all
           else if (userRole === 'lgu_officer') {
             shouldShow = targetAgency === 'barangay' || targetAgency === 'lgu' || targetAgency === 'all';
+            console.log(`${shouldShow ? '✅' : '❌'} [SOS WebSocket] LGU Officer - ${shouldShow ? 'showing' : 'hiding'} alert`);
           }
           else {
             shouldShow = false;
+            console.log(`❌ [SOS WebSocket] Role ${userRole} - hiding alert`);
           }
-          
-          console.log(`🔍 [SOS WebSocket] Role check: ${userRole} | Target: ${targetAgency} | Show: ${shouldShow}`);
         } catch (e) {
           console.error('🔴 [SOS WebSocket] Error parsing user data:', e);
         }
@@ -493,7 +495,7 @@ export default function SOSNotificationBell() {
                         <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-500">
                           <div className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
-                            {format(new Date(alert.created_at), 'h:mm a')}
+                            {format(new Date(alert.created_at.replace('Z', '')), 'h:mm a')}
                           </div>
                           {alert.latitude && alert.longitude && (
                             <div className="flex items-center gap-1">

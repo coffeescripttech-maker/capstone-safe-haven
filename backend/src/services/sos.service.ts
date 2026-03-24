@@ -369,12 +369,13 @@ class SOSService {
       let params: any[] = [];
 
       // Apply role-based filtering for target_agency
-      // Super admin and admin can see all alerts
-      // MDRRMO, PNP, BFP, and other roles only see alerts targeted to them or 'all'
-      if (filters.userRole && filters.userRole !== 'super_admin' && filters.userRole !== 'admin') {
+      // Super admin sees all alerts
+      // MDRRMO/admin, PNP, BFP, and other roles only see alerts targeted to them or 'all'
+      if (filters.userRole && filters.userRole !== 'super_admin') {
         // Map role to target_agency values they should see
         const roleAgencyMap: Record<string, string[]> = {
-          'mdrrmo': ['mdrrmo', 'all'],
+          'mdrrmo': ['mdrrmo', 'admin', 'all'],
+          'admin': ['mdrrmo', 'admin', 'all'],
           'pnp': ['pnp', 'all'],
           'bfp': ['bfp', 'all'],
           'lgu_officer': ['barangay', 'lgu', 'all']

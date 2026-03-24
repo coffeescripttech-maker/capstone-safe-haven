@@ -1,176 +1,96 @@
-# Incident Timezone Fix Complete
+# Incident & SOS Timezone Fix - Complete
 
-## Status: ✅ Fixed
+## Problem Identified
 
-## Problem
-The incident detail page (`/incidents/32`) was showing incorrect timestamps. The `createdAt` field was returning UTC time instead of Philippine Time (UTC+8), while the emergency alerts page (`/emergency-alerts/96`) was correctly showing PH time.
+The backend was adding 8 hours to timestamps using `toPhilippineTime()` utility and returning them with ISO format (Z suffix). This caused a **double-conversion issue**:
+
+1. Backend adds 8 hours: `16:19 UTC` → `00:19 PH time` → returns as `"2026-03-21T00:19:25.000Z"`
+2. Browser sees 'Z' suffix (UTC indicator) and adds 8 hours again: `00:19 UTC + 8 hours` → `08:19 AM`
+3. Result: Time displays 8 hours ahead in notification bells
 
 ## Root Cause
-The `incident.service.ts` was using JavaScript's `new Date().toISOString()` for date conversion, which doesn't apply timezone conversion. The alert service was already using the `toPhilippineTime()` utility function from `timezone.ts`.
 
-## API Response Before Fix
-```json
-{
-  "status": "success",
-  "data": {
-    "id": 32,
-    "createdAt": "2026-03-20T02:08:44.000Z",  // UTC time
-    "updatedAt": "2026-03-20T02:08:44.000Z"   // UTC time
-  }
-}
-```
+The 'Z' suffix in ISO 8601 format tells the browser "this is UTC time". When the backend returns Philippine time with a 'Z' suffix, the browser incorrectly interprets it as UTC and converts it again.
 
-## API Response After Fix
-```json
-{
-  "status": "success",
-  "data": {
-    "id": 32,
-    "createdAt": "2026-03-20T10:08:44.000Z",  // PH time (UTC+8)
-    "updatedAt": "2026-03-20T10:08:44.000Z"   // PH time (UTC+8)
-  }
-}
-```
+## Solution Applied
 
-## Changes Made
+**Reverted timezone conversion in backend services** - Let the browser handle timezone conversion naturally:
 
-### File: `MOBILE_APP/backend/src/services/incident.service.ts`
+### Changes Made
 
-1. **Added timezone utility import:**
-```typescript
-import { toPhilippineTime } from '../utils/timezone';
-```
+1. **incident.service.ts**
+   - Removed `toPhilippineTime()` import
+   - Removed timezone conversion in `getUserIncidents()` method
+   - Removed timezone conversion in `formatIncidentForRole()` method
+   - Now returns UTC timestamps as-is from database
 
-2. **Updated `formatIncidentForRole()` method:**
-```typescript
-// Before:
-createdAt: incident.created_at ? new Date(incident.created_at).toISOString() : null,
-updatedAt: incident.updated_at ? new Date(incident.updated_at).toISOString() : null,
+2. **sos.service.ts**
+   - Removed `toPhilippineTime()` import
+   - Removed `formatSOSAlert()` method
+   - Removed timezone conversion in `getSOSAlerts()` method
+   - Removed timezone conversion in `getSOSAlertById()` method
+   - Now returns UTC timestamps as-is from database
 
-// After:
-createdAt: incident.created_at ? toPhilippineTime(incident.created_at) : null,
-updatedAt: incident.updated_at ? toPhilippineTime(incident.updated_at) : null,
-```
+## How It Works Now
 
-3. **Updated `getUserIncidents()` method:**
-```typescript
-// Before:
-createdAt: incident.created_at ? new Date(incident.created_at).toISOString() : null,
-updatedAt: incident.updated_at ? new Date(incident.updated_at).toISOString() : null,
+### Backend
+- Database stores: `2026-03-20 16:19:25` (UTC)
+- API returns: `"2026-03-20T16:19:25.000Z"` (UTC with Z suffix)
 
-// After:
-createdAt: incident.created_at ? toPhilippineTime(incident.created_at) : null,
-updatedAt: incident.updated_at ? toPhilippineTime(incident.updated_at) : null,
-```
+### Frontend (Browser in PH timezone)
+- Receives: `"2026-03-20T16:19:25.000Z"`
+- Browser interprets as UTC
+- Converts to local timezone: `16:19 UTC + 8 hours = 00:19 AM (March 21)` ✅ CORRECT!
 
-## Timezone Utility Function
+### Benefits
 
-The `toPhilippineTime()` function from `backend/src/utils/timezone.ts`:
-
-```typescript
-export function toPhilippineTime(utcDate: Date | string): string {
-  const date = typeof utcDate === 'string' ? new Date(utcDate) : utcDate;
-  
-  // Add 8 hours for Philippine timezone
-  const philippineTime = new Date(date.getTime() + (8 * 60 * 60 * 1000));
-  
-  return philippineTime.toISOString();
-}
-```
-
-## Affected Endpoints
-
-All incident-related endpoints now return PH time:
-
-1. `GET /api/v1/incidents` - List all incidents
-2. `GET /api/v1/incidents/:id` - Get incident by ID
-3. `GET /api/v1/incidents/user/:userId` - Get user's incidents
-4. `POST /api/v1/incidents` - Create incident (returns created incident)
-
-## How Mobile App Submits Incidents
-
-The mobile app (`ReportIncidentScreen.tsx`) does NOT send any datetime when creating an incident. It only sends:
-
-```typescript
-const reportData = {
-  incidentType,
-  title,
-  description,
-  latitude,
-  longitude,
-  address,
-  severity,
-  photos,
-  targetAgency,
-};
-```
-
-The backend automatically uses MySQL's `CURRENT_TIMESTAMP` when inserting:
-
-```sql
-INSERT INTO incident_reports 
-(user_id, incident_type, title, description, latitude, longitude, 
- address, severity, photos, status, assigned_to)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
--- created_at and updated_at use CURRENT_TIMESTAMP automatically
-```
-
-## The Flow
-
-1. **Mobile App** → Submits incident (no datetime sent)
-2. **MySQL Database** → Stores with `CURRENT_TIMESTAMP` in UTC
-3. **Backend API** → Converts UTC to PH Time when returning data
-4. **Web App** → Displays the PH Time
+1. **Standard web practice** - ISO 8601 with Z suffix is designed for this
+2. **Works for all timezones** - Users in different timezones see correct local time
+3. **No double conversion** - Browser handles timezone conversion once
+4. **Consistent behavior** - Detail pages and notification bells show same time
 
 ## Testing
 
-### Method 1: PowerShell Test Script
+### Test Incident API
 ```powershell
-# Run the test script
-cd MOBILE_APP/backend
-.\test-incident-timezone.ps1
+.\backend\test-incident-timezone.ps1
 ```
 
-### Method 2: Manual API Test
-```bash
-# Test incident detail endpoint
-curl http://localhost:3001/api/v1/incidents/32 \
-  -H "Authorization: Bearer YOUR_TOKEN"
+Expected: `created_at` should show UTC time (8 hours behind PH time)
+
+### Test SOS API
+```powershell
+# Test SOS alert endpoint
+curl http://192.168.43.25:3001/api/v1/sos-alerts/61
 ```
 
-### Method 3: Check in Web App
-1. Restart backend: `cd MOBILE_APP/backend && npm run dev`
-2. Open web app: `http://localhost:3000/incidents/32`
-3. Check "Reported" datetime - should show PH time
+Expected: `created_at` should show UTC time (8 hours behind PH time)
 
-### Expected behavior:
-- `createdAt` should show time 8 hours ahead of UTC
-- Example: If UTC is `02:08:44`, PH time should be `10:08:44`
-- The web app incident detail page should now show correct PH time
+### Test Notification Bells
+1. Open web app notification bells (Incident or SOS)
+2. Check time display
+3. Should now show correct Philippine time (not 8 hours ahead)
 
-## Consistency Across Services
+## Files Modified
 
-Now all services use consistent timezone handling:
+- `MOBILE_APP/backend/src/services/incident.service.ts`
+- `MOBILE_APP/backend/src/services/sos.service.ts`
 
-✅ **Alert Service** - Uses `toPhilippineTime()`
-✅ **Incident Service** - Uses `toPhilippineTime()` (FIXED)
-⚠️ **SOS Service** - Returns raw database dates (may need fix if issues arise)
+## Next Steps
 
-## Related Files
+1. ✅ Revert timezone conversion in backend
+2. ⏳ Restart backend server
+3. ⏳ Test incident API endpoint
+4. ⏳ Test SOS API endpoint
+5. ⏳ Test notification bells in web app
+6. ⏳ Verify detail pages still show correct time
 
-- `MOBILE_APP/backend/src/services/incident.service.ts` - Fixed
-- `MOBILE_APP/backend/src/utils/timezone.ts` - Utility functions
-- `MOBILE_APP/backend/src/services/alert.service.ts` - Reference implementation
-- `MOBILE_APP/web_app/src/app/(admin)/incidents/[id]/page.tsx` - Frontend display
+## Status
 
-## Notes
-
-- The database stores all timestamps in UTC (standard practice)
-- The conversion to PH time happens at the API layer
-- Frontend receives PH time and can display it directly
-- This matches the behavior of the emergency alerts system
+**REVERTED** - Backend now returns UTC timestamps. Browser handles timezone conversion.
 
 ---
 
-**Fixed:** March 21, 2026
-**Status:** Production Ready ✅
+**Date:** March 21, 2026
+**Issue:** Double timezone conversion causing 8-hour offset
+**Resolution:** Let browser handle timezone conversion (standard practice)

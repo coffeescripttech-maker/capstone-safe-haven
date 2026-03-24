@@ -135,10 +135,9 @@ export default function IncidentNotificationBell() {
       
       const incident = payload.data;
       
-      // Check if this incident is relevant to the current user's role
-      // Backend already filters by assigned_agency, but we double-check here
+      // STRICT role-based filtering: Only show incidents assigned to user's agency
       const userStr = localStorage.getItem('safehaven_user');
-      let shouldShow = true;
+      let shouldShow = false;
       
       if (userStr) {
         try {
@@ -146,27 +145,39 @@ export default function IncidentNotificationBell() {
           const userRole = user.role;
           const assignedAgency = incident.assignedAgency || incident.assigned_agency;
           
-          // Super admin and admin see all incidents
-          if (userRole === 'super_admin' || userRole === 'admin') {
+          console.log(`🔍 [Incident WebSocket] Checking visibility - User Role: ${userRole} | Assigned Agency: ${assignedAgency || 'none'}`);
+          
+          // ONLY super_admin sees ALL incidents
+          if (userRole === 'super_admin') {
             shouldShow = true;
+            console.log(`✅ [Incident WebSocket] Super admin - showing all incidents`);
           }
           // Citizens only see their own incidents
           else if (userRole === 'citizen') {
             shouldShow = incident.userId === user.id || incident.user_id === user.id;
+            console.log(`${shouldShow ? '✅' : '❌'} [Incident WebSocket] Citizen - ${shouldShow ? 'own incident' : 'not own incident'}`);
           }
-          // Agency roles (PNP, BFP, MDRRMO) see incidents assigned to them or unassigned
-          else if (['pnp', 'bfp', 'mdrrmo'].includes(userRole)) {
-            shouldShow = !assignedAgency || assignedAgency === userRole;
+          // Agency roles (including MDRRMO/admin) ONLY see incidents assigned to them
+          else if (userRole === 'mdrrmo' || userRole === 'admin') {
+            shouldShow = assignedAgency === 'mdrrmo' || assignedAgency === 'admin';
+            console.log(`${shouldShow ? '✅' : '❌'} [Incident WebSocket] MDRRMO/Admin - ${shouldShow ? 'showing' : 'hiding'} incident`);
           }
-          // LGU officer sees all incidents in their jurisdiction
+          else if (userRole === 'pnp') {
+            shouldShow = assignedAgency === 'pnp';
+            console.log(`${shouldShow ? '✅' : '❌'} [Incident WebSocket] PNP - ${shouldShow ? 'showing' : 'hiding'} incident`);
+          }
+          else if (userRole === 'bfp') {
+            shouldShow = assignedAgency === 'bfp';
+            console.log(`${shouldShow ? '✅' : '❌'} [Incident WebSocket] BFP - ${shouldShow ? 'showing' : 'hiding'} incident`);
+          }
           else if (userRole === 'lgu_officer') {
-            shouldShow = true; // Backend handles jurisdiction filtering
+            shouldShow = assignedAgency === 'lgu_officer' || !assignedAgency;
+            console.log(`${shouldShow ? '✅' : '❌'} [Incident WebSocket] LGU Officer - ${shouldShow ? 'showing' : 'hiding'} incident`);
           }
           else {
             shouldShow = false;
+            console.log(`❌ [Incident WebSocket] Role ${userRole} - hiding incident`);
           }
-          
-          console.log(`🔍 [Incident WebSocket] Role check: ${userRole} | Assigned: ${assignedAgency || 'none'} | Show: ${shouldShow}`);
         } catch (e) {
           console.error('🔴 [Incident WebSocket] Error parsing user data:', e);
         }
@@ -503,7 +514,7 @@ export default function IncidentNotificationBell() {
                           <div className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
                             {incident.createdAt && !isNaN(new Date(incident.createdAt).getTime()) 
-                              ? format(new Date(incident.createdAt), 'h:mm a')
+                              ? format(new Date(incident.createdAt.replace('Z', '')), 'h:mm a')
                               : 'Just now'
                             }
                           </div>
