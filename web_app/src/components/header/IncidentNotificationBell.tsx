@@ -143,7 +143,8 @@ export default function IncidentNotificationBell() {
         try {
           const user = JSON.parse(userStr);
           const userRole = user.role;
-          const assignedAgency = incident.assignedAgency || incident.assigned_agency;
+          // Check multiple possible field names for assigned agency
+          const assignedAgency = incident.assignedAgency || incident.assigned_agency || incident.targetAgency;
           
           console.log(`🔍 [Incident WebSocket] Checking visibility - User Role: ${userRole} | Assigned Agency: ${assignedAgency || 'none'}`);
           
