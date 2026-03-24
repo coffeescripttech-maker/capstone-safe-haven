@@ -32,7 +32,7 @@ class IncidentController {
       }
 
       // Validate target agency if provided
-      const validAgencies = ['pnp', 'bfp', 'mdrrmo'];
+      const validAgencies = ['pnp', 'bfp', 'mdrrmo', 'lgu', 'lgu_officer'];
       if (targetAgency && !validAgencies.includes(targetAgency)) {
         return res.status(400).json({
           status: 'error',
