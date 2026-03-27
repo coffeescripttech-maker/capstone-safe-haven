@@ -10,44 +10,80 @@ export class SMSWebhookController {
   /**
    * Receive SMS webhook from SMSMobileAPI
    * 
-   * Expected payload format:
+   * SMS Mobile API sends this format:
    * {
-   *   from: "+639171234567",
-   *   to: "+639923150633",
-   *   message: "SOS|PNP|14.5995,120.9842|Juan Dela Cruz|09171234567",
-   *   timestamp: "2026-03-25T10:30:00Z",
-   *   messageId: "sms-12345"
+   *   "date": "2026-03-27",
+   *   "hour": "09:23:02",
+   *   "time_received": "20260327172254316",
+   *   "message": "SOS|ALL|13.174030,123.732330|6|Citizen Citizen|Not provided",
+   *   "number": "639923150633",
+   *   "guid": "5C9D42DF-105D-4126-8F26-60D6C1E32BB3"
    * }
    */
   async receiveSMS(req: Request, res: Response): Promise<void> {
+    const startTime = Date.now();
+    
     try {
-      const { from, to, message, timestamp, messageId } = req.body;
+      // Log raw request for debugging
 
-      logger.info('📱 SMS Webhook received:', { from, to, message, timestamp, messageId });
+      console.log("Dex");
+      logger.info('🔔 SMS Webhook received - RAW BODY:', {
+        body: req.body,
+        headers: {
+          'content-type': req.headers['content-type'],
+          'user-agent': req.headers['user-agent']
+        },
+        timestamp: new Date().toISOString()
+      });
+
+      // SMS Mobile API format
+      const { date, hour, time_received, message, number, guid } = req.body;
 
       // Validate webhook payload
-      if (!from || !message) {
+      if (!message || !number) {
+        logger.error('❌ Invalid webhook payload - missing required fields:', {
+          hasMessage: !!message,
+          hasNumber: !!number,
+          receivedKeys: Object.keys(req.body)
+        });
+        
         res.status(400).json({
           status: 'error',
-          message: 'Invalid webhook payload: missing from or message'
+          message: 'Invalid webhook payload: missing message or number',
+          received: Object.keys(req.body)
         });
         return;
       }
 
-      // Verify this is sent to our gateway number
-      const gatewayNumber = process.env.SMS_GATEWAY_NUMBER || '09923150633';
-      if (to && !to.includes(gatewayNumber.replace(/^\+?63/, ''))) {
-        logger.warn(`SMS sent to wrong number: ${to}, expected: ${gatewayNumber}`);
-      }
+      logger.info('📱 SMS Details:', {
+        from: number,
+        message: message,
+        date: date,
+        hour: hour,
+        guid: guid,
+        time_received: time_received
+      });
 
       // Parse SMS message format: "SOS|AGENCY|LAT,LNG|USERID|NAME|PHONE"
       const parts = message.trim().split('|');
       
+      logger.info('🔍 Parsing SMS message:', {
+        rawMessage: message,
+        parts: parts,
+        partCount: parts.length
+      });
+      
       if (parts.length < 6 || parts[0].toUpperCase() !== 'SOS') {
-        logger.warn('Invalid SMS format:', message);
+        logger.warn('❌ Invalid SMS format:', {
+          message: message,
+          parts: parts,
+          expectedFormat: 'SOS|AGENCY|LAT,LNG|USERID|NAME|PHONE'
+        });
+        
         res.status(400).json({
           status: 'error',
-          message: 'Invalid SMS format. Expected: SOS|AGENCY|LAT,LNG|USERID|NAME|PHONE'
+          message: 'Invalid SMS format. Expected: SOS|AGENCY|LAT,LNG|USERID|NAME|PHONE',
+          received: message
         });
         return;
       }
@@ -58,21 +94,35 @@ export class SMSWebhookController {
       const longitude = parseFloat(lngStr);
       const userId = parseInt(userIdStr);
 
+      logger.info('📊 Parsed SOS data:', {
+        targetAgency,
+        coordinates: { latitude, longitude },
+        userId,
+        userName,
+        userPhone
+      });
+
       // Validate target agency
       const validAgencies = ['barangay', 'lgu', 'bfp', 'pnp', 'mdrrmo', 'all'];
       const agency = targetAgency.toLowerCase();
       
       if (!validAgencies.includes(agency)) {
-        logger.warn(`Invalid agency in SMS: ${targetAgency}`);
+        logger.warn(`❌ Invalid agency in SMS: ${targetAgency}`, {
+          received: targetAgency,
+          validOptions: validAgencies
+        });
+        
         res.status(400).json({
           status: 'error',
-          message: `Invalid agency: ${targetAgency}`
+          message: `Invalid agency: ${targetAgency}. Valid options: ${validAgencies.join(', ')}`
         });
         return;
       }
 
       // Verify user exists (use userId from SMS for faster lookup)
       let user = null;
+      
+      logger.info('🔍 Looking up user:', { userId, userPhone });
       
       if (userId && !isNaN(userId)) {
         // Try by user ID first (most reliable)
@@ -81,19 +131,30 @@ export class SMSWebhookController {
       
       if (!user) {
         // Fallback to phone number lookup
+        logger.info('User not found by ID, trying phone lookup...');
         user = await this.findUserByPhone(userPhone);
       }
       
       if (!user) {
-        logger.warn(`User not found - ID: ${userId}, Phone: ${userPhone}`);
+        logger.warn(`❌ User not found - ID: ${userId}, Phone: ${userPhone}`);
         res.status(404).json({
           status: 'error',
-          message: 'User not found. Please register first.'
+          message: 'User not found. Please register first.',
+          searchedUserId: userId,
+          searchedPhone: userPhone
         });
         return;
       }
 
+      logger.info('✅ User found:', {
+        id: user.id,
+        name: `${user.first_name} ${user.last_name}`,
+        phone: user.phone
+      });
+
       // Create SOS alert (same as regular SOS)
+      logger.info('🚨 Creating SOS alert...');
+      
       const sosAlert = await sosService.createSOSAlert({
         userId: user.id,
         latitude: isNaN(latitude) ? undefined : latitude,
@@ -104,26 +165,48 @@ export class SMSWebhookController {
           userId: user.id,
           name: userName,
           phone: userPhone,
-          smsFrom: from,
-          smsMessageId: messageId
+          smsFrom: number,
+          smsMessageId: guid,
+          smsDate: date,
+          smsHour: hour,
+          smsTimeReceived: time_received
         },
         targetAgency: agency as any
       });
 
-      logger.info(`✅ SOS alert created from SMS: ${sosAlert.id}, user: ${user.id}, agency: ${agency}`);
+      const processingTime = Date.now() - startTime;
+      
+      logger.info(`✅ SOS alert created successfully from SMS:`, {
+        sosId: sosAlert.id,
+        userId: user.id,
+        agency: agency,
+        location: { latitude, longitude },
+        processingTimeMs: processingTime,
+        smsGuid: guid
+      });
 
       // Respond to webhook (200 OK tells SMSMobileAPI we processed it)
       res.status(200).json({
         status: 'success',
         message: 'SOS alert processed successfully',
-        sosId: sosAlert.id
+        sosId: sosAlert.id,
+        processingTimeMs: processingTime
       });
 
     } catch (error: any) {
-      logger.error('Error processing SMS webhook:', error);
+      const processingTime = Date.now() - startTime;
+      
+      logger.error('❌ Error processing SMS webhook:', {
+        error: error.message,
+        stack: error.stack,
+        body: req.body,
+        processingTimeMs: processingTime
+      });
+      
       res.status(500).json({
         status: 'error',
-        message: error.message || 'Failed to process SMS'
+        message: error.message || 'Failed to process SMS',
+        errorType: error.name
       });
     }
   }
@@ -216,11 +299,21 @@ export class SMSWebhookController {
   /**
    * Health check endpoint for webhook
    */
-  async healthCheck(req: Request, res: Response): Promise<void> {
+  async healthCheck(_req: Request, res: Response): Promise<void> {
+    logger.info('🏥 Webhook health check requested');
+    
     res.json({
       status: 'success',
       message: 'SMS webhook endpoint is active',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      expectedFormat: {
+        date: 'YYYY-MM-DD',
+        hour: 'HH:MM:SS',
+        time_received: 'timestamp',
+        message: 'SOS|AGENCY|LAT,LNG|USERID|NAME|PHONE',
+        number: '639XXXXXXXXX',
+        guid: 'unique-id'
+      }
     });
   }
 }

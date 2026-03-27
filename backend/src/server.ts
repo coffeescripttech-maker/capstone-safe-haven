@@ -57,6 +57,7 @@ app.use((_req, res) => {
 websocketService.initialize(httpServer);
 
 // Start server
+// saasass
 httpServer.listen(PORT, () => {
   logger.info(`SafeHaven API Server running on port ${PORT}`);
   logger.info(`Environment: ${process.env.NODE_ENV}`);
