@@ -515,7 +515,7 @@ export default function IncidentNotificationBell() {
                           <div className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
                             {incident.createdAt && !isNaN(new Date(incident.createdAt).getTime()) 
-                              ? format(new Date(incident.createdAt.replace('Z', '')), 'h:mm a')
+                              ? format(new Date(incident.createdAt), 'h:mm a')
                               : 'Just now'
                             }
                           </div>

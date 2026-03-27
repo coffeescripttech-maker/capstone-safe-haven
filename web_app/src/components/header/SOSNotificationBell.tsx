@@ -495,7 +495,7 @@ export default function SOSNotificationBell() {
                         <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-500">
                           <div className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
-                            {format(new Date(alert.created_at.replace('Z', '')), 'h:mm a')}
+                            {format(new Date(alert.created_at), 'h:mm a')}
                           </div>
                           {alert.latitude && alert.longitude && (
                             <div className="flex items-center gap-1">
