@@ -224,7 +224,9 @@ class SOSService {
   private async notifyEmergencyContact(sosId: number, userId: number): Promise<void> {
     try {
       const [rows] = await pool.query<RowDataPacket[]>(
-        `SELECT emergency_contact_name, emergency_contact_phone FROM users WHERE id = ?`,
+        `SELECT emergency_contact_name, emergency_contact_phone 
+         FROM user_profiles 
+         WHERE user_id = ?`,
         [userId]
       );
 
@@ -239,6 +241,10 @@ class SOSService {
           notificationMethod: 'sms',
           status: 'pending'
         });
+        
+        logger.info(`📞 Emergency contact notified for SOS ${sosId}`);
+      } else {
+        logger.info(`ℹ️ No emergency contact found for user ${userId}`);
       }
     } catch (error) {
       logger.error('Error notifying emergency contact:', error);
@@ -251,22 +257,30 @@ class SOSService {
       // Build role filter based on target agency
       let roleFilter = '';
       if (targetAgency === 'all') {
-        roleFilter = "role IN ('lgu_officer', 'admin', 'pnp', 'bfp', 'mdrrmo')";
+        roleFilter = "u.role IN ('lgu_officer', 'admin', 'pnp', 'bfp', 'mdrrmo')";
       } else if (targetAgency === 'barangay' || targetAgency === 'lgu') {
-        roleFilter = "role IN ('lgu_officer', 'admin')";
+        roleFilter = "u.role IN ('lgu_officer', 'admin')";
       } else {
-        roleFilter = `role IN ('${targetAgency}', 'admin')`;
+        roleFilter = `u.role IN ('${targetAgency}', 'admin')`;
       }
 
       // Find responders within radius using Haversine formula
+      // Check both users.latitude and user_profiles.latitude
       const [responders] = await pool.query<RowDataPacket[]>(
-        `SELECT id, email, phone, role,
-         (6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) AS distance
-         FROM users
+        `SELECT u.id, u.email, u.phone, u.role,
+         COALESCE(u.latitude, up.latitude) as lat,
+         COALESCE(u.longitude, up.longitude) as lng,
+         (6371 * acos(
+           cos(radians(?)) * cos(radians(COALESCE(u.latitude, up.latitude))) * 
+           cos(radians(COALESCE(u.longitude, up.longitude)) - radians(?)) + 
+           sin(radians(?)) * sin(radians(COALESCE(u.latitude, up.latitude)))
+         )) AS distance
+         FROM users u
+         LEFT JOIN user_profiles up ON u.id = up.user_id
          WHERE ${roleFilter}
-         AND is_active = true
-         AND latitude IS NOT NULL 
-         AND longitude IS NOT NULL
+         AND u.is_active = true
+         AND (u.latitude IS NOT NULL OR up.latitude IS NOT NULL)
+         AND (u.longitude IS NOT NULL OR up.longitude IS NOT NULL)
          HAVING distance < ?
          ORDER BY distance
          LIMIT 10`,

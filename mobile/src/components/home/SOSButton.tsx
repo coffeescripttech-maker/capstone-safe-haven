@@ -31,7 +31,7 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ onSOSSent }) => {
   const { isOnline } = useNetwork();
   const [showConfirm, setShowConfirm] = useState(false);
   const [sending, setSending] = useState(false);
-  const [countdown, setCountdown] = useState(3);
+  const [countdown, setCountdown] = useState(1);
   const [pulseAnim] = useState(new Animated.Value(1));
   const [selectedAgency, setSelectedAgency] = useState<TargetAgency>('all');
 
@@ -66,7 +66,7 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ onSOSSent }) => {
     Vibration.vibrate([100, 50, 100]);
 
     setSending(true);
-    setCountdown(3);
+    setCountdown(1);
 
     // Countdown
     const countdownInterval = setInterval(() => {
@@ -114,7 +114,7 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ onSOSSent }) => {
 
           setShowConfirm(false);
           setSending(false);
-          setCountdown(3);
+          setCountdown(1);
 
           RNAlert.alert(
             '✅ SOS Sent Successfully!',
@@ -223,7 +223,7 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ onSOSSent }) => {
   const handleCancel = () => {
     setShowConfirm(false);
     setSending(false);
-    setCountdown(3);
+    setCountdown(1);
     setSelectedAgency('all');
   };
 

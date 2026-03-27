@@ -9,7 +9,7 @@ const router = Router();
 // Logging middleware for all webhook requests
 router.use((req: Request, _res: Response, next: NextFunction) => {
 
-    console.log("hey");
+  console.log("hey");
   logger.info('🌐 Webhook request received:', {
     method: req.method,
     path: req.path,
