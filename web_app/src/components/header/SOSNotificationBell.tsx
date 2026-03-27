@@ -346,33 +346,51 @@ export default function SOSNotificationBell() {
 
   const playNotificationSound = () => {
     try {
+      console.log('🔊 [SOS Bell] Attempting to play notification sound...');
+      
       // Create audio element if it doesn't exist
       if (!audioRef.current) {
         audioRef.current = new Audio('/notification-sound.mp3');
-        audioRef.current.volume = 0.5;
+        audioRef.current.volume = 0.7; // Increased volume
+        console.log('🔊 [SOS Bell] Audio element created');
       }
       
+      // Reset audio to start
+      audioRef.current.currentTime = 0;
+      
       // Play sound (fallback to system beep if audio file not found)
-      audioRef.current.play().catch(() => {
-        // Fallback: Use Web Audio API to create a beep
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.frequency.value = 800;
-        oscillator.type = 'sine';
-        
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-        
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.5);
-      });
+      audioRef.current.play()
+        .then(() => {
+          console.log('✅ [SOS Bell] Notification sound played successfully');
+        })
+        .catch((error) => {
+          console.warn('⚠️ [SOS Bell] Audio file not found, using fallback beep', error);
+          
+          // Fallback: Use Web Audio API to create a beep
+          try {
+            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.3);
+            
+            console.log('✅ [SOS Bell] Fallback beep played');
+          } catch (beepError) {
+            console.error('❌ [SOS Bell] Failed to play fallback beep:', beepError);
+          }
+        });
     } catch (error) {
-      console.error('Error playing notification sound:', error);
+      console.error('❌ [SOS Bell] Error in playNotificationSound:', error);
     }
   };
 
