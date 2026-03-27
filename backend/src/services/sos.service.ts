@@ -30,6 +30,7 @@ export interface CreateSOSRequest {
   longitude?: number;
   message: string;
   targetAgency: 'barangay' | 'lgu' | 'bfp' | 'pnp' | 'mdrrmo' | 'all';
+  source?: 'api' | 'sms'; // Track how SOS was sent
   userInfo: {
     name: string;
     phone: string;
@@ -56,15 +57,16 @@ class SOSService {
 
       // Insert SOS alert
       const [result] = await connection.query<ResultSetHeader>(
-        `INSERT INTO sos_alerts (user_id, latitude, longitude, message, user_info, status, priority, target_agency)
-         VALUES (?, ?, ?, ?, ?, 'sent', 'high', ?)`,
+        `INSERT INTO sos_alerts (user_id, latitude, longitude, message, user_info, status, priority, target_agency, source)
+         VALUES (?, ?, ?, ?, ?, 'sent', 'high', ?, ?)`,
         [
           data.userId,
           data.latitude || null,
           data.longitude || null,
           data.message,
           JSON.stringify(data.userInfo),
-          data.targetAgency
+          data.targetAgency,
+          data.source || 'api'
         ]
       );
 

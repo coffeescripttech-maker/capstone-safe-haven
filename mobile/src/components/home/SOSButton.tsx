@@ -15,7 +15,9 @@ import { COLORS } from '../../constants/colors';
 import { SPACING } from '../../constants/spacing';
 import { useAuth } from '../../store/AuthContext';
 import { useLocation } from '../../store/LocationContext';
+import { useNetwork } from '../../store/NetworkContext';
 import api from '../../services/api';
+import { sendSOSviaSMS } from '../../services/sms';
 
 interface SOSButtonProps {
   onSOSSent?: () => void;
@@ -26,6 +28,7 @@ type TargetAgency = 'barangay' | 'lgu' | 'bfp' | 'pnp' | 'mdrrmo' | 'all';
 export const SOSButton: React.FC<SOSButtonProps> = ({ onSOSSent }) => {
   const { user } = useAuth();
   const { location } = useLocation();
+  const { isOnline } = useNetwork();
   const [showConfirm, setShowConfirm] = useState(false);
   const [sending, setSending] = useState(false);
   const [countdown, setCountdown] = useState(3);
@@ -92,14 +95,51 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ onSOSSent }) => {
         message: 'Emergency! I need help!',
         targetAgency: selectedAgency,
         userInfo: {
+          userId: user?.id || 0,
           name: userName,
           phone: user?.phone || 'Not provided',
         },
       };
 
-      console.log('Sending SOS with data:', sosData);
+      console.log('📡 Sending SOS...', { isOnline, sosData });
 
-      await api.post('/sos', sosData);
+      // TRY API FIRST (if online)
+      if (isOnline) {
+        try {
+          console.log('📡 Attempting API send (online)...');
+          await api.post('/sos', sosData);
+
+          // Success vibration
+          Vibration.vibrate([100, 50, 100, 50, 100]);
+
+          setShowConfirm(false);
+          setSending(false);
+          setCountdown(3);
+
+          RNAlert.alert(
+            '✅ SOS Sent Successfully!',
+            `Your emergency alert has been sent to ${selectedAgency.toUpperCase()} responders via internet. Help is on the way!`,
+            [{ text: 'OK', style: 'default' }]
+          );
+
+          onSOSSent?.();
+          return; // Success, exit
+        } catch (apiError: any) {
+          console.error('❌ API send failed, trying SMS fallback...', apiError);
+          
+          // Show warning that falling back to SMS
+          console.log('⚠️ Internet connection failed, switching to SMS...');
+          // Continue to SMS fallback
+        }
+      }
+
+      // FALLBACK TO SMS (offline or API failed)
+      console.log('📱 Opening SMS app with pre-filled message (offline fallback)...');
+      
+      const smsGatewayNumber = process.env.EXPO_PUBLIC_SMS_GATEWAY_NUMBER || '09923150633';
+      
+      // This will open SMS app with pre-filled message
+      const smsSent = await sendSOSviaSMS(sosData, smsGatewayNumber);
 
       // Success vibration
       Vibration.vibrate([100, 50, 100, 50, 100]);
@@ -109,25 +149,73 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ onSOSSent }) => {
       setCountdown(3);
 
       RNAlert.alert(
-        'SOS Sent!',
-        'Your emergency alert has been sent to authorities and your emergency contacts.',
-        [{ text: 'OK' }]
+        '📱 SMS Ready to Send',
+        `Your emergency SMS is ready!\n\n` +
+        `📱 To: ${smsGatewayNumber}\n` +
+        `📍 Location: ${location ? 'Included' : 'Not available'}\n` +
+        `👤 Your info: ${userName}\n\n` +
+        `⚠️ IMPORTANT: Please press SEND in the SMS app to complete your emergency alert.\n\n` +
+        `The message has been pre-filled with all your information.`,
+        [{ text: 'OK', style: 'default' }]
       );
 
       onSOSSent?.();
-    } catch (error) {
-      console.error('Error sending SOS:', error);
+
+    } catch (error: any) {
+      console.error('❌ Error sending SOS:', error);
       
       // Error vibration
       Vibration.vibrate([100, 100, 100]);
 
+      setShowConfirm(false);
       setSending(false);
       setCountdown(3);
 
+      // Determine specific error message
+      let errorTitle = '❌ SOS Send Failed';
+      let errorMessage = '';
+
+      if (error.message?.includes('cancelled by user')) {
+        errorTitle = '⚠️ SMS Cancelled';
+        errorMessage = 
+          'You cancelled the SMS send.\n\n' +
+          'Your emergency alert was NOT sent. If you need help, please try again or call 911 directly.';
+      } else if (error.message?.includes('SMS not available')) {
+        errorTitle = '❌ SMS Not Available';
+        errorMessage = 'Your device does not support SMS sending. Please call emergency services directly at 911.';
+      } else if (error.message?.includes('SMS') && !isOnline) {
+        errorTitle = '❌ SMS Failed';
+        errorMessage = 
+          'Failed to open SMS app. Possible reasons:\n\n' +
+          '• No SIM card inserted\n' +
+          '• SMS app not available\n' +
+          '• Device restrictions\n\n' +
+          'Please call emergency services directly at 911.';
+      } else if (!isOnline) {
+        errorTitle = '❌ No Connection';
+        errorMessage = 
+          'Cannot send SOS alert:\n\n' +
+          '• No internet connection\n' +
+          '• SMS app failed to open\n\n' +
+          'Please try again or call 911 directly.';
+      } else {
+        errorTitle = '❌ SOS Send Failed';
+        errorMessage = 
+          'Failed to send emergency alert. Please try again or call emergency services directly at 911.\n\n' +
+          `Error: ${error.message || 'Unknown error'}`;
+      }
+
       RNAlert.alert(
-        'Error',
-        'Failed to send SOS alert. Please try calling emergency services directly.',
-        [{ text: 'OK' }]
+        errorTitle,
+        errorMessage,
+        [
+          { text: 'Try Again', style: 'default', onPress: () => setShowConfirm(true) },
+          { text: 'Call 911', style: 'destructive', onPress: () => {
+            // TODO: Add direct call to 911 if needed
+            console.log('User chose to call 911');
+          }},
+          { text: 'Cancel', style: 'cancel' }
+        ]
       );
     }
   };

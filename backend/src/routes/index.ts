@@ -16,6 +16,7 @@ import alertAutomationRoutes from './alertAutomation.routes';
 import smsBlastRoutes from './smsBlast.routes';
 import locationRoutes from './location.routes';
 import notificationRoutes from './notifications.routes';
+import smsWebhookRoutes from './smsWebhook.routes';
 
 const router = Router();
 
@@ -36,5 +37,6 @@ router.use('/admin/alert-automation', alertAutomationRoutes);
 router.use('/sms-blast', smsBlastRoutes);
 router.use('/locations', locationRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/webhooks', smsWebhookRoutes);
 
 export default router;
