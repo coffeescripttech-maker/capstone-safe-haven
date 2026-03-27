@@ -128,8 +128,13 @@ export default function SOSNotificationBell() {
 
     // Listen for new SOS events
     socket.on('new_sos', (payload: any) => {
-      console.log('🚨 [SOS WebSocket] New SOS alert received!');
-      console.log('🚨 [SOS WebSocket] Payload:', payload);
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('🚨 [SOS WebSocket] NEW SOS ALERT RECEIVED!');
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('🚨 [SOS WebSocket] Full Payload:', JSON.stringify(payload, null, 2));
+      console.log('🚨 [SOS WebSocket] Payload Type:', payload.type);
+      console.log('🚨 [SOS WebSocket] Alert Data:', payload.data);
+      console.log('═══════════════════════════════════════════════════════');
       
       const alert = payload.data;
       
@@ -218,19 +223,15 @@ export default function SOSNotificationBell() {
       try {
         console.log('🔍 [SOS Bell] Fetching initial pending SOS alerts...');
         
-        // Get last viewed time from localStorage (per user)
+        // Get user info
         const userStr = localStorage.getItem('safehaven_user');
-        let userRole = undefined;
-        let userJurisdiction = undefined;
         let userId = undefined;
         
         if (userStr) {
           try {
             const user = JSON.parse(userStr);
-            userRole = user.role;
-            userJurisdiction = user.jurisdiction;
             userId = user.id;
-            console.log('🔍 [SOS Bell] User role:', userRole, '| Jurisdiction:', userJurisdiction);
+            console.log('🔍 [SOS Bell] User ID:', userId);
           } catch (e) {
             console.error('🔴 [SOS Bell] Error parsing user data:', e);
           }
@@ -239,14 +240,25 @@ export default function SOSNotificationBell() {
         // Get last viewed timestamp for this user
         const lastViewedKey = `sos_bell_last_viewed_${userId}`;
         const lastViewedStr = localStorage.getItem(lastViewedKey);
-        const lastViewed = lastViewedStr ? new Date(lastViewedStr) : new Date(0); // Default to epoch if never viewed
         
-        console.log('🔍 [SOS Bell] Last viewed:', lastViewed.toISOString());
+        // If never viewed, don't show any old alerts (only show new ones via WebSocket)
+        // If previously viewed, show alerts created after that time
+        let lastViewed: Date;
         
-        // SOS alerts use 'sent' status for new/pending alerts, not 'pending'
-        // Backend will automatically filter based on role and target_agency
+        if (lastViewedStr) {
+          lastViewed = new Date(lastViewedStr);
+          console.log('🔍 [SOS Bell] Last viewed:', lastViewed.toISOString());
+        } else {
+          // Never viewed before - set to current time so only NEW alerts show up
+          lastViewed = new Date();
+          console.log('🔍 [SOS Bell] First time viewing - will only show new alerts from now on');
+        }
+        
+        console.log('🔍 [SOS Bell] Fetching alerts with status=sent (new/pending)');
+        
+        // Fetch all 'sent' status alerts (backend filters by role automatically)
         const response = await sosApi.getAll({ 
-          status: 'sent',  // ✅ Correct status for new SOS alerts
+          status: 'sent',
           limit: 50
         });
         
@@ -254,19 +266,28 @@ export default function SOSNotificationBell() {
           const paginatedData = response.data;
           const alerts = paginatedData.alerts || paginatedData.data || [];
           
-          console.log(`🔍 [SOS Bell] Found ${alerts.length} total pending SOS alerts (status='sent', role-filtered)`);
+          console.log(`🔍 [SOS Bell] Found ${alerts.length} total 'sent' SOS alerts (role-filtered by backend)`);
           
           // Filter alerts created after last viewed time
           const newAlertsOnly = alerts.filter((alert: SOSAlert) => {
             const alertTime = new Date(alert.created_at);
-            return alertTime > lastViewed;
+            const isNew = alertTime > lastViewed;
+            if (isNew) {
+              console.log(`  ✅ Alert #${alert.id} is NEW (${alertTime.toISOString()})`);
+            }
+            return isNew;
           });
           
-          console.log(`🔍 [SOS Bell] ${newAlertsOnly.length} alerts are NEW (created after last view)`);
+          console.log(`🔍 [SOS Bell] ${newAlertsOnly.length} alerts are NEW (created after ${lastViewed.toISOString()})`);
           
           // Set initial alerts and count (only NEW alerts)
-          setNewAlerts(newAlertsOnly.slice(0, 10)); // Show last 10
-          setUnreadCount(newAlertsOnly.length);
+          if (newAlertsOnly.length > 0) {
+            setNewAlerts(newAlertsOnly.slice(0, 10)); // Show last 10
+            setUnreadCount(newAlertsOnly.length);
+            console.log(`✅ [SOS Bell] Showing ${newAlertsOnly.length} new alerts`);
+          } else {
+            console.log('ℹ️ [SOS Bell] No new alerts to show');
+          }
           
           // Update last check time to now
           setLastCheckTime(new Date());
@@ -348,47 +369,47 @@ export default function SOSNotificationBell() {
     try {
       console.log('🔊 [SOS Bell] Attempting to play notification sound...');
       
-      // Create audio element if it doesn't exist
-      if (!audioRef.current) {
-        audioRef.current = new Audio('/notification-sound.mp3');
-        audioRef.current.volume = 0.7; // Increased volume
-        console.log('🔊 [SOS Bell] Audio element created');
-      }
-      
-      // Reset audio to start
-      audioRef.current.currentTime = 0;
-      
-      // Play sound (fallback to system beep if audio file not found)
-      audioRef.current.play()
-        .then(() => {
-          console.log('✅ [SOS Bell] Notification sound played successfully');
-        })
-        .catch((error) => {
-          console.warn('⚠️ [SOS Bell] Audio file not found, using fallback beep', error);
+      // Use Web Audio API to create a beep (more reliable than audio files)
+      try {
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        // Create a two-tone alert sound
+        oscillator.frequency.value = 880; // A5 note
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.2);
+        
+        // Second beep
+        setTimeout(() => {
+          const oscillator2 = audioContext.createOscillator();
+          const gainNode2 = audioContext.createGain();
           
-          // Fallback: Use Web Audio API to create a beep
-          try {
-            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            
-            oscillator.frequency.value = 800;
-            oscillator.type = 'sine';
-            
-            gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-            
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.3);
-            
-            console.log('✅ [SOS Bell] Fallback beep played');
-          } catch (beepError) {
-            console.error('❌ [SOS Bell] Failed to play fallback beep:', beepError);
-          }
-        });
+          oscillator2.connect(gainNode2);
+          gainNode2.connect(audioContext.destination);
+          
+          oscillator2.frequency.value = 1046; // C6 note
+          oscillator2.type = 'sine';
+          
+          gainNode2.gain.setValueAtTime(0.3, audioContext.currentTime);
+          gainNode2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+          
+          oscillator2.start(audioContext.currentTime);
+          oscillator2.stop(audioContext.currentTime + 0.2);
+        }, 250);
+        
+        console.log('✅ [SOS Bell] Alert sound played successfully');
+      } catch (beepError) {
+        console.error('❌ [SOS Bell] Failed to play alert sound:', beepError);
+      }
     } catch (error) {
       console.error('❌ [SOS Bell] Error in playNotificationSound:', error);
     }
