@@ -226,21 +226,30 @@ export default function IncidentNotificationBell() {
       try {
         console.log('🔍 [Incident Bell] Fetching initial pending incidents...');
         
-        // Get user info from localStorage for role-based filtering
+        // Get last viewed time from localStorage (per user)
         const userStr = localStorage.getItem('safehaven_user');
         let userRole = undefined;
         let userJurisdiction = undefined;
+        let userId = undefined;
         
         if (userStr) {
           try {
             const user = JSON.parse(userStr);
             userRole = user.role;
             userJurisdiction = user.jurisdiction;
+            userId = user.id;
             console.log('🔍 [Incident Bell] User role:', userRole, '| Jurisdiction:', userJurisdiction);
           } catch (e) {
             console.error('🔴 [Incident Bell] Error parsing user data:', e);
           }
         }
+        
+        // Get last viewed timestamp for this user
+        const lastViewedKey = `incident_bell_last_viewed_${userId}`;
+        const lastViewedStr = localStorage.getItem(lastViewedKey);
+        const lastViewed = lastViewedStr ? new Date(lastViewedStr) : new Date(0); // Default to epoch if never viewed
+        
+        console.log('🔍 [Incident Bell] Last viewed:', lastViewed.toISOString());
         
         // Backend will automatically filter based on role and assigned_agency
         const response = await incidentsApi.getAll({ 
@@ -252,11 +261,22 @@ export default function IncidentNotificationBell() {
           const paginatedData = response.data;
           const incidents = paginatedData.data || [];
           
-          console.log(`🔍 [Incident Bell] Found ${incidents.length} pending incidents (role-filtered)`);
+          console.log(`🔍 [Incident Bell] Found ${incidents.length} total pending incidents (role-filtered)`);
           
-          // Set initial incidents and count
-          setNewIncidents(incidents.slice(0, 10)); // Show last 10
-          setUnreadCount(incidents.length);
+          // Filter incidents created after last viewed time
+          const newIncidentsOnly = incidents.filter((incident: Incident) => {
+            const incidentTime = new Date(incident.createdAt);
+            return incidentTime > lastViewed;
+          });
+          
+          console.log(`🔍 [Incident Bell] ${newIncidentsOnly.length} incidents are NEW (created after last view)`);
+          
+          // Set initial incidents and count (only NEW incidents)
+          setNewIncidents(newIncidentsOnly.slice(0, 10)); // Show last 10
+          setUnreadCount(newIncidentsOnly.length);
+          
+          // Update last check time to now
+          setLastCheckTime(new Date());
         }
       } catch (error) {
         console.error('🔴 [Incident Bell] Error fetching initial incidents:', error);
@@ -378,7 +398,19 @@ export default function IncidentNotificationBell() {
   const handleBellClick = () => {
     setIsOpen(!isOpen);
     if (!isOpen) {
-      // Mark as read when opening
+      // Mark as read when opening - save timestamp to localStorage
+      const userStr = localStorage.getItem('safehaven_user');
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          const lastViewedKey = `incident_bell_last_viewed_${user.id}`;
+          localStorage.setItem(lastViewedKey, new Date().toISOString());
+          console.log('✅ [Incident Bell] Marked as viewed at:', new Date().toISOString());
+        } catch (e) {
+          console.error('🔴 [Incident Bell] Error saving last viewed time:', e);
+        }
+      }
+      
       setUnreadCount(0);
       setLastCheckTime(new Date());
     }

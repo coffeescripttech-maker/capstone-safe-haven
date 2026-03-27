@@ -218,21 +218,30 @@ export default function SOSNotificationBell() {
       try {
         console.log('🔍 [SOS Bell] Fetching initial pending SOS alerts...');
         
-        // Get user info from localStorage for role-based filtering
+        // Get last viewed time from localStorage (per user)
         const userStr = localStorage.getItem('safehaven_user');
         let userRole = undefined;
         let userJurisdiction = undefined;
+        let userId = undefined;
         
         if (userStr) {
           try {
             const user = JSON.parse(userStr);
             userRole = user.role;
             userJurisdiction = user.jurisdiction;
+            userId = user.id;
             console.log('🔍 [SOS Bell] User role:', userRole, '| Jurisdiction:', userJurisdiction);
           } catch (e) {
             console.error('🔴 [SOS Bell] Error parsing user data:', e);
           }
         }
+        
+        // Get last viewed timestamp for this user
+        const lastViewedKey = `sos_bell_last_viewed_${userId}`;
+        const lastViewedStr = localStorage.getItem(lastViewedKey);
+        const lastViewed = lastViewedStr ? new Date(lastViewedStr) : new Date(0); // Default to epoch if never viewed
+        
+        console.log('🔍 [SOS Bell] Last viewed:', lastViewed.toISOString());
         
         // SOS alerts use 'sent' status for new/pending alerts, not 'pending'
         // Backend will automatically filter based on role and target_agency
@@ -245,11 +254,22 @@ export default function SOSNotificationBell() {
           const paginatedData = response.data;
           const alerts = paginatedData.alerts || paginatedData.data || [];
           
-          console.log(`🔍 [SOS Bell] Found ${alerts.length} pending SOS alerts (status='sent', role-filtered)`);
+          console.log(`🔍 [SOS Bell] Found ${alerts.length} total pending SOS alerts (status='sent', role-filtered)`);
           
-          // Set initial alerts and count
-          setNewAlerts(alerts.slice(0, 10)); // Show last 10
-          setUnreadCount(alerts.length);
+          // Filter alerts created after last viewed time
+          const newAlertsOnly = alerts.filter((alert: SOSAlert) => {
+            const alertTime = new Date(alert.created_at);
+            return alertTime > lastViewed;
+          });
+          
+          console.log(`🔍 [SOS Bell] ${newAlertsOnly.length} alerts are NEW (created after last view)`);
+          
+          // Set initial alerts and count (only NEW alerts)
+          setNewAlerts(newAlertsOnly.slice(0, 10)); // Show last 10
+          setUnreadCount(newAlertsOnly.length);
+          
+          // Update last check time to now
+          setLastCheckTime(new Date());
         }
       } catch (error) {
         console.error('🔴 [SOS Bell] Error fetching initial alerts:', error);
@@ -359,7 +379,19 @@ export default function SOSNotificationBell() {
   const handleBellClick = () => {
     setIsOpen(!isOpen);
     if (!isOpen) {
-      // Mark as read when opening
+      // Mark as read when opening - save timestamp to localStorage
+      const userStr = localStorage.getItem('safehaven_user');
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          const lastViewedKey = `sos_bell_last_viewed_${user.id}`;
+          localStorage.setItem(lastViewedKey, new Date().toISOString());
+          console.log('✅ [SOS Bell] Marked as viewed at:', new Date().toISOString());
+        } catch (e) {
+          console.error('🔴 [SOS Bell] Error saving last viewed time:', e);
+        }
+      }
+      
       setUnreadCount(0);
       setLastCheckTime(new Date());
     }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,10 @@ import {
   Alert as RNAlert,
   Animated,
   Vibration,
+  Platform,
+  PermissionsAndroid,
+  AppState,
+  AppStateStatus,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AlertTriangle } from 'lucide-react-native';
@@ -17,7 +21,7 @@ import { useAuth } from '../../store/AuthContext';
 import { useLocation } from '../../store/LocationContext';
 import { useNetwork } from '../../store/NetworkContext';
 import api from '../../services/api';
-import { sendSOSviaSMS } from '../../services/sms';
+import { sendSOSviaSMS, canSendSilentSMS } from '../../services/sms';
 
 interface SOSButtonProps {
   onSOSSent?: () => void;
@@ -34,6 +38,90 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ onSOSSent }) => {
   const [countdown, setCountdown] = useState(1);
   const [pulseAnim] = useState(new Animated.Value(1));
   const [selectedAgency, setSelectedAgency] = useState<TargetAgency>('all');
+  const [hasSMSPermission, setHasSMSPermission] = useState(false);
+  const [waitingForSMSReturn, setWaitingForSMSReturn] = useState(false);
+  const appState = useRef<AppStateStatus>(AppState.currentState);
+
+  // Request SMS permission on Android
+  useEffect(() => {
+    const requestSMSPermission = async () => {
+      if (Platform.OS === 'android') {
+        try {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.SEND_SMS,
+            {
+              title: 'SMS Permission',
+              message: 'SafeHaven needs SMS permission to send emergency alerts when offline',
+              buttonNeutral: 'Ask Me Later',
+              buttonNegative: 'Cancel',
+              buttonPositive: 'OK',
+            }
+          );
+          
+          setHasSMSPermission(granted === PermissionsAndroid.RESULTS.GRANTED);
+          
+          if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+            console.log('✅ SMS permission granted - silent SMS available');
+          } else {
+            console.log('⚠️ SMS permission denied - will use SMS app with user confirmation');
+          }
+        } catch (err) {
+          console.warn('Error requesting SMS permission:', err);
+        }
+      }
+    };
+
+    requestSMSPermission();
+  }, []);
+
+  // Listen for app returning from background (after SMS app)
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      // User returned to app from background
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        console.log('📱 App returned to foreground');
+        
+        // If we were waiting for SMS return, show confirmation
+        if (waitingForSMSReturn) {
+          console.log('✅ User returned from SMS app');
+          setWaitingForSMSReturn(false);
+          
+          // Show confirmation that SMS was likely sent
+          setTimeout(() => {
+            RNAlert.alert(
+              '✅ Welcome Back!',
+              'Did you send the emergency SMS?\n\n' +
+              '✅ If YES: Your SOS alert should arrive at the emergency gateway shortly.\n\n' +
+              '❌ If NO: You can press the SOS button again to retry.',
+              [
+                { 
+                  text: 'Yes, I sent it', 
+                  style: 'default',
+                  onPress: () => {
+                    console.log('✅ User confirmed SMS was sent');
+                    onSOSSent?.();
+                  }
+                },
+                { 
+                  text: 'No, I cancelled', 
+                  style: 'cancel',
+                  onPress: () => {
+                    console.log('⚠️ User cancelled SMS');
+                  }
+                }
+              ]
+            );
+          }, 500); // Small delay to ensure app is fully active
+        }
+      }
+      
+      appState.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [waitingForSMSReturn, onSOSSent]);
 
   // Pulse animation
   React.useEffect(() => {
@@ -138,8 +226,11 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ onSOSSent }) => {
       
       const smsGatewayNumber = process.env.EXPO_PUBLIC_SMS_GATEWAY_NUMBER || '09923150633';
       
+      // Set flag that we're waiting for user to return from SMS app
+      setWaitingForSMSReturn(true);
+      
       // This will open SMS app with pre-filled message
-      const smsSent = await sendSOSviaSMS(sosData, smsGatewayNumber);
+      await sendSOSviaSMS(sosData, smsGatewayNumber);
 
       // Success vibration
       Vibration.vibrate([100, 50, 100, 50, 100]);
@@ -148,18 +239,17 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ onSOSSent }) => {
       setSending(false);
       setCountdown(3);
 
+      // Show brief instruction before SMS app opens
       RNAlert.alert(
-        '📱 SMS Ready to Send',
+        '📱 Opening SMS App',
         `Your emergency SMS is ready!\n\n` +
         `📱 To: ${smsGatewayNumber}\n` +
         `📍 Location: ${location ? 'Included' : 'Not available'}\n` +
         `👤 Your info: ${userName}\n\n` +
-        `⚠️ IMPORTANT: Please press SEND in the SMS app to complete your emergency alert.\n\n` +
-        `The message has been pre-filled with all your information.`,
+        `⚠️ IMPORTANT: Press SEND in the SMS app to complete your emergency alert.\n\n` +
+        `The app will automatically return here after you send or cancel.`,
         [{ text: 'OK', style: 'default' }]
       );
-
-      onSOSSent?.();
 
     } catch (error: any) {
       console.error('❌ Error sending SOS:', error);

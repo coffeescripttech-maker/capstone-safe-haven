@@ -39,7 +39,8 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.VIBRATE",
         "android.permission.RECEIVE_BOOT_COMPLETED",
-        "android.permission.WAKE_LOCK"
+        "android.permission.WAKE_LOCK",
+        "android.permission.SEND_SMS"
       ],
       "config": {
         "googleMaps": {
@@ -62,16 +63,15 @@
             "./assets/sounds/low_alert.wav"
           ]
         }
-      ]
+      ],
+      "./plugins/withSilentSMS.js"
     ],
     "extra": {
       "eas": {
         "projectId": "658ac31a-7930-47e9-9adc-8126ed6a438a"
       }
     },
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.0",
     "updates": {
       "url": "https://u.expo.dev/658ac31a-7930-47e9-9adc-8126ed6a438a"
     }

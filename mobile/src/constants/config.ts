@@ -24,10 +24,10 @@ export const API_CONFIG = {
   // Base URL - uses environment variable or fallback
   BASE_URL: getEnvVar(
     'EXPO_PUBLIC_API_URL',
-
+   'https://capstone-safe-haven.onrender.com/api/v1'
     
     // 'https://margert-unespousable-asley.ngrok-free.dev/api/v1'
-      'https://safe-haven-backend-api.onrender.com/api/v1'
+      // 'https://safe-haven-backend-api.onrender.com/api/v1'
     // 'http://192.168.43.25:3001/api/v1'
     // // 'https://safe-haven-backend-api.onrender.com/api/v1'
   ),
