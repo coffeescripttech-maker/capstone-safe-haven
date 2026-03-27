@@ -77,33 +77,33 @@ eas build --platform android --profile preview
 
 ---
 
-### 4. 🔧 Fixed SOS Notification Bell (TASK 4)
+### 4. ✅ Fixed SOS Notification Bell (TASK 4)
 **Issue:** Badge count not incrementing, sound not playing, "No new SOS alerts" message
 
 **Root Causes Identified:**
-1. Initial fetch used 5 minutes ago as default, showing old alerts as "new"
-2. Clicking bell immediately saved current timestamp, filtering out ALL alerts
+1. Complex "last viewed" timestamp filtering caused race conditions
+2. Clicking bell before initial fetch completed would filter out ALL alerts
 3. Sound file didn't exist (`/notification-sound.mp3`)
-4. No visual feedback for WebSocket events
+4. Logic was too complex compared to working /sos-alerts page
 
-**Solutions Implemented:**
-- Fixed initial fetch logic:
-  - First-time users: Start with current time (not 5 minutes ago)
-  - Returning users: Show alerts created after last visit
-  - Only truly NEW alerts are shown
-- Improved sound implementation:
-  - Replaced file-based audio with Web Audio API
-  - Two-tone beep (880Hz → 1046Hz)
-  - No external file dependency
-  - Works in all browsers
-- Enhanced WebSocket logging:
-  - Clear visual separators in console
-  - Better debugging information
-  - Detailed payload logging
-- Better role-based filtering with detailed logs
+**Final Solution (Simplified Approach):**
+- **Removed "last viewed" timestamp filtering completely**
+- **Badge count = pending alerts** (status='sent')
+- **Auto-refresh every 15 seconds** (like /sos-alerts page)
+- **WebSocket for real-time increment** (only when NEW 'sent' alerts arrive)
+- **Don't clear badge on click** (badge shows pending count, only decreases when alerts resolved)
+- Improved sound: Web Audio API two-tone beep (880Hz → 1046Hz)
+- Enhanced WebSocket logging with clear visual separators
+
+**How It Works Now:**
+1. Page loads → Fetch all 'sent' status alerts → Show count in badge
+2. Auto-refresh every 15 seconds → Update badge count
+3. WebSocket receives new_sos → If status='sent', increment badge +1 and play sound
+4. User clicks bell → Dropdown opens, badge stays (shows pending count)
+5. Badge only decreases when alerts are resolved on backend (status changes from 'sent')
 
 **Files Modified:**
-- `MOBILE_APP/web_app/src/components/header/SOSNotificationBell.tsx`
+- `MOBILE_APP/web_app/src/components/header/SOSNotificationBell.tsx` ✅ COMPLETE
 - `MOBILE_APP/backend/test-websocket-sos.ps1` (NEW - test script)
 - `MOBILE_APP/test-sos-websocket.html` (NEW - standalone test page)
 - `MOBILE_APP/NOTIFICATION_BADGE_COUNT_COMPLETE.md` (NEW - full documentation)
@@ -113,22 +113,14 @@ eas build --platform android --profile preview
 **Current Status:**
 - ✅ Code is fixed and ready
 - ⏳ Needs deployment to Vercel
-- ⏳ Users need to clear localStorage cache
+- ✅ No cache clearing needed (removed localStorage dependency)
 
 **To Deploy:**
 ```powershell
 cd MOBILE_APP/web_app
 git add src/components/header/SOSNotificationBell.tsx
-git commit -m "Fix SOS notification bell badge count and sound"
+git commit -m "Simplify SOS bell to match /sos-alerts page logic"
 git push origin main
-```
-
-**After Deployment, Clear Cache:**
-```javascript
-// In browser console (F12)
-const user = JSON.parse(localStorage.getItem('safehaven_user'));
-localStorage.removeItem(`sos_bell_last_viewed_${user.id}`);
-location.reload();
 ```
 
 ---
@@ -207,25 +199,20 @@ location.reload();
    ```powershell
    cd MOBILE_APP/web_app
    git add .
-   git commit -m "Fix SOS notification bell"
+   git commit -m "Simplify SOS bell to match /sos-alerts page logic"
    git push origin main
    ```
 
-2. **Clear localStorage cache** (after deployment):
-   ```javascript
-   const user = JSON.parse(localStorage.getItem('safehaven_user'));
-   localStorage.removeItem(`sos_bell_last_viewed_${user.id}`);
-   location.reload();
-   ```
-
-3. **Test SOS bell:**
+2. **Test SOS bell (after deployment):**
+   - Refresh page (no cache clearing needed!)
+   - Badge should show count of pending SOS alerts immediately
    - Send SOS from mobile app
    - Watch for badge increment
    - Listen for sound
-   - Check console logs
+   - Check console logs for detailed debugging
 
 ### Optional (When Ready)
-4. **Build APK with silent SMS:**
+3. **Build APK with silent SMS:**
    ```powershell
    cd MOBILE_APP/mobile
    npm install @expo/config-plugins
@@ -233,7 +220,7 @@ location.reload();
    eas build --platform android --profile preview
    ```
 
-5. **Test silent SMS:**
+4. **Test silent SMS:**
    - Install new APK
    - Grant SMS permission
    - Turn off internet

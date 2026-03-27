@@ -186,22 +186,28 @@ export default function SOSNotificationBell() {
         return;
       }
       
-      // Add to notifications list
-      setNewAlerts(prev => {
-        const updated = [alert, ...prev].slice(0, 10);
-        console.log('🚨 [SOS WebSocket] Updated alerts list:', updated.length, 'alerts');
-        return updated;
-      });
-      
-      setUnreadCount(prev => {
-        const newCount = prev + 1;
-        console.log('🚨 [SOS WebSocket] Unread count:', newCount);
-        return newCount;
-      });
-      
-      // Play notification sound
-      console.log('🔊 [SOS WebSocket] Playing notification sound...');
-      playNotificationSound();
+      // Only add if status is 'sent' (pending)
+      if (alert.status === 'sent') {
+        // Add to notifications list (prepend to show newest first)
+        setNewAlerts(prev => {
+          const updated = [alert, ...prev].slice(0, 10);
+          console.log('🚨 [SOS WebSocket] Updated alerts list:', updated.length, 'alerts');
+          return updated;
+        });
+        
+        // Increment badge count
+        setUnreadCount(prev => {
+          const newCount = prev + 1;
+          console.log('🚨 [SOS WebSocket] Badge count incremented to:', newCount);
+          return newCount;
+        });
+        
+        // Play notification sound
+        console.log('🔊 [SOS WebSocket] Playing notification sound...');
+        playNotificationSound();
+      } else {
+        console.log(`ℹ️ [SOS WebSocket] Alert status is '${alert.status}', not incrementing badge (only 'sent' alerts count)`);
+      }
     });
 
     // Log all events for debugging
@@ -217,46 +223,16 @@ export default function SOSNotificationBell() {
     };
   }, []);
 
-  // Initial fetch of pending SOS alerts on mount (with role-based filtering)
+  // Initial fetch of pending SOS alerts on mount (simplified like /sos-alerts page)
   useEffect(() => {
     const fetchInitialAlerts = async () => {
       try {
-        console.log('🔍 [SOS Bell] Fetching initial pending SOS alerts...');
-        
-        // Get user info
-        const userStr = localStorage.getItem('safehaven_user');
-        let userId = undefined;
-        
-        if (userStr) {
-          try {
-            const user = JSON.parse(userStr);
-            userId = user.id;
-            console.log('🔍 [SOS Bell] User ID:', userId);
-          } catch (e) {
-            console.error('🔴 [SOS Bell] Error parsing user data:', e);
-          }
-        }
-        
-        // Get last viewed timestamp for this user
-        const lastViewedKey = `sos_bell_last_viewed_${userId}`;
-        const lastViewedStr = localStorage.getItem(lastViewedKey);
-        
-        // If never viewed, don't show any old alerts (only show new ones via WebSocket)
-        // If previously viewed, show alerts created after that time
-        let lastViewed: Date;
-        
-        if (lastViewedStr) {
-          lastViewed = new Date(lastViewedStr);
-          console.log('🔍 [SOS Bell] Last viewed:', lastViewed.toISOString());
-        } else {
-          // Never viewed before - set to current time so only NEW alerts show up
-          lastViewed = new Date();
-          console.log('🔍 [SOS Bell] First time viewing - will only show new alerts from now on');
-        }
-        
-        console.log('🔍 [SOS Bell] Fetching alerts with status=sent (new/pending)');
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('🔍 [SOS Bell] INITIAL FETCH STARTED');
+        console.log('═══════════════════════════════════════════════════════');
         
         // Fetch all 'sent' status alerts (backend filters by role automatically)
+        // No "last viewed" filtering - just show count of pending alerts
         const response = await sosApi.getAll({ 
           status: 'sent',
           limit: 50
@@ -266,28 +242,18 @@ export default function SOSNotificationBell() {
           const paginatedData = response.data;
           const alerts = paginatedData.alerts || paginatedData.data || [];
           
-          console.log(`🔍 [SOS Bell] Found ${alerts.length} total 'sent' SOS alerts (role-filtered by backend)`);
+          console.log(`✅ [SOS Bell] Found ${alerts.length} pending SOS alerts (status='sent')`);
+          console.log(`   These are role-filtered by backend automatically`);
           
-          // Filter alerts created after last viewed time
-          const newAlertsOnly = alerts.filter((alert: SOSAlert) => {
-            const alertTime = new Date(alert.created_at);
-            const isNew = alertTime > lastViewed;
-            if (isNew) {
-              console.log(`  ✅ Alert #${alert.id} is NEW (${alertTime.toISOString()})`);
-            }
-            return isNew;
-          });
+          // Show ALL pending alerts in the list (last 10)
+          setNewAlerts(alerts.slice(0, 10));
           
-          console.log(`🔍 [SOS Bell] ${newAlertsOnly.length} alerts are NEW (created after ${lastViewed.toISOString()})`);
+          // Badge count = total number of pending alerts
+          setUnreadCount(alerts.length);
           
-          // Set initial alerts and count (only NEW alerts)
-          if (newAlertsOnly.length > 0) {
-            setNewAlerts(newAlertsOnly.slice(0, 10)); // Show last 10
-            setUnreadCount(newAlertsOnly.length);
-            console.log(`✅ [SOS Bell] Showing ${newAlertsOnly.length} new alerts`);
-          } else {
-            console.log('ℹ️ [SOS Bell] No new alerts to show');
-          }
+          console.log(`✅ [SOS Bell] Badge count: ${alerts.length}`);
+          console.log(`✅ [SOS Bell] Showing ${Math.min(alerts.length, 10)} alerts in dropdown`);
+          console.log('═══════════════════════════════════════════════════════');
           
           // Update last check time to now
           setLastCheckTime(new Date());
@@ -298,6 +264,13 @@ export default function SOSNotificationBell() {
     };
 
     fetchInitialAlerts();
+    
+    // Auto-refresh every 15 seconds (like /sos-alerts page)
+    const interval = setInterval(() => {
+      fetchInitialAlerts();
+    }, 15000);
+
+    return () => clearInterval(interval);
   }, []);
 
   // POLLING DISABLED - Using WebSocket only for real-time updates
@@ -416,24 +389,10 @@ export default function SOSNotificationBell() {
   };
 
   const handleBellClick = () => {
+    console.log('🔔 [SOS Bell] Bell clicked, toggling dropdown');
     setIsOpen(!isOpen);
-    if (!isOpen) {
-      // Mark as read when opening - save timestamp to localStorage
-      const userStr = localStorage.getItem('safehaven_user');
-      if (userStr) {
-        try {
-          const user = JSON.parse(userStr);
-          const lastViewedKey = `sos_bell_last_viewed_${user.id}`;
-          localStorage.setItem(lastViewedKey, new Date().toISOString());
-          console.log('✅ [SOS Bell] Marked as viewed at:', new Date().toISOString());
-        } catch (e) {
-          console.error('🔴 [SOS Bell] Error saving last viewed time:', e);
-        }
-      }
-      
-      setUnreadCount(0);
-      setLastCheckTime(new Date());
-    }
+    // Don't clear badge count or save "last viewed" - badge shows pending alerts count
+    // Badge will only decrease when alerts are actually resolved (status changes from 'sent')
   };
 
   const handleViewAlert = (alertId: number) => {
