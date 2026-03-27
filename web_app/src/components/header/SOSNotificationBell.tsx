@@ -342,47 +342,63 @@ export default function SOSNotificationBell() {
     try {
       console.log('🔊 [SOS Bell] Attempting to play notification sound...');
       
-      // Use Web Audio API to create a beep (more reliable than audio files)
-      try {
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        // Create a two-tone alert sound
-        oscillator.frequency.value = 880; // A5 note
-        oscillator.type = 'sine';
-        
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-        
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.2);
-        
-        // Second beep
-        setTimeout(() => {
-          const oscillator2 = audioContext.createOscillator();
-          const gainNode2 = audioContext.createGain();
-          
-          oscillator2.connect(gainNode2);
-          gainNode2.connect(audioContext.destination);
-          
-          oscillator2.frequency.value = 1046; // C6 note
-          oscillator2.type = 'sine';
-          
-          gainNode2.gain.setValueAtTime(0.3, audioContext.currentTime);
-          gainNode2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-          
-          oscillator2.start(audioContext.currentTime);
-          oscillator2.stop(audioContext.currentTime + 0.2);
-        }, 250);
-        
-        console.log('✅ [SOS Bell] Alert sound played successfully');
-      } catch (beepError) {
-        console.error('❌ [SOS Bell] Failed to play alert sound:', beepError);
+      // Create audio element if it doesn't exist
+      if (!audioRef.current) {
+        audioRef.current = new Audio('/notification-sound.mp3');
+        audioRef.current.volume = 0.5;
       }
+      
+      // Try to play audio file first
+      audioRef.current.play()
+        .then(() => {
+          console.log('✅ [SOS Bell] Audio file played successfully');
+        })
+        .catch(() => {
+          console.log('⚠️ [SOS Bell] Audio file not found, using Web Audio API fallback...');
+          
+          // Fallback: Use Web Audio API to create a two-tone beep
+          try {
+            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            
+            // First beep (880Hz - A5 note)
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 880;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.2);
+            
+            // Second beep (1046Hz - C6 note) after 250ms
+            setTimeout(() => {
+              const oscillator2 = audioContext.createOscillator();
+              const gainNode2 = audioContext.createGain();
+              
+              oscillator2.connect(gainNode2);
+              gainNode2.connect(audioContext.destination);
+              
+              oscillator2.frequency.value = 1046;
+              oscillator2.type = 'sine';
+              
+              gainNode2.gain.setValueAtTime(0.3, audioContext.currentTime);
+              gainNode2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+              
+              oscillator2.start(audioContext.currentTime);
+              oscillator2.stop(audioContext.currentTime + 0.2);
+            }, 250);
+            
+            console.log('✅ [SOS Bell] Web Audio API beep played successfully');
+          } catch (beepError) {
+            console.error('❌ [SOS Bell] Failed to play Web Audio API beep:', beepError);
+          }
+        });
     } catch (error) {
       console.error('❌ [SOS Bell] Error in playNotificationSound:', error);
     }
