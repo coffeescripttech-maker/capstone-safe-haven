@@ -11,6 +11,7 @@ import { generalLimiter } from './middleware/rateLimiter';
 import routes from './routes';
 import { alertAutomationService } from './services/alertAutomation.service';
 import { websocketService } from './services/websocket.service';
+import { startReservationExpirationJob } from './jobs/expireReservations';
 
 dotenv.config();
 
@@ -78,6 +79,9 @@ httpServer.listen(PORT, () => {
   });
   
   logger.info('Alert Automation monitoring scheduled (every 5 minutes)');
+  
+  // Start Reservation Expiration Job
+  startReservationExpirationJob();
 });
 
 export default app;

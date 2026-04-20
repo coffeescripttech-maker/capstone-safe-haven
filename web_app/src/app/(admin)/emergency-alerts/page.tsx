@@ -29,14 +29,18 @@ import {
 
 interface Alert {
   id: number;
-  type: AlertType;
-  severity: AlertSeverity;
+  type?: AlertType;
+  alert_type?: string; // Backend returns snake_case
+  severity?: AlertSeverity;
   title: string;
   description: string;
-  location: string;
-  createdAt: string;
+  location?: string;
+  affected_areas?: string[];
+  createdAt?: string;
+  created_at?: string; // Backend returns snake_case
   isActive?: boolean;
-  is_active?: boolean; // Backend returns snake_case
+  is_active?: boolean | number; // Backend returns snake_case as 0 or 1
+  source?: string;
 }
 
 export default function AlertsPage() {
@@ -150,6 +154,41 @@ export default function AlertsPage() {
     }
   };
 
+  const getSourceBadge = (source: string | null | undefined) => {
+    const sourceMap: Record<string, { label: string; color: string; icon: string }> = {
+      // Automated sources
+      'auto_weather': { label: 'Auto Weather', color: 'bg-blue-100 text-blue-700 border-blue-200', icon: '🌦️' },
+      'auto_earthquake': { label: 'Auto Earthquake', color: 'bg-orange-100 text-orange-700 border-orange-200', icon: '🌍' },
+      // Official agencies
+      'PAGASA': { label: 'PAGASA', color: 'bg-purple-100 text-purple-700 border-purple-200', icon: '🌡️' },
+      'PHIVOLCS': { label: 'PHIVOLCS', color: 'bg-orange-100 text-orange-700 border-orange-200', icon: '🌋' },
+      'NDRRMC': { label: 'NDRRMC', color: 'bg-red-100 text-red-700 border-red-200', icon: '🚨' },
+      'LGU': { label: 'LGU', color: 'bg-green-100 text-green-700 border-green-200', icon: '🏛️' },
+      // Other sources
+      'OTHER': { label: 'Other', color: 'bg-gray-100 text-gray-700 border-gray-200', icon: '📋' },
+    };
+
+    // Handle empty, null, undefined, or 'N/A' sources
+    if (!source || source === 'N/A' || source.trim() === '') {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full border bg-gray-100 text-gray-700 border-gray-200">
+          <span>📝</span>
+          Manual
+        </span>
+      );
+    }
+
+    // Get source info from map or use default
+    const sourceInfo = sourceMap[source] || { label: source, color: 'bg-gray-100 text-gray-700 border-gray-200', icon: '📝' };
+
+    return (
+      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full border ${sourceInfo.color}`}>
+        <span>{sourceInfo.icon}</span>
+        {sourceInfo.label}
+      </span>
+    );
+  };
+
   const filteredAlerts = alerts
     .filter(alert => {
       // Filter out inactive alerts - check both camelCase and snake_case
@@ -159,17 +198,28 @@ export default function AlertsPage() {
       return !!isActive;
     })
     .filter(alert => {
-      if (filter !== 'all' && alert.type !== filter) return false;
-      if (severityFilter !== 'all' && alert.severity !== severityFilter) return false;
+      // Get alert type - handle both camelCase and snake_case
+      const alertType = (alert.type || alert.alert_type) as AlertType;
+      // Get severity - handle empty strings as undefined
+      const alertSeverity = alert.severity || undefined;
+      
+      if (filter !== 'all' && alertType !== filter) return false;
+      if (severityFilter !== 'all' && alertSeverity !== severityFilter) return false;
       if (searchQuery && !alert.title.toLowerCase().includes(searchQuery.toLowerCase()) && 
           !alert.description.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       return true;
     }).sort((a, b) => {
-      // Sort by creation date
-      const dateA = new Date(a.createdAt).getTime();
-      const dateB = new Date(b.createdAt).getTime();
+      // Sort by creation date - handle both camelCase and snake_case
+      const dateA = new Date(a.createdAt || a.created_at || 0).getTime();
+      const dateB = new Date(b.createdAt || b.created_at || 0).getTime();
       return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
     });
+
+  // Debug: Log first alert to see what fields are available
+  if (filteredAlerts.length > 0) {
+    console.log('📋 First alert data:', filteredAlerts[0]);
+    console.log('📋 Alert keys:', Object.keys(filteredAlerts[0]));
+  }
 
   if (isLoading) {
     return (
@@ -362,6 +412,9 @@ export default function AlertsPage() {
                     Severity
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Source
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                     Location
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
@@ -373,11 +426,21 @@ export default function AlertsPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredAlerts.map((alert) => (
+                {filteredAlerts.map((alert) => {
+                  // Get alert type and severity - handle both camelCase and snake_case
+                  const alertType = (alert.type || alert.alert_type) as AlertType;
+                  const alertSeverity = (alert.severity || 'moderate') as AlertSeverity;
+                  const alertLocation = alert.location || (alert.affected_areas && alert.affected_areas[0]) || 'N/A';
+                  const alertCreatedAt = alert.createdAt || alert.created_at || '';
+                  const alertSource = alert.source; // Pass as-is, getSourceBadge will handle null/undefined/empty
+                  
+
+                  console.log({alertSource});
+                  return (
                   <tr key={alert.id} className="hover:bg-gray-50 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex items-start gap-3">
-                        <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getSeverityGradient(alert.severity)} flex items-center justify-center flex-shrink-0 shadow-md`}>
+                        <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getSeverityGradient(alertSeverity)} flex items-center justify-center flex-shrink-0 shadow-md`}>
                           <AlertTriangle className="w-5 h-5 text-white" />
                         </div>
                         <div className="min-w-0 flex-1">
@@ -391,26 +454,37 @@ export default function AlertsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full border ${getTypeColor(alert.type)}`}>
-                        {getTypeIcon(alert.type)}
-                        {alert.type}
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full border ${getTypeColor(alertType)}`}>
+                        {getTypeIcon(alertType)}
+                        {alertType}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-full border ${getSeverityColor(alert.severity)}`}>
-                        {alert.severity}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-full border ${getSeverityColor(alertSeverity)}`}>
+                          {alertSeverity || 'N/A'}
+                        </span>
+                        {(alert.advanceNoticeHours || alert.advance_notice_hours) && (alert.advanceNoticeHours || alert.advance_notice_hours) > 0 && (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-700 border border-orange-200">
+                            <Clock className="w-3 h-3" />
+                            {alert.advanceNoticeHours || alert.advance_notice_hours}h
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {getSourceBadge(alertSource)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-1.5 text-sm text-gray-600">
                         <MapPin className="w-4 h-4 text-gray-400" />
-                        {alert.location || 'N/A'}
+                        {alertLocation}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-1.5 text-sm text-gray-600">
                         <Calendar className="w-4 h-4 text-gray-400" />
-                        {format(new Date(alert.createdAt), 'MMM d, yyyy')}
+                        {alertCreatedAt ? format(new Date(alertCreatedAt), 'MMM d, yyyy') : 'N/A'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right">
@@ -439,7 +513,8 @@ export default function AlertsPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

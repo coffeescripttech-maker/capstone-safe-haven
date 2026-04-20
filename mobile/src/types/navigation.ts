@@ -46,6 +46,7 @@ export type CentersStackParamList = {
   CentersMap: undefined;
   CentersList: undefined;
   CenterDetails: { centerId: number };
+  MyReservations: undefined;
 };
 
 // Guides Stack Navigator

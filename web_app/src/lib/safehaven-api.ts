@@ -179,6 +179,7 @@ export const alertsApi = {
           createdBy: alert.created_by,
           createdAt: alert.created_at,
           updatedAt: alert.updated_at,
+          source: alert.source
         };
       });
     }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { centersApi, handleApiError } from '@/lib/safehaven-api';
 import toast from 'react-hot-toast';
@@ -19,9 +19,7 @@ import {
   XCircle,
   Phone,
   RefreshCw,
-  TrendingUp,
-  Home,
-  Activity
+  TrendingUp
 } from 'lucide-react';
 
 interface Center {

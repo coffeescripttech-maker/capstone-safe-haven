@@ -63,6 +63,8 @@ export interface DisasterAlert {
   startTime: string;
   endTime?: string;
   isActive: boolean;
+  advanceNoticeHours?: number; // Hours of advance notice for predictive alerts
+  forecastData?: any; // Forecast data used for prediction
   metadata?: {
     windSpeed?: number;
     signalNumber?: number;

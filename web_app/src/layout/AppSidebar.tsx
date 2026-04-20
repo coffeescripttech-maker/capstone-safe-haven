@@ -51,8 +51,11 @@ const navItems: NavItem[] = [
   {
     icon: <CalenderIcon />,
     name: "Evacuation Centers",
-    path: "/evacuation-centers",
     requiredRoles: ['super_admin', 'admin', 'mdrrmo', 'lgu_officer'], // Center management
+    subItems: [
+      { name: "All Centers", path: "/evacuation-centers" },
+      { name: "Reservations", path: "/evacuation-centers/reservations" },
+    ],
   },
   {
     icon: <UserCircleIcon />,

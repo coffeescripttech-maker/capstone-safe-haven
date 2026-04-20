@@ -176,6 +176,14 @@ class WebSocketService {
       this.notifyHandlers('notification', data);
     });
 
+    this.socket.on('capacity_updated', (data: any) => {
+      console.log('📢 [WebSocket] CAPACITY UPDATE RECEIVED!');
+      console.log('   Center:', data.data?.centerId);
+      console.log('   Available Slots:', data.data?.availableSlots);
+      console.log('   Status:', data.data?.statusLevel);
+      this.notifyHandlers('capacity_updated', data);
+    });
+
     // Ping/pong for connection health
     this.socket.on('pong', () => {
       console.log('🏓 [WebSocket] Pong received - connection alive');

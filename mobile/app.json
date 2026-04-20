@@ -69,7 +69,8 @@
     "extra": {
       "eas": {
         "projectId": "658ac31a-7930-47e9-9adc-8126ed6a438a"
-      }
+      },
+      "EXPO_PUBLIC_MAPBOX_TOKEN": "pk.eyJ1IjoibWlyYW5mYW0tMTIzIiwiYSI6ImNtMnUwa3AwNjA5MTAyanB4aGtxNXlkanUifQ.oYbW0ZPDHKZ8_fwy7ilmyA"
     },
     "runtimeVersion": "1.0.0",
     "updates": {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,30 +8,65 @@ import {
   Linking,
   Alert as RNAlert,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import * as Location from 'expo-location';
 
 import { EvacuationCenter } from '../../types/models';
 import { CentersStackParamList } from '../../types/navigation';
 import { centersService } from '../../services/centers';
+import reservationService, { CenterStatus } from '../../services/reservation';
+import websocketService from '../../services/websocket.service';
+import { getDirections, formatDistance, formatDuration, RouteData } from '../../services/mapbox';
 import { COLORS } from '../../constants/colors';
 import { SPACING } from '../../constants/spacing';
 import { Loading } from '../../components/common/Loading';
+import CenterStatusBadge from '../../components/evacuation/CenterStatusBadge';
+import ReservationModal from '../../components/evacuation/ReservationModal';
+import ReservationCountdown from '../../components/evacuation/ReservationCountdown';
 
 type RouteProps = RouteProp<CentersStackParamList, 'CenterDetails'>;
+type NavigationProps = NativeStackNavigationProp<CentersStackParamList>;
 
 export const CenterDetailsScreen: React.FC = () => {
   const route = useRoute<RouteProps>();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProps>();
   const { centerId } = route.params;
 
   const [center, setCenter] = useState<EvacuationCenter | null>(null);
+  const [centerStatus, setCenterStatus] = useState<CenterStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showReservationModal, setShowReservationModal] = useState(false);
+  const [refreshingStatus, setRefreshingStatus] = useState(false);
+  
+  // Route display states
+  const [routeData, setRouteData] = useState<RouteData | null>(null);
+  const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
+  const [loadingRoute, setLoadingRoute] = useState(false);
+  
+  // Map ref for fitting route
+  const mapRef = useRef<MapView>(null);
 
   useEffect(() => {
     loadCenter();
+    loadCenterStatus();
+    
+    // Subscribe to WebSocket capacity updates
+    const unsubscribe = websocketService.on('capacity_updated', (data) => {
+      if (data.data?.centerId === centerId) {
+        console.log('📢 Capacity updated for this center:', data.data);
+        loadCenterStatus();
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, [centerId]);
 
   const loadCenter = async () => {
@@ -60,16 +95,206 @@ export const CenterDetailsScreen: React.FC = () => {
     }
   };
 
+  const loadCenterStatus = async () => {
+    try {
+      console.log('🔄 Loading center status for center:', centerId);
+      const status = await reservationService.getCenterStatus(centerId);
+      console.log('✅ Loaded center status:', status);
+      console.log('   Available slots:', status.availableSlots);
+      console.log('   Status level:', status.statusLevel);
+      console.log('   Has reservation:', !!status.myReservation);
+      setCenterStatus(status);
+    } catch (error) {
+      console.error('❌ Error loading center status:', error);
+      // Set a default status so button isn't permanently disabled
+      setCenterStatus({
+        centerId,
+        available: true,
+        availableSlots: 0,
+        statusLevel: 'full',
+      });
+    }
+  };
+
+  const handleViewStatus = async () => {
+    try {
+      setRefreshingStatus(true);
+      await loadCenterStatus();
+      
+      // Show success feedback
+      RNAlert.alert(
+        '✅ Status Updated',
+        centerStatus 
+          ? `Available Slots: ${centerStatus.availableSlots}\nStatus: ${centerStatus.statusLevel.toUpperCase()}`
+          : 'Status refreshed successfully',
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      RNAlert.alert('Error', 'Failed to refresh status');
+    } finally {
+      setRefreshingStatus(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([loadCenter(), loadCenterStatus()]);
+    setRefreshing(false);
+  };
+
+  const handleReserveSlot = () => {
+    if (!centerStatus) {
+      RNAlert.alert('Error', 'Unable to load center availability');
+      return;
+    }
+
+    if (centerStatus.myReservation) {
+      RNAlert.alert(
+        'Active Reservation',
+        'You already have an active reservation for this center. Please cancel it first or wait for it to expire.',
+        [
+          { text: 'OK' },
+          {
+            text: 'View Reservations',
+            onPress: () => navigation.navigate('MyReservations'),
+          },
+        ]
+      );
+      return;
+    }
+
+    if (centerStatus.availableSlots <= 0) {
+      RNAlert.alert('No Slots Available', 'This center is currently full. Please try another center.');
+      return;
+    }
+
+    setShowReservationModal(true);
+  };
+
+  const handleReservationSuccess = () => {
+    loadCenterStatus();
+    RNAlert.alert(
+      'Reservation Created',
+      'Your reservation has been created successfully. You have 30 minutes to arrive.',
+      [
+        { text: 'OK' },
+        {
+          text: 'View Reservations',
+          onPress: () => navigation.navigate('MyReservations'),
+        },
+      ]
+    );
+  };
+
   const handleCall = () => {
     if (center?.contactNumber) {
       Linking.openURL(`tel:${center.contactNumber}`);
     }
   };
 
-  const handleDirections = () => {
-    if (center?.latitude && center?.longitude) {
-      const url = `https://www.google.com/maps/dir/?api=1&destination=${center.latitude},${center.longitude}`;
-      Linking.openURL(url);
+  const handleDirections = async () => {
+    if (!center?.latitude || !center?.longitude) {
+      RNAlert.alert('Error', 'Center location not available');
+      return;
+    }
+
+    try {
+      setLoadingRoute(true);
+
+      // Request location permission
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        RNAlert.alert(
+          'Permission Required',
+          'Location permission is needed to show directions',
+          [
+            { text: 'Cancel' },
+            {
+              text: 'Open in Maps',
+              onPress: () => {
+                const url = `https://www.google.com/maps/dir/?api=1&destination=${center.latitude},${center.longitude}`;
+                Linking.openURL(url);
+              },
+            },
+          ]
+        );
+        return;
+      }
+
+      // Get current location
+      console.log('📍 Getting current location...');
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      setUserLocation(location);
+      console.log('✅ Current location:', location.coords);
+
+      // Fetch route from Mapbox
+      console.log('🗺️ Fetching route...');
+      const route = await getDirections(
+        {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        },
+        {
+          latitude: center.latitude,
+          longitude: center.longitude,
+        }
+      );
+
+      if (route) {
+        setRouteData(route);
+        console.log('✅ Route loaded successfully');
+        
+        // Fit map to show entire route
+        if (mapRef.current && route.coordinates.length > 0) {
+          setTimeout(() => {
+            mapRef.current?.fitToCoordinates(route.coordinates, {
+              edgePadding: { top: 100, right: 50, bottom: 50, left: 50 },
+              animated: true,
+            });
+          }, 500);
+        }
+        
+        RNAlert.alert(
+          '🗺️ Route Found',
+          `Distance: ${formatDistance(route.distance)}\nEstimated Time: ${formatDuration(route.duration)}`,
+          [{ text: 'OK' }]
+        );
+      } else {
+        RNAlert.alert(
+          'Route Not Found',
+          'Unable to calculate route. Would you like to open in Google Maps?',
+          [
+            { text: 'Cancel' },
+            {
+              text: 'Open Maps',
+              onPress: () => {
+                const url = `https://www.google.com/maps/dir/?api=1&destination=${center.latitude},${center.longitude}`;
+                Linking.openURL(url);
+              },
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('❌ Error getting directions:', error);
+      RNAlert.alert(
+        'Error',
+        'Failed to get directions. Would you like to open in Google Maps?',
+        [
+          { text: 'Cancel' },
+          {
+            text: 'Open Maps',
+            onPress: () => {
+              const url = `https://www.google.com/maps/dir/?api=1&destination=${center.latitude},${center.longitude}`;
+              Linking.openURL(url);
+            },
+          },
+        ]
+      );
+    } finally {
+      setLoadingRoute(false);
     }
   };
 
@@ -109,7 +334,55 @@ export const CenterDetailsScreen: React.FC = () => {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          colors={[COLORS.primary]}
+        />
+      }
+    >
+      {/* Status Badge - NEW */}
+      {centerStatus && (
+        <View style={styles.statusBadgeContainer}>
+          <CenterStatusBadge
+            statusLevel={centerStatus.statusLevel}
+            availableSlots={centerStatus.availableSlots}
+            size="large"
+          />
+        </View>
+      )}
+
+      {/* Active Reservation - NEW */}
+      {centerStatus?.myReservation && (
+        <View style={styles.activeReservationContainer}>
+          <View style={styles.activeReservationHeader}>
+            <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+            <Text style={styles.activeReservationTitle}>Active Reservation</Text>
+          </View>
+          <Text style={styles.activeReservationText}>
+            You have reserved {centerStatus.myReservation.groupSize} {centerStatus.myReservation.groupSize === 1 ? 'slot' : 'slots'}
+          </Text>
+          {centerStatus.myReservation.status === 'pending' && (
+            <View style={styles.countdownContainer}>
+              <ReservationCountdown
+                expiresAt={centerStatus.myReservation.expiresAt}
+                onExpired={loadCenterStatus}
+                size="medium"
+              />
+            </View>
+          )}
+          <TouchableOpacity
+            style={styles.viewReservationButton}
+            onPress={() => navigation.navigate('MyReservations')}
+          >
+            <Text style={styles.viewReservationButtonText}>View My Reservations</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Map Preview */}
       {center.latitude && center.longitude && !isNaN(center.latitude) && !isNaN(center.longitude) && (
         <View style={styles.mapContainer}>
@@ -125,14 +398,58 @@ export const CenterDetailsScreen: React.FC = () => {
             scrollEnabled={false}
             zoomEnabled={false}
           >
+            {/* Destination Marker */}
             <Marker
               coordinate={{
                 latitude: Number(center.latitude),
                 longitude: Number(center.longitude),
               }}
               pinColor={getCapacityColor()}
+              title={center.name}
             />
+
+            {/* User Location Marker */}
+            {userLocation && (
+              <Marker
+                coordinate={{
+                  latitude: userLocation.coords.latitude,
+                  longitude: userLocation.coords.longitude,
+                }}
+                pinColor="#3B82F6"
+                title="Your Location"
+              />
+            )}
+
+            {/* Route Polyline */}
+            {routeData && routeData.coordinates.length > 0 && (
+              <Polyline
+                coordinates={routeData.coordinates}
+                strokeColor="#3B82F6"
+                strokeWidth={4}
+              />
+            )}
           </MapView>
+
+          {/* Route Info Overlay */}
+          {routeData && (
+            <View style={styles.routeInfoOverlay}>
+              <View style={styles.routeInfoCard}>
+                <View style={styles.routeInfoItem}>
+                  <Ionicons name="navigate" size={16} color={COLORS.primary} />
+                  <Text style={styles.routeInfoText}>
+                    {formatDistance(routeData.distance)}
+                  </Text>
+                </View>
+                <View style={styles.routeInfoDivider} />
+                <View style={styles.routeInfoItem}>
+                  <Ionicons name="time" size={16} color={COLORS.primary} />
+                  <Text style={styles.routeInfoText}>
+                    {formatDuration(routeData.duration)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
         </View>
       )}
 
@@ -241,24 +558,121 @@ export const CenterDetailsScreen: React.FC = () => {
 
       {/* Action Buttons */}
       <View style={styles.actions}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.callButton]}
-          onPress={handleCall}
-          disabled={!center.contactNumber}
-        >
-          <Ionicons name="call" size={20} color="#FFFFFF" />
-          <Text style={styles.actionButtonText}>Call</Text>
-        </TouchableOpacity>
+        {/* Reserve Slot Button - Primary Action */}
+        {!centerStatus?.myReservation && (
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              styles.reserveButton,
+              (!centerStatus || centerStatus.availableSlots <= 0) && styles.disabledButton,
+            ]}
+            onPress={handleReserveSlot}
+            disabled={!centerStatus || centerStatus.availableSlots <= 0}
+          >
+            <Ionicons name="calendar" size={20} color="#FFFFFF" />
+            <Text style={styles.actionButtonText}>
+              {!centerStatus 
+                ? 'Loading...' 
+                : centerStatus.availableSlots <= 0 
+                  ? 'No Slots Available' 
+                  : 'Reserve Slot'}
+            </Text>
+          </TouchableOpacity>
+        )}
 
-        <TouchableOpacity
-          style={[styles.actionButton, styles.directionsButton]}
-          onPress={handleDirections}
-          disabled={!center.latitude || !center.longitude}
-        >
-          <Ionicons name="navigate" size={20} color="#FFFFFF" />
-          <Text style={styles.actionButtonText}>Directions</Text>
-        </TouchableOpacity>
+        {/* Quick Action Buttons Row */}
+        <View style={styles.quickActionsRow}>
+          <TouchableOpacity
+            style={[styles.quickActionButton, styles.directionsButton]}
+            onPress={handleDirections}
+            disabled={!center.latitude || !center.longitude || loadingRoute}
+          >
+            {loadingRoute ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Ionicons name="navigate" size={24} color="#FFFFFF" />
+            )}
+            <Text style={styles.quickActionText}>
+              {loadingRoute ? 'Loading...' : 'Get Directions'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.quickActionButton, styles.statusButton]}
+            onPress={handleViewStatus}
+            disabled={refreshingStatus}
+          >
+            {refreshingStatus ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Ionicons name="stats-chart" size={24} color="#FFFFFF" />
+            )}
+            <Text style={styles.quickActionText}>
+              {refreshingStatus ? 'Updating...' : 'View Status'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.quickActionsRow}>
+          <TouchableOpacity
+            style={[styles.quickActionButton, styles.groupButton]}
+            onPress={() => setShowReservationModal(true)}
+            disabled={!centerStatus || centerStatus.availableSlots <= 0 || !!centerStatus?.myReservation}
+          >
+            <Ionicons name="people" size={24} color="#FFFFFF" />
+            <Text style={styles.quickActionText}>Register Group</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.quickActionButton, styles.joinButton]}
+            onPress={() => navigation.navigate('MyReservations')}
+          >
+            <Ionicons name="enter" size={24} color="#FFFFFF" />
+            <Text style={styles.quickActionText}>Join Center</Text>
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {/* Color-Coded Status Legend */}
+      {/* <View style={styles.statusLegend}>
+        <Text style={styles.legendTitle}>Availability Status:</Text>
+        <View style={styles.legendItems}>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: '#10B981' }]} />
+            <Text style={styles.legendText}>🟢 Green = Maraming slots</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: '#F59E0B' }]} />
+            <Text style={styles.legendText}>🟡 Yellow = Paubos na</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: '#EF4444' }]} />
+            <Text style={styles.legendText}>🔴 Red = Full</Text>
+          </View>
+        </View>
+      </View> */}
+
+      {/* Debug Info - Remove after testing */}
+      {__DEV__ && centerStatus && (
+        <View style={styles.debugInfo}>
+          <Text style={styles.debugText}>Debug Info:</Text>
+          <Text style={styles.debugText}>Available Slots: {centerStatus.availableSlots}</Text>
+          <Text style={styles.debugText}>Status Level: {centerStatus.statusLevel}</Text>
+          <Text style={styles.debugText}>Has Reservation: {centerStatus.myReservation ? 'Yes' : 'No'}</Text>
+        </View>
+      )}
+
+      {/* Reservation Modal - NEW */}
+      {center && centerStatus && (
+        <ReservationModal
+          visible={showReservationModal}
+          onClose={() => setShowReservationModal(false)}
+          onSuccess={handleReservationSuccess}
+          centerId={center.id}
+          centerName={center.name}
+          availableSlots={centerStatus.availableSlots}
+        />
+      )}
     </ScrollView>
   );
 };
@@ -271,9 +685,45 @@ const styles = StyleSheet.create({
   mapContainer: {
     height: 200,
     backgroundColor: '#E5E7EB',
+    position: 'relative',
   },
   map: {
     flex: 1,
+  },
+  routeInfoOverlay: {
+    position: 'absolute',
+    top: SPACING.md,
+    left: SPACING.md,
+    right: SPACING.md,
+  },
+  routeInfoCard: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 12,
+    padding: SPACING.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  routeInfoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  routeInfoDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: '#E5E7EB',
+    marginHorizontal: SPACING.md,
+  },
+  routeInfoText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
   },
   header: {
     padding: SPACING.lg,
@@ -373,28 +823,146 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xs,
   },
   actions: {
-    flexDirection: 'row',
     padding: SPACING.lg,
-    gap: SPACING.md,
+    backgroundColor: '#FFFFFF',
   },
   actionButton: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: SPACING.md,
-    borderRadius: 8,
+    borderRadius: 12,
     gap: SPACING.xs,
+    marginBottom: SPACING.md,
   },
-  callButton: {
-    backgroundColor: '#10B981',
+  reserveButton: {
+    backgroundColor: '#3B82F6',
+  },
+  quickActionsRow: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  quickActionButton: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.lg,
+    borderRadius: 12,
+    gap: SPACING.xs,
   },
   directionsButton: {
     backgroundColor: COLORS.primary,
+  },
+  statusButton: {
+    backgroundColor: '#8B5CF6',
+  },
+  groupButton: {
+    backgroundColor: '#F59E0B',
+  },
+  joinButton: {
+    backgroundColor: '#10B981',
+  },
+  disabledButton: {
+    backgroundColor: '#9CA3AF',
+    opacity: 0.6,
   },
   actionButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  quickActionText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  statusLegend: {
+    backgroundColor: '#F3F4F6',
+    padding: SPACING.lg,
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.xl,
+  },
+  legendTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: SPACING.md,
+  },
+  legendItems: {
+    gap: SPACING.sm,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  legendDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  legendText: {
+    fontSize: 14,
+    color: COLORS.text,
+  },
+  statusBadgeContainer: {
+    padding: SPACING.lg,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  activeReservationContainer: {
+    backgroundColor: '#D1FAE5',
+    padding: SPACING.lg,
+    marginTop: SPACING.sm,
+    borderLeftWidth: 4,
+    borderLeftColor: '#10B981',
+  },
+  activeReservationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    marginBottom: SPACING.sm,
+  },
+  activeReservationTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#065F46',
+  },
+  activeReservationText: {
+    fontSize: 14,
+    color: '#047857',
+    marginBottom: SPACING.sm,
+  },
+  countdownContainer: {
+    marginBottom: SPACING.sm,
+  },
+  viewReservationButton: {
+    backgroundColor: '#10B981',
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  viewReservationButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  debugInfo: {
+    backgroundColor: '#FEF3C7',
+    padding: SPACING.md,
+    margin: SPACING.lg,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+  },
+  debugText: {
+    fontSize: 12,
+    color: '#92400E',
+    marginBottom: 4,
   },
 });

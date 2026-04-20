@@ -9,25 +9,147 @@ import { alertTargetingService } from './alertTargeting.service';
 
 export const alertAutomationService = {
   // Main monitoring function - called by scheduled job
-  async monitorAndCreateAlerts(): Promise<{ weatherAlerts: number; earthquakeAlerts: number }> {
+  async monitorAndCreateAlerts(): Promise<{ weatherAlerts: number; earthquakeAlerts: number; forecastAlerts: number }> {
     console.log('[Alert Automation] Starting monitoring cycle...');
     
     let weatherAlerts = 0;
     let earthquakeAlerts = 0;
+    let forecastAlerts = 0;
     
     try {
-      // Monitor weather
+      // Monitor current weather (reactive)
       weatherAlerts = await this.monitorWeather();
+      
+      // Monitor weather forecast (predictive) - NEW!
+      forecastAlerts = await this.monitorWeatherWithForecast();
       
       // Monitor earthquakes
       earthquakeAlerts = await this.monitorEarthquakes();
       
-      console.log(`[Alert Automation] Cycle complete. Weather: ${weatherAlerts}, Earthquakes: ${earthquakeAlerts}`);
+      console.log(`[Alert Automation] Cycle complete. Current: ${weatherAlerts}, Forecast: ${forecastAlerts}, Earthquakes: ${earthquakeAlerts}`);
     } catch (error) {
       console.error('[Alert Automation] Error in monitoring cycle:', error);
     }
     
-    return { weatherAlerts, earthquakeAlerts };
+    return { weatherAlerts, earthquakeAlerts, forecastAlerts };
+  },
+
+  // Monitor weather forecast (predictive)
+  async monitorWeatherWithForecast(): Promise<number> {
+    try {
+      const cities = [
+        { name: 'Libertad, Tayug', lat: 16.0305, lon: 120.7442 },
+        { name: 'Dagupan City', lat: 16.0433, lon: 120.3397 },
+        { name: 'San Carlos City', lat: 15.9294, lon: 120.3417 },
+        { name: 'Urdaneta City', lat: 15.9761, lon: 120.5711 },
+        { name: 'Alaminos City', lat: 16.1581, lon: 119.9819 },
+        { name: 'Lingayen', lat: 16.0194, lon: 120.2286 }
+      ];
+      
+      let alertsCreated = 0;
+      
+      for (const city of cities) {
+        // Analyze forecast for next 24 hours
+        const analysis = await weatherService.analyzeForecast(city.lat, city.lon, city.name);
+        
+        if (analysis.hasSevereWeather) {
+          // Check if similar alert already exists
+          const recentAlert = await this.checkRecentAlert('auto_weather', city.name, 60);
+          
+          if (!recentAlert) {
+            await this.createPredictiveWeatherAlert(city, analysis);
+            alertsCreated++;
+            console.log(`[Forecast] Created predictive alert for ${city.name} (${analysis.hoursUntil}h advance)`);
+          } else {
+            console.log(`[Forecast] Skipped ${city.name} - recent alert exists`);
+          }
+        }
+      }
+      
+      return alertsCreated;
+    } catch (error) {
+      console.error('[Forecast] Error monitoring forecast:', error);
+      return 0;
+    }
+  },
+
+  // Create predictive weather alert with advance notice
+  async createPredictiveWeatherAlert(city: any, analysis: any): Promise<number | null> {
+    const connection = await pool.getConnection();
+    
+    try {
+      const conditions = analysis.conditions;
+      const hoursText = analysis.hoursUntil === 1 ? '1 hour' : `${analysis.hoursUntil} hours`;
+      const expectedTime = new Date(conditions.time).toLocaleTimeString('en-PH', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true 
+      });
+      
+      // Determine alert type based on conditions
+      let alertType = 'typhoon';
+      if (conditions.weatherCode >= 95) alertType = 'storm_surge';
+      else if (conditions.precipitation > 70) alertType = 'flood';
+      
+      const title = `⚠️ Severe Weather Expected in ${hoursText}`;
+      const description = `${city.name} will experience severe weather conditions starting at ${expectedTime}.
+
+📊 Expected Conditions:
+• ${conditions.weatherDescription}
+• Rainfall: ${conditions.precipitation.toFixed(1)}mm
+• Wind Speed: ${conditions.windSpeed.toFixed(1)}km/h  
+• Probability: ${conditions.precipProb}%
+• Temperature: ${conditions.temperature.toFixed(1)}°C
+
+⏰ Time to prepare: ${hoursText}
+🏠 Secure your home and belongings
+📱 Stay updated with alerts
+🚨 Consider evacuation if conditions worsen`;
+      
+      // Calculate start_time (when severe weather begins)
+      const startTime = new Date(conditions.time);
+      
+      const [result] = await connection.query<any>(
+        `INSERT INTO disaster_alerts 
+        (alert_type, severity, title, description, source, source_data, affected_areas, 
+         latitude, longitude, radius_km, start_time, is_active, created_by, auto_approved, 
+         advance_notice_hours, forecast_data)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 1, ?, ?)`,
+        [
+          alertType,
+          analysis.severity,
+          title,
+          description,
+          'auto_weather',
+          JSON.stringify({ city: city.name, analysis }),
+          JSON.stringify([city.name]),
+          city.lat,
+          city.lon,
+          50,
+          startTime,
+          analysis.hoursUntil,
+          JSON.stringify(conditions)
+        ]
+      );
+      
+      const alertId = result.insertId;
+      
+      // Target users in affected city
+      const usersTargeted = await alertTargetingService.targetUsersByCity(city.name, alertId, title);
+      
+      // Log automation
+      await this.logAutomation('weather', 0, 'Predictive Weather Alert', alertId, 'created', 
+        `Alert created with ${hoursText} advance notice`, conditions, usersTargeted);
+      
+      console.log(`[Forecast] Created alert #${alertId} for ${city.name}, targeted ${usersTargeted} users`);
+      
+      return alertId;
+    } catch (error) {
+      console.error('[Forecast] Error creating predictive alert:', error);
+      return null;
+    } finally {
+      connection.release();
+    }
   },
 
   // Monitor weather data

@@ -48,15 +48,22 @@ export const CentersListScreen: React.FC = () => {
   };
 
   useEffect(() => {
-    // Add map button to header
+    // Add map and reservations buttons to header
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity
-          onPress={() => navigation.navigate('CentersMap')}
-          style={{ marginRight: 16 }}
-        >
-          <Ionicons name="map" size={24} color={COLORS.primary} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 16, gap: 16 }}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('MyReservations')}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+          >
+            <Ionicons name="calendar" size={24} color={COLORS.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('CentersMap')}
+          >
+            <Ionicons name="map" size={24} color={COLORS.primary} />
+          </TouchableOpacity>
+        </View>
       ),
     });
   }, [navigation]);
@@ -156,6 +163,24 @@ export const CentersListScreen: React.FC = () => {
         </View>
       )}
 
+      {/* My Reservations Quick Access */}
+      <TouchableOpacity
+        style={styles.reservationsCard}
+        onPress={() => navigation.navigate('MyReservations')}
+        activeOpacity={0.7}
+      >
+        <View style={styles.reservationsContent}>
+          <View style={styles.reservationsIcon}>
+            <Ionicons name="calendar" size={24} color="#fff" />
+          </View>
+          <View style={styles.reservationsText}>
+            <Text style={styles.reservationsTitle}>My Reservations</Text>
+            <Text style={styles.reservationsSubtitle}>View and manage your bookings</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color={COLORS.textSecondary} />
+        </View>
+      </TouchableOpacity>
+
       <FlatList
         data={centers}
         keyExtractor={(item, index) => `${item.id}-${item.name}-${index}`}
@@ -217,5 +242,44 @@ const styles = StyleSheet.create({
   updateText: {
     color: COLORS.textSecondary,
     fontSize: TYPOGRAPHY.sizes.xs,
+  },
+  reservationsCard: {
+    backgroundColor: '#fff',
+    marginHorizontal: SPACING.md,
+    marginTop: SPACING.md,
+    marginBottom: SPACING.sm,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  reservationsContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: SPACING.md,
+  },
+  reservationsIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.md,
+  },
+  reservationsText: {
+    flex: 1,
+  },
+  reservationsTitle: {
+    fontSize: TYPOGRAPHY.sizes.md,
+    fontWeight: TYPOGRAPHY.weights.bold,
+    color: COLORS.text,
+    marginBottom: 2,
+  },
+  reservationsSubtitle: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.textSecondary,
   },
 });

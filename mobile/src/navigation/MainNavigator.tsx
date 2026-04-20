@@ -12,6 +12,7 @@ import { AlertDetailsScreen } from '../screens/alerts/AlertDetailsScreen';
 import { CentersMapScreen } from '../screens/centers/CentersMapScreen';
 import { CentersListScreen } from '../screens/centers/CentersListScreen';
 import { CenterDetailsScreen } from '../screens/centers/CenterDetailsScreen';
+import { MyReservationsScreen } from '../screens/evacuation/MyReservationsScreen';
 import { ContactsListScreen } from '../screens/contacts/ContactsListScreen';
 import { GuidesListScreen } from '../screens/guides/GuidesListScreen';
 import { GuideDetailsScreen } from '../screens/guides/GuideDetailsScreen';
@@ -75,6 +76,11 @@ const CentersNavigator: React.FC = () => {
         name="CenterDetails"
         component={CenterDetailsScreen}
         options={{ title: 'Center Details' }}
+      />
+      <CentersStack.Screen
+        name="MyReservations"
+        component={MyReservationsScreen}
+        options={{ title: 'My Reservations' }}
       />
     </CentersStack.Navigator>
   );

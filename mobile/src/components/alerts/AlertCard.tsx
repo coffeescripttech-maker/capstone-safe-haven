@@ -39,6 +39,41 @@ export const AlertCard: React.FC<AlertCardProps> = ({ alert, onPress }) => {
     }
   };
 
+  const getSourceBadge = (source: string | null | undefined) => {
+    const sourceMap: Record<string, { label: string; color: string; icon: string }> = {
+      // Automated sources
+      'auto_weather': { label: 'Auto Weather', color: '#3B82F6', icon: '🌦️' },
+      'auto_earthquake': { label: 'Auto Earthquake', color: '#F97316', icon: '🌍' },
+      // Official agencies
+      'PAGASA': { label: 'PAGASA', color: '#8B5CF6', icon: '🌡️' },
+      'PHIVOLCS': { label: 'PHIVOLCS', color: '#F97316', icon: '🌋' },
+      'NDRRMC': { label: 'NDRRMC', color: '#EF4444', icon: '🚨' },
+      'LGU': { label: 'LGU', color: '#10B981', icon: '🏛️' },
+      // Other sources
+      'OTHER': { label: 'Other', color: '#6B7280', icon: '📋' },
+    };
+
+    // Handle empty, null, undefined, or 'N/A' sources
+    if (!source || source === 'N/A' || source.trim() === '') {
+      return (
+        <View style={[styles.sourceBadge, { backgroundColor: '#F3F4F6' }]}>
+          <Text style={styles.sourceBadgeIcon}>📝</Text>
+          <Text style={[styles.sourceBadgeText, { color: '#374151' }]}>Manual</Text>
+        </View>
+      );
+    }
+
+    // Get source info from map or use default
+    const sourceInfo = sourceMap[source] || { label: source, color: '#6B7280', icon: '📝' };
+
+    return (
+      <View style={[styles.sourceBadge, { backgroundColor: `${sourceInfo.color}15` }]}>
+        <Text style={styles.sourceBadgeIcon}>{sourceInfo.icon}</Text>
+        <Text style={[styles.sourceBadgeText, { color: sourceInfo.color }]}>{sourceInfo.label}</Text>
+      </View>
+    );
+  };
+
   // Safety check
   if (!alert) {
     return null;
@@ -65,9 +100,20 @@ export const AlertCard: React.FC<AlertCardProps> = ({ alert, onPress }) => {
         </Text>
 
         <View style={styles.footer}>
-          <Text style={styles.source}>📡 {alert.source || 'Unknown'}</Text>
+          <View style={styles.sourceContainer}>
+            {getSourceBadge(alert.source)}
+          </View>
           <Text style={styles.time}>{alert.createdAt ? formatTimeAgo(alert.createdAt) : 'Unknown time'}</Text>
         </View>
+
+        {alert.advanceNoticeHours && alert.advanceNoticeHours > 0 && (
+          <View style={styles.advanceNoticeBadge}>
+            <Text style={styles.advanceNoticeIcon}>⏰</Text>
+            <Text style={styles.advanceNoticeText}>
+              {alert.advanceNoticeHours}h advance notice
+            </Text>
+          </View>
+        )}
 
         {alert.affectedAreas && alert.affectedAreas.length > 0 && (
           <View style={styles.areas}>
@@ -145,10 +191,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: SPACING.xs,
   },
-  source: {
+  sourceContainer: {
+    flex: 1,
+    marginRight: SPACING.sm,
+  },
+  sourceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  sourceBadgeIcon: {
+    fontSize: 12,
+    marginRight: 4,
+  },
+  sourceBadgeText: {
     fontSize: TYPOGRAPHY.sizes.xs,
-    color: COLORS.textSecondary,
+    fontWeight: TYPOGRAPHY.weights.semibold,
   },
   time: {
     fontSize: TYPOGRAPHY.sizes.xs,
@@ -170,5 +233,24 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: TYPOGRAPHY.sizes.xs,
     color: COLORS.text,
+  },
+  advanceNoticeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    borderRadius: 12,
+    marginTop: SPACING.sm,
+    alignSelf: 'flex-start',
+  },
+  advanceNoticeIcon: {
+    fontSize: 14,
+    marginRight: 4,
+  },
+  advanceNoticeText: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    fontWeight: TYPOGRAPHY.weights.semibold,
+    color: '#FF9500',
   },
 });

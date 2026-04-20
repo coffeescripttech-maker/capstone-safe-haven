@@ -37,6 +37,95 @@ export const weatherService = {
     }
   },
 
+  // Get hourly forecast for next X hours
+  async getHourlyForecast(lat: number, lon: number, hours: number = 24): Promise<any> {
+    try {
+      const response = await axios.get(OPEN_METEO_BASE_URL, {
+        params: {
+          latitude: lat,
+          longitude: lon,
+          hourly: 'temperature_2m,precipitation,wind_speed_10m,weather_code,precipitation_probability',
+          forecast_hours: hours,
+          timezone: 'Asia/Manila'
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching forecast from Open-Meteo:', error);
+      throw new Error('Failed to fetch forecast data');
+    }
+  },
+
+  // Analyze forecast for severe weather conditions
+  async analyzeForecast(lat: number, lon: number, cityName: string): Promise<{
+    hasSevereWeather: boolean;
+    hoursUntil: number;
+    severity: string;
+    conditions: any;
+    cityName: string;
+  }> {
+    try {
+      const forecast = await this.getHourlyForecast(lat, lon, 24);
+      
+      // Check each hour for severe conditions
+      for (let i = 0; i < forecast.hourly.time.length; i++) {
+        const precipitation = forecast.hourly.precipitation[i] || 0;
+        const windSpeed = forecast.hourly.wind_speed_10m[i] || 0;
+        const precipProb = forecast.hourly.precipitation_probability[i] || 0;
+        const weatherCode = forecast.hourly.weather_code[i] || 0;
+        
+        // Severe weather thresholds
+        const isSevere = precipitation > 50 || windSpeed > 50 || precipProb > 70 || weatherCode >= 95;
+        
+        if (isSevere && i > 0) { // Only alert if at least 1 hour in advance
+          return {
+            hasSevereWeather: true,
+            hoursUntil: i,
+            severity: this.calculateSeverity(precipitation, windSpeed, precipProb, weatherCode),
+            conditions: {
+              time: forecast.hourly.time[i],
+              precipitation,
+              windSpeed,
+              precipProb,
+              weatherCode,
+              weatherDescription: this.getWeatherDescription(weatherCode),
+              temperature: forecast.hourly.temperature_2m[i]
+            },
+            cityName
+          };
+        }
+      }
+      
+      return { 
+        hasSevereWeather: false, 
+        hoursUntil: 0, 
+        severity: 'none', 
+        conditions: null,
+        cityName 
+      };
+    } catch (error) {
+      console.error(`Error analyzing forecast for ${cityName}:`, error);
+      return { 
+        hasSevereWeather: false, 
+        hoursUntil: 0, 
+        severity: 'none', 
+        conditions: null,
+        cityName 
+      };
+    }
+  },
+
+  // Calculate severity based on multiple factors
+  calculateSeverity(precip: number, wind: number, prob: number, weatherCode: number): string {
+    // Critical: Thunderstorm or extreme conditions
+    if (weatherCode >= 95 || precip > 100 || wind > 80 || prob > 90) return 'critical';
+    // High: Heavy rain/wind
+    if (precip > 70 || wind > 60 || prob > 80) return 'high';
+    // Moderate: Significant rain/wind
+    if (precip > 50 || wind > 50 || prob > 70) return 'moderate';
+    return 'low';
+  },
+
   // Get weather for major Philippine cities
   async getPhilippinesWeather(): Promise<WeatherData[]> {
     const cities = [
