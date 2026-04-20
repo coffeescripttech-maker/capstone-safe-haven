@@ -61,7 +61,7 @@ const navItems: NavItem[] = [
     icon: <UserCircleIcon />,
     name: "Users",
     path: "/users",
-    requiredRoles: ['super_admin', 'admin'], // User management - admin only
+    requiredRoles: ['super_admin', 'admin', 'mdrrmo'], // User management - admin and mdrrmo
   },
   {
     icon: <PieChartIcon />,
