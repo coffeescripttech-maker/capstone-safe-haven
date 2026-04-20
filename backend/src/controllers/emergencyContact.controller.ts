@@ -168,4 +168,21 @@ export class EmergencyContactController {
       next(error);
     }
   }
+
+  /**
+   * Delete contact permanently (Admin only)
+   */
+  async deleteContact(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const id = parseInt(req.params.id);
+      await contactService.deleteContact(id);
+      
+      res.json({
+        status: 'success',
+        message: 'Emergency contact deleted successfully'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

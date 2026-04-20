@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { usersApi, handleApiError } from '@/lib/safehaven-api';
+import { useSafeHavenAuth } from '@/context/SafeHavenAuthContext';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import {
@@ -25,7 +26,10 @@ import {
   Mail,
   Phone,
   Calendar,
-  Activity
+  Activity,
+  Edit,
+  Trash2,
+  Save
 } from 'lucide-react';
 
 interface UserData {
@@ -35,6 +39,7 @@ interface UserData {
   first_name: string;
   last_name: string;
   role: string;
+  jurisdiction: string | null;
   is_verified: boolean;
   is_active: boolean;
   created_at: string;
@@ -46,6 +51,7 @@ interface UserData {
 
 export default function UsersListPage() {
   const router = useRouter();
+  const { user: currentUser } = useSafeHavenAuth();
   const [users, setUsers] = useState<UserData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -53,9 +59,12 @@ export default function UsersListPage() {
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('true'); // Default to show only active users
   const [showAddUser, setShowAddUser] = useState(false);
+  const [showEditUser, setShowEditUser] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserData | null>(null);
+  const [userToEdit, setUserToEdit] = useState<UserData | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [newUserData, setNewUserData] = useState({
     email: '',
     phone: '',
@@ -68,6 +77,16 @@ export default function UsersListPage() {
     province: '',
     barangay: ''
   });
+  const [editUserData, setEditUserData] = useState({
+    first_name: '',
+    last_name: '',
+    role: 'citizen',
+    jurisdiction: '',
+    city: '',
+    province: '',
+    barangay: '',
+    is_active: true
+  });
   const [stats, setStats] = useState({
     total_users: 0,
     active_users: 0,
@@ -78,6 +97,9 @@ export default function UsersListPage() {
     new_this_week: 0,
     new_this_month: 0
   });
+
+  // Check if current user can delete users (only super_admin)
+  const canDeleteUsers = currentUser?.role === 'super_admin';
 
   useEffect(() => {
     loadUsers();
@@ -126,6 +148,21 @@ export default function UsersListPage() {
 
   const handleSearch = () => {
     loadUsers();
+  };
+
+  const handleEditClick = (user: UserData) => {
+    setUserToEdit(user);
+    setEditUserData({
+      first_name: user.first_name,
+      last_name: user.last_name,
+      role: user.role,
+      jurisdiction: user.jurisdiction || '',
+      city: user.city || '',
+      province: user.province || '',
+      barangay: '',
+      is_active: user.is_active
+    });
+    setShowEditUser(true);
   };
 
   const handleDeleteClick = (user: UserData) => {
@@ -184,6 +221,40 @@ export default function UsersListPage() {
       toast.error(handleApiError(error));
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleUpdateUser = async () => {
+    if (!userToEdit) return;
+
+    // Validate required fields
+    if (!editUserData.first_name || !editUserData.last_name) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      setIsUpdating(true);
+      await usersApi.update(userToEdit.id, editUserData);
+      toast.success('User updated successfully');
+      setShowEditUser(false);
+      setUserToEdit(null);
+      setEditUserData({
+        first_name: '',
+        last_name: '',
+        role: 'citizen',
+        jurisdiction: '',
+        city: '',
+        province: '',
+        barangay: '',
+        is_active: true
+      });
+      loadUsers(true);
+      loadStatistics();
+    } catch (error) {
+      toast.error(handleApiError(error));
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -578,19 +649,31 @@ export default function UsersListPage() {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => router.push(`/users/${user.id}`)}
-                            className="p-2 text-brand-600 hover:bg-brand-50 rounded-lg transition-all"
-                            title="View Details"
+                            className="px-3 py-1.5 text-brand-600 hover:bg-brand-50 rounded-lg transition-all flex items-center gap-1.5 text-sm font-medium"
+                            title="View user details"
                           >
                             <Eye className="w-4 h-4" />
+                            Details
                           </button>
                           <button
-                            onClick={() => handleDeleteClick(user)}
-                            className="p-2 text-error-600 hover:bg-error-50 rounded-lg transition-all"
-                            title="Delete User"
-                            disabled={!user.is_active}
+                            onClick={() => handleEditClick(user)}
+                            className="px-3 py-1.5 text-info-600 hover:bg-info-50 rounded-lg transition-all flex items-center gap-1.5 text-sm font-medium"
+                            title="Edit user"
                           >
-                            <UserX className="w-4 h-4" />
+                            <Edit className="w-4 h-4" />
+                            Edit
                           </button>
+                          {canDeleteUsers && (
+                            <button
+                              onClick={() => handleDeleteClick(user)}
+                              className="px-3 py-1.5 text-error-600 hover:bg-error-50 rounded-lg transition-all flex items-center gap-1.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                              title={!user.is_active ? 'User already inactive' : 'Delete user'}
+                              disabled={!user.is_active}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -607,6 +690,199 @@ export default function UsersListPage() {
         <div className="mt-4 text-center text-sm text-gray-600">
           Showing <span className="font-semibold text-gray-900">{filteredUsers.length}</span> of{' '}
           <span className="font-semibold text-gray-900">{users.length}</span> users
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {showEditUser && userToEdit && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">Edit User</h2>
+              <p className="text-gray-600 mt-1">Update user information</p>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Personal Information */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      First Name <span className="text-error-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={editUserData.first_name}
+                      onChange={(e) => setEditUserData({ ...editUserData, first_name: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                      placeholder="Juan"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Last Name <span className="text-error-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={editUserData.last_name}
+                      onChange={(e) => setEditUserData({ ...editUserData, last_name: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                      placeholder="Dela Cruz"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Account Details */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Account Details</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input
+                      type="email"
+                      value={userToEdit.email}
+                      disabled
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                    <input
+                      type="tel"
+                      value={userToEdit.phone}
+                      disabled
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Phone cannot be changed</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Role <span className="text-error-500">*</span>
+                    </label>
+                    <select
+                      value={editUserData.role}
+                      onChange={(e) => setEditUserData({ ...editUserData, role: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                    >
+                      <option value="citizen">👤 Citizen - Regular app user</option>
+                      <option value="lgu_officer">👮 LGU Officer - Local government officer</option>
+                      <option value="mdrrmo">🚨 MDRRMO - Disaster management officer</option>
+                      <option value="bfp">🚒 BFP - Bureau of Fire Protection</option>
+                      <option value="pnp">👮‍♂️ PNP - Philippine National Police</option>
+                      <option value="admin">🛡️ Admin - System administrator</option>
+                      <option value="super_admin">⭐ Super Admin - Full system access</option>
+                    </select>
+                  </div>
+                  {needsJurisdiction(editUserData.role) && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Jurisdiction
+                      </label>
+                      <input
+                        type="text"
+                        value={editUserData.jurisdiction}
+                        onChange={(e) => setEditUserData({ ...editUserData, jurisdiction: e.target.value })}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                        placeholder="e.g., Legazpi City, Albay Province"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Account Status <span className="text-error-500">*</span>
+                    </label>
+                    <select
+                      value={editUserData.is_active ? 'true' : 'false'}
+                      onChange={(e) => setEditUserData({ ...editUserData, is_active: e.target.value === 'true' })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                    >
+                      <option value="true">✅ Active</option>
+                      <option value="false">❌ Inactive</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Location (Optional) */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Location (Optional)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+                    <input
+                      type="text"
+                      value={editUserData.city}
+                      onChange={(e) => setEditUserData({ ...editUserData, city: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                      placeholder="Legazpi City"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Province</label>
+                    <input
+                      type="text"
+                      value={editUserData.province}
+                      onChange={(e) => setEditUserData({ ...editUserData, province: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                      placeholder="Albay"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Barangay</label>
+                    <input
+                      type="text"
+                      value={editUserData.barangay}
+                      onChange={(e) => setEditUserData({ ...editUserData, barangay: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                      placeholder="Barangay 1"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowEditUser(false);
+                  setUserToEdit(null);
+                  setEditUserData({
+                    first_name: '',
+                    last_name: '',
+                    role: 'citizen',
+                    jurisdiction: '',
+                    city: '',
+                    province: '',
+                    barangay: '',
+                    is_active: true
+                  });
+                }}
+                className="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateUser}
+                disabled={isUpdating}
+                className="px-6 py-2.5 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-all font-semibold shadow-md hover:shadow-lg flex items-center gap-2 disabled:opacity-50"
+              >
+                {isUpdating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Update User
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

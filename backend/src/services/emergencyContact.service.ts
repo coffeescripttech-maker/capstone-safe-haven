@@ -334,6 +334,22 @@ export class EmergencyContactService {
   }
 
   /**
+   * Delete emergency contact permanently
+   */
+  async deleteContact(id: number): Promise<void> {
+    await this.getContactById(id);
+
+    try {
+      await db.query(
+        'DELETE FROM emergency_contacts WHERE id = ?',
+        [id]
+      );
+    } catch (error) {
+      throw new AppError('Failed to delete emergency contact', 500);
+    }
+  }
+
+  /**
    * Search contacts by keyword
    */
   async searchContacts(query: string, filters?: ContactFilters): Promise<EmergencyContact[]> {

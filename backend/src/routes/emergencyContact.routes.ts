@@ -16,6 +16,7 @@ router.get('/:id', contactController.getContactById);
 // Admin routes with rate limiting
 router.post('/', authenticate, authorize('admin', 'lgu_officer'), createUpdateLimiter, contactController.createContact);
 router.put('/:id', authenticate, authorize('admin', 'lgu_officer'), createUpdateLimiter, contactController.updateContact);
-router.delete('/:id', authenticate, authorize('admin', 'lgu_officer'), adminLimiter, contactController.deactivateContact);
+router.patch('/:id/deactivate', authenticate, authorize('admin', 'lgu_officer'), adminLimiter, contactController.deactivateContact);
+router.delete('/:id', authenticate, authorize('admin', 'lgu_officer'), adminLimiter, contactController.deleteContact);
 
 export default router;

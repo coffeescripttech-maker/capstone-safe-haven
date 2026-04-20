@@ -20,7 +20,6 @@ import {
   XCircle,
   Key,
   AlertCircle,
-  Trash2,
   UserX
 } from 'lucide-react';
 
@@ -62,7 +61,6 @@ export default function UserDetailPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [newPassword, setNewPassword] = useState('');
 
   const [formData, setFormData] = useState({
@@ -80,6 +78,12 @@ export default function UserDetailPage() {
 
   useEffect(() => {
     loadUser();
+    
+    // Check if edit mode should be enabled from URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('edit') === 'true') {
+      setIsEditing(true);
+    }
   }, [userId]);
 
   const loadUser = async () => {
@@ -141,16 +145,6 @@ export default function UserDetailPage() {
     }
   };
 
-  const handleDelete = async (hardDelete: boolean) => {
-    try {
-      await usersApi.delete(userId, hardDelete);
-      toast.success(hardDelete ? 'User permanently deleted' : 'User deactivated successfully');
-      router.push('/users');
-    } catch (error) {
-      toast.error(handleApiError(error));
-    }
-  };
-
   const getRoleInfo = (role: string) => {
     return roleOptions.find(r => r.value === role) || roleOptions[0];
   };
@@ -203,23 +197,12 @@ export default function UserDetailPage() {
 
           <div className="flex items-center gap-3">
             {!isEditing ? (
-              <>
-                <button
-                  onClick={() => setShowDeleteDialog(true)}
-                  disabled={!user.is_active}
-                  className="px-6 py-2.5 bg-error-500 text-white rounded-lg hover:bg-error-600 transition-all font-semibold shadow-md hover:shadow-lg flex items-center gap-2 disabled:opacity-50"
-                  title={!user.is_active ? 'User already inactive' : 'Delete user'}
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Delete
-                </button>
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="px-6 py-2.5 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-all font-semibold shadow-md hover:shadow-lg"
-                >
-                  Edit User
-                </button>
-              </>
+              <button
+                onClick={() => setIsEditing(true)}
+                className="px-6 py-2.5 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-all font-semibold shadow-md hover:shadow-lg"
+              >
+                Edit User
+              </button>
             ) : (
               <>
                 <button
@@ -538,84 +521,6 @@ export default function UserDetailPage() {
           </div>
         </div>
       </div>
-
-      {/* Delete Confirmation Dialog */}
-      {showDeleteDialog && user && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900">Delete User</h2>
-              <p className="text-gray-600 mt-1">Choose how to delete this user</p>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <div className="flex items-start gap-3">
-                  <User className="w-5 h-5 text-gray-500 mt-0.5" />
-                  <div>
-                    <p className="font-semibold text-gray-900">
-                      {user.first_name} {user.last_name}
-                    </p>
-                    <p className="text-sm text-gray-600">{user.email}</p>
-                    <p className="text-sm text-gray-600">{user.phone}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="bg-warning-50 border border-warning-200 rounded-lg p-4">
-                  <h3 className="font-semibold text-warning-900 mb-2 flex items-center gap-2">
-                    <UserX className="w-4 h-4" />
-                    Soft Delete (Recommended)
-                  </h3>
-                  <p className="text-sm text-warning-800 mb-3">
-                    Deactivate the user account. The user cannot log in, but all data is preserved for audit purposes.
-                  </p>
-                  <button
-                    onClick={() => {
-                      handleDelete(false);
-                      setShowDeleteDialog(false);
-                    }}
-                    className="w-full px-4 py-2.5 bg-warning-500 text-white rounded-lg hover:bg-warning-600 transition-all font-semibold"
-                  >
-                    Deactivate User
-                  </button>
-                </div>
-
-                <div className="bg-error-50 border border-error-200 rounded-lg p-4">
-                  <h3 className="font-semibold text-error-900 mb-2 flex items-center gap-2">
-                    <XCircle className="w-4 h-4" />
-                    Hard Delete (Permanent)
-                  </h3>
-                  <p className="text-sm text-error-800 mb-3">
-                    Permanently remove the user and all related data from the database. This action cannot be undone!
-                  </p>
-                  <button
-                    onClick={() => {
-                      if (confirm('⚠️ Are you absolutely sure? This will PERMANENTLY delete all user data and cannot be undone!')) {
-                        handleDelete(true);
-                        setShowDeleteDialog(false);
-                      }
-                    }}
-                    className="w-full px-4 py-2.5 bg-error-500 text-white rounded-lg hover:bg-error-600 transition-all font-semibold"
-                  >
-                    Permanently Delete
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 border-t border-gray-200 flex justify-end">
-              <button
-                onClick={() => setShowDeleteDialog(false)}
-                className="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all font-semibold"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

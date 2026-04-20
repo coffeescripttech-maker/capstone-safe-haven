@@ -130,13 +130,19 @@ export class AlertController {
   async deactivateAlert(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const id = parseInt(req.params.id);
+      console.log(`🗑️ [Alert Controller] Deactivate request for alert ID: ${id}`);
+      console.log(`👤 [Alert Controller] Requested by user: ${req.user?.id} (${req.user?.role})`);
+      
       await alertService.deactivateAlert(id);
+      
+      console.log(`✅ [Alert Controller] Alert ${id} deactivated successfully`);
       
       res.json({
         status: 'success',
         message: 'Alert deactivated successfully'
       });
     } catch (error) {
+      console.error(`❌ [Alert Controller] Failed to deactivate alert:`, error);
       next(error);
     }
   }

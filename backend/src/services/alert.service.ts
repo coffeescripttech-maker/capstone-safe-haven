@@ -599,15 +599,59 @@ export class AlertService {
    * Deactivate an alert (soft delete)
    */
   async deactivateAlert(id: number): Promise<void> {
-    // Verify alert exists
-    await this.getAlertById(id);
+    console.log(`🔍 [Alert Service] Starting deactivation for alert ID: ${id}`);
+    
+    // Verify alert exists and get current state
+    const alert = await this.getAlertById(id);
+    console.log(`📋 [Alert Service] Current alert state:`, {
+      id: alert.id,
+      title: alert.title,
+      is_active: alert.is_active,
+      status: alert.status
+    });
 
     try {
-      await db.query(
-        'UPDATE disaster_alerts SET is_active = FALSE, updated_at = NOW() WHERE id = ?',
+      console.log(`💾 [Alert Service] Executing UPDATE query: SET is_active = 0 WHERE id = ${id}`);
+      
+      const [result] = await db.query(
+        'UPDATE disaster_alerts SET is_active = 0, updated_at = NOW() WHERE id = ?',
         [id]
       );
+      
+      const affectedRows = (result as any).affectedRows;
+      const changedRows = (result as any).changedRows;
+      
+      console.log(`📊 [Alert Service] Update result:`, {
+        affectedRows,
+        changedRows,
+        warningCount: (result as any).warningCount
+      });
+      
+      if (affectedRows === 0) {
+        console.error(`❌ [Alert Service] No rows affected - alert ${id} not found`);
+        throw new AppError('Alert not found or already deactivated', 404);
+      }
+      
+      if (changedRows === 0) {
+        console.warn(`⚠️ [Alert Service] Alert ${id} was already deactivated (is_active was already 0)`);
+      }
+      
+      // Verify the update by fetching the alert again
+      const updatedAlert = await this.getAlertById(id);
+      console.log(`✅ [Alert Service] Alert ${id} deactivated successfully. New state:`, {
+        id: updatedAlert.id,
+        is_active: updatedAlert.is_active,
+        updated_at: updatedAlert.updated_at
+      });
+      
+      if (updatedAlert.is_active) {
+        console.error(`❌ [Alert Service] CRITICAL: Alert ${id} is_active is still true after update!`);
+        throw new AppError('Failed to deactivate alert - database update did not persist', 500);
+      }
+      
     } catch (error) {
+      console.error(`❌ [Alert Service] Error deactivating alert ${id}:`, error);
+      if (error instanceof AppError) throw error;
       throw new AppError('Failed to deactivate alert', 500);
     }
   }

@@ -36,6 +36,7 @@ interface Alert {
   location: string;
   createdAt: string;
   isActive?: boolean;
+  is_active?: boolean; // Backend returns snake_case
 }
 
 export default function AlertsPage() {
@@ -47,6 +48,12 @@ export default function AlertsPage() {
   const [severityFilter, setSeverityFilter] = useState<'all' | AlertSeverity>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc'); // Default: newest first
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; alertId: number | null; alertTitle: string }>({
+    isOpen: false,
+    alertId: null,
+    alertTitle: ''
+  });
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     loadAlerts();
@@ -60,8 +67,12 @@ export default function AlertsPage() {
         setIsRefreshing(true);
       }
       const response = await alertsApi.getAll();
+      console.log('📦 Alerts API response:', response);
       if (response.status === 'success') {
-        setAlerts(response.data || []);
+        // Backend returns { alerts: [], total, page, limit }
+        const alertsData = response.data?.alerts || response.data || [];
+        console.log('📊 Alerts data:', alertsData);
+        setAlerts(Array.isArray(alertsData) ? alertsData : []);
       }
     } catch (error) {
       toast.error(handleApiError(error));
@@ -71,15 +82,29 @@ export default function AlertsPage() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this alert?')) return;
+  const handleDelete = async () => {
+    if (!deleteModal.alertId) return;
 
     try {
-      await alertsApi.delete(id);
+      setIsDeleting(true);
+      await alertsApi.delete(deleteModal.alertId);
       toast.success('Alert deleted successfully');
+      setDeleteModal({ isOpen: false, alertId: null, alertTitle: '' });
       loadAlerts(true);
     } catch (error) {
       toast.error(handleApiError(error));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const openDeleteModal = (id: number, title: string) => {
+    setDeleteModal({ isOpen: true, alertId: id, alertTitle: title });
+  };
+
+  const closeDeleteModal = () => {
+    if (!isDeleting) {
+      setDeleteModal({ isOpen: false, alertId: null, alertTitle: '' });
     }
   };
 
@@ -125,18 +150,26 @@ export default function AlertsPage() {
     }
   };
 
-  const filteredAlerts = alerts.filter(alert => {
-    if (filter !== 'all' && alert.type !== filter) return false;
-    if (severityFilter !== 'all' && alert.severity !== severityFilter) return false;
-    if (searchQuery && !alert.title.toLowerCase().includes(searchQuery.toLowerCase()) && 
-        !alert.description.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    return true;
-  }).sort((a, b) => {
-    // Sort by creation date
-    const dateA = new Date(a.createdAt).getTime();
-    const dateB = new Date(b.createdAt).getTime();
-    return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
-  });
+  const filteredAlerts = alerts
+    .filter(alert => {
+      // Filter out inactive alerts - check both camelCase and snake_case
+      // Backend returns is_active as number (0 or 1)
+      const isActive = alert.isActive !== undefined ? alert.isActive : alert.is_active;
+      // Keep only alerts where is_active is truthy (1, true) - exclude falsy (0, false, null, undefined)
+      return !!isActive;
+    })
+    .filter(alert => {
+      if (filter !== 'all' && alert.type !== filter) return false;
+      if (severityFilter !== 'all' && alert.severity !== severityFilter) return false;
+      if (searchQuery && !alert.title.toLowerCase().includes(searchQuery.toLowerCase()) && 
+          !alert.description.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      return true;
+    }).sort((a, b) => {
+      // Sort by creation date
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+    });
 
   if (isLoading) {
     return (
@@ -397,7 +430,7 @@ export default function AlertsPage() {
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDelete(alert.id)}
+                          onClick={() => openDeleteModal(alert.id, alert.title)}
                           className="p-2 text-error-600 hover:bg-error-50 rounded-lg transition-all"
                           title="Delete Alert"
                         >
@@ -418,6 +451,59 @@ export default function AlertsPage() {
         <div className="mt-4 text-center text-sm text-gray-600">
           Showing <span className="font-semibold text-gray-900">{filteredAlerts.length}</span> of{' '}
           <span className="font-semibold text-gray-900">{alerts.length}</span> alerts
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 transform transition-all">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 bg-error-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-6 h-6 text-error-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Delete Alert</h3>
+                <p className="text-sm text-gray-600">This action cannot be undone</p>
+              </div>
+            </div>
+            
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-sm text-gray-700 mb-2">
+                Are you sure you want to delete this alert?
+              </p>
+              <p className="text-sm font-semibold text-gray-900 line-clamp-2">
+                {deleteModal.alertTitle}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={closeDeleteModal}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-error-500 to-error-600 text-white rounded-lg hover:from-error-600 hover:to-error-700 transition-all font-medium shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete Alert
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
