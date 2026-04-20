@@ -51,6 +51,8 @@ const transformAlert = (alert: any): DisasterAlert | null => {
       startTime: alert.start_time || new Date().toISOString(),
       endTime: alert.end_time || null,
       isActive: Boolean(alert.is_active),
+      advanceNoticeHours: alert.advance_notice_hours || undefined,
+      forecastData: alert.forecast_data || undefined,
       metadata: alert.metadata || {},
       createdAt: alert.created_at || new Date().toISOString(),
       updatedAt: alert.updated_at || new Date().toISOString(),

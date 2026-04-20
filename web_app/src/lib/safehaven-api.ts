@@ -536,6 +536,23 @@ export const statsApi = {
   },
 };
 
+// Weather API
+export const weatherApi = {
+  getForecasts: async () => {
+    console.log('📡 Fetching weather forecasts');
+    const response = await api.get('/weather/forecasts');
+    console.log('📦 Weather forecasts response:', response.data);
+    return response.data;
+  },
+  
+  getForecastAlerts: async () => {
+    console.log('📡 Fetching forecast-triggered alerts');
+    const response = await api.get('/weather/forecast-alerts');
+    console.log('📦 Forecast alerts response:', response.data);
+    return response.data;
+  },
+};
+
 // Admin API
 export const adminApi = {
   getStats: async () => {

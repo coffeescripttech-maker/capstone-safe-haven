@@ -94,17 +94,23 @@ const navItems: NavItem[] = [
     requiredRoles: ['super_admin', 'admin', 'mdrrmo'], // Automation management
   },
   {
+    icon: <CalenderIcon />,
+    name: "Weather Forecast",
+    path: "/weather-forecast",
+    requiredRoles: ['super_admin', 'admin', 'mdrrmo'], // Weather forecast monitoring
+  },
+  {
     icon: <PageIcon />,
     name: "SMS Blast",
     path: "/sms-blast",
     requiredRoles: ['super_admin', 'admin', 'mdrrmo', 'pnp', 'bfp', 'lgu_officer'], // SMS blast - all roles except citizen
   },
-  {
-    icon: <UserCircleIcon />,
-    name: "Permissions",
-    path: "/permissions",
-    requiredRoles: ['super_admin'], // Permission management - super admin only
-  },
+  // {
+  //   icon: <UserCircleIcon />,
+  //   name: "Permissions",
+  //   path: "/permissions",
+  //   requiredRoles: ['super_admin'], // Permission management - super admin only
+  // },
   {
     icon: <PageIcon />,
     name: "Audit Logs",

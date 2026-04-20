@@ -197,6 +197,15 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.menuArrow}>→</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Weather', { screen: 'WeatherForecast' })}>
+          <Text style={styles.menuIcon}>🌦️</Text>
+          <View style={styles.menuTextContainer}>
+            <Text style={styles.menuText}>Weather Forecast</Text>
+            <Text style={styles.menuSubtext}>24-hour weather predictions</Text>
+          </View>
+          <Text style={styles.menuArrow}>→</Text>
+        </TouchableOpacity>
+
         {/* Admin/MDRRMO Only - User Management */}
         <ProtectedComponent requiredRole={['super_admin', 'admin']}>
           <TouchableOpacity 

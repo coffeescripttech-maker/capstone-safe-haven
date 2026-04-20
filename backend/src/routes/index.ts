@@ -32,7 +32,7 @@ router.use('/bulletin', bulletinRoutes);
 router.use('/guides', guideRoutes);
 router.use('/users', userRoutes);
 router.use('/admin', adminRoutes);
-router.use('/admin/weather', weatherRoutes);
+router.use('/weather', weatherRoutes);
 router.use('/admin/earthquakes', earthquakeRoutes);
 router.use('/admin/alert-automation', alertAutomationRoutes);
 router.use('/sms-blast', smsBlastRoutes);

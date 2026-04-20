@@ -1,18 +1,54 @@
-// Weather Routes - Weather data access
-
 import { Router } from 'express';
+import { WeatherController } from '../controllers/weather.controller';
 import { authenticate, authorize } from '../middleware/auth';
-import * as weatherController from '../controllers/weather.controller';
 
 const router = Router();
+const weatherController = new WeatherController();
 
-// Public weather routes - require authentication only
+// All weather routes require authentication
 router.use(authenticate);
 
-// GET /api/v1/admin/weather/philippines - Get weather for major PH cities
-router.get('/philippines', weatherController.getPhilippinesWeather);
+/**
+ * @route   GET /api/weather/forecasts
+ * @desc    Get weather forecasts with advance notice
+ * @access  Admin, MDRRMO, LGU Officer
+ */
+router.get(
+  '/forecasts',
+  authorize('super_admin', 'admin', 'mdrrmo', 'lgu_officer'),
+  weatherController.getForecasts.bind(weatherController)
+);
 
-// GET /api/v1/admin/weather/location?lat=14.5995&lon=120.9842 - Get weather for specific location
-router.get('/location', weatherController.getLocationWeather);
+/**
+ * @route   GET /api/weather/forecast-alerts
+ * @desc    Get forecast-triggered alerts
+ * @access  Admin, MDRRMO, LGU Officer
+ */
+router.get(
+  '/forecast-alerts',
+  authorize('super_admin', 'admin', 'mdrrmo', 'lgu_officer'),
+  weatherController.getForecastAlerts.bind(weatherController)
+);
+
+/**
+ * @route   GET /api/weather/current
+ * @desc    Get current weather for all monitored cities (Mobile)
+ * @access  Authenticated users
+ */
+router.get(
+  '/current',
+  weatherController.getCurrentWeather.bind(weatherController)
+);
+
+/**
+ * @route   GET /api/weather/forecast
+ * @desc    Get hourly forecast for specific location (Mobile)
+ * @access  Authenticated users
+ * @query   lat, lon, hours (optional, default 24)
+ */
+router.get(
+  '/forecast',
+  weatherController.getHourlyForecast.bind(weatherController)
+);
 
 export default router;

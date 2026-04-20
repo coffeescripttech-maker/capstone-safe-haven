@@ -4,7 +4,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View } from 'react-native';
-import { MainTabParamList, AlertsStackParamList, CentersStackParamList, GuidesStackParamList, IncidentsStackParamList, FamilyStackParamList, ProfileStackParamList } from '../types/navigation';
+import { MainTabParamList, AlertsStackParamList, CentersStackParamList, GuidesStackParamList, IncidentsStackParamList, FamilyStackParamList, ProfileStackParamList, WeatherStackParamList } from '../types/navigation';
 import { COLORS } from '../constants/colors';
 import { HomeScreen } from '../screens/home/HomeScreen';
 import { AlertsListScreen } from '../screens/alerts/AlertsListScreen';
@@ -28,6 +28,7 @@ import { ProfileScreen } from '../screens/profile/ProfileScreen';
 import { EditProfileScreen } from '../screens/profile/EditProfileScreen';
 import { SettingsScreen } from '../screens/profile/SettingsScreen';
 import { AboutScreen } from '../screens/profile/AboutScreen';
+import { WeatherForecastScreen } from '../screens/weather/WeatherForecastScreen';
 import { useNotifications } from '../store/NotificationContext';
 import { CustomTabBar } from '../components/navigation/CustomTabBar';
 import { CustomHeader } from '../components/navigation/CustomHeader';
@@ -39,6 +40,7 @@ const GuidesStack = createNativeStackNavigator<GuidesStackParamList>();
 const IncidentsStack = createNativeStackNavigator<IncidentsStackParamList>();
 const FamilyStack = createNativeStackNavigator<FamilyStackParamList>();
 const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
+const WeatherStack = createNativeStackNavigator<WeatherStackParamList>();
 
 // Alerts Stack Navigator
 const AlertsNavigator: React.FC = () => {
@@ -188,6 +190,19 @@ const ProfileNavigator: React.FC = () => {
   );
 };
 
+// Weather Stack Navigator
+const WeatherNavigator: React.FC = () => {
+  return (
+    <WeatherStack.Navigator>
+      <WeatherStack.Screen
+        name="WeatherForecast"
+        component={WeatherForecastScreen}
+        options={{ title: 'Weather Forecast' }}
+      />
+    </WeatherStack.Navigator>
+  );
+};
+
 // Dummy screen for center tab (SOS button handles the action)
 const SOSPlaceholder: React.FC = () => {
   return <View style={{ flex: 1, backgroundColor: COLORS.background }} />;
@@ -268,6 +283,13 @@ export const MainNavigator: React.FC = () => {
       <Tab.Screen
         name="Contacts"
         component={ContactsListScreen}
+        options={{
+          tabBarButton: () => null, // Hide from tab bar
+        }}
+      />
+      <Tab.Screen
+        name="Weather"
+        component={WeatherNavigator}
         options={{
           tabBarButton: () => null, // Hide from tab bar
         }}

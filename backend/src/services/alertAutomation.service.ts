@@ -137,6 +137,10 @@ export const alertAutomationService = {
       // Target users in affected city
       const usersTargeted = await alertTargetingService.targetUsersByCity(city.name, alertId, title);
       
+      // Send notifications immediately (since auto-approved)
+      await alertTargetingService.sendNotificationsForAlert(alertId);
+      console.log(`[Forecast] Sent notifications for alert #${alertId}`);
+      
       // Log automation
       await this.logAutomation('weather', 0, 'Predictive Weather Alert', alertId, 'created', 
         `Alert created with ${hoursText} advance notice`, conditions, usersTargeted);

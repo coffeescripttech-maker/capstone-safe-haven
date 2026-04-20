@@ -61,6 +61,8 @@ export default function CentersListPage() {
       
       if (response.status === 'success') {
         const centersData = response.data?.centers || response.data || [];
+
+        console.log({centersData});
         setCenters(Array.isArray(centersData) ? centersData : []);
       }
     } catch (error) {

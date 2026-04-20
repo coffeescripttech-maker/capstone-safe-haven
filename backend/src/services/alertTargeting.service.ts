@@ -10,13 +10,14 @@ export const alertTargetingService = {
     const connection = await pool.getConnection();
     
     try {
-      // Find users in the specified city with FCM tokens
+      // Find users in the specified city with FCM tokens (join with user_profiles)
       const [users] = await connection.query<RowDataPacket[]>(
-        `SELECT id, fcm_token, first_name, notification_preferences 
-         FROM users 
-         WHERE city = ? 
-         AND fcm_token IS NOT NULL 
-         AND fcm_token != ''`,
+        `SELECT u.id, u.fcm_token, u.first_name, u.notification_preferences, up.city
+         FROM users u
+         JOIN user_profiles up ON u.id = up.user_id
+         WHERE up.city = ? 
+         AND u.fcm_token IS NOT NULL 
+         AND u.fcm_token != ''`,
         [city]
       );
       
