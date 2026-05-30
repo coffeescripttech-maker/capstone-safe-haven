@@ -1,6 +1,6 @@
 // Weather Service - Mobile API Integration
 
-import { api } from './api';
+import api from './api';
 
 export interface WeatherData {
   name: string;
@@ -36,7 +36,11 @@ export const weatherService = {
   async getCurrentWeather(): Promise<WeatherData[]> {
     try {
       const response = await api.get('/weather/current');
-      return response.data;
+      // Backend returns { status: 'success', data: [...] }
+      if (response.data && response.data.data) {
+        return response.data.data;
+      }
+      return response.data || [];
     } catch (error) {
       console.error('Error fetching current weather:', error);
       throw error;
@@ -49,6 +53,10 @@ export const weatherService = {
       const response = await api.get('/weather/forecast', {
         params: { lat, lon, hours }
       });
+      // Backend returns { status: 'success', data: {...} }
+      if (response.data && response.data.data) {
+        return response.data.data;
+      }
       return response.data;
     } catch (error) {
       console.error('Error fetching forecast:', error);

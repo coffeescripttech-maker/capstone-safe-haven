@@ -1,9 +1,19 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { adminApi } from '@/lib/safehaven-api';
-import { CheckCircle, XCircle, AlertTriangle, Clock, MapPin, Users, Zap } from '@/components/ui/icons';
+import { 
+  CheckCircle, 
+  XCircle, 
+  AlertTriangle, 
+  Clock, 
+  MapPin, 
+  Users, 
+  Zap, 
+  Activity, 
+  TrendingUp, 
+  RefreshCw 
+} from 'lucide-react';
 
 interface PendingAlert {
   id: number;
@@ -102,10 +112,19 @@ export default function AlertAutomationPage() {
 
   const getSeverityColor = (severity: string) => {
     switch (severity.toLowerCase()) {
-      case 'critical': return 'text-red-600 bg-red-50';
-      case 'warning': return 'text-orange-600 bg-orange-50';
-      case 'info': return 'text-blue-600 bg-blue-50';
-      default: return 'text-gray-600 bg-gray-50';
+      case 'critical': return 'bg-error-100 text-error-700 border-error-200';
+      case 'warning': return 'bg-warning-100 text-warning-700 border-warning-200';
+      case 'info': return 'bg-info-100 text-info-700 border-info-200';
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  };
+
+  const getSeverityGradient = (severity: string) => {
+    switch (severity.toLowerCase()) {
+      case 'critical': return 'bg-gradient-to-br from-error-500 to-error-600 text-white';
+      case 'warning': return 'bg-gradient-to-br from-warning-500 to-warning-600 text-white';
+      case 'info': return 'bg-gradient-to-br from-info-500 to-info-600 text-white';
+      default: return 'bg-gradient-to-br from-gray-500 to-gray-600 text-white';
     }
   };
 
@@ -116,161 +135,194 @@ export default function AlertAutomationPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Alert Automation</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">Review and approve auto-generated alerts</p>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-electric-50/10 to-gray-50 p-6">
+      {/* Header with Glass Morphism */}
+      <div className="mb-8 relative">
+        {/* Decorative Background */}
+        <div className="absolute inset-0 -z-10 overflow-hidden rounded-3xl">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-electric-500/5 rounded-full blur-3xl animate-pulse-slow"></div>
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-brand-500/5 rounded-full blur-3xl"></div>
         </div>
-        <div className="flex gap-3">
-          <button
-            onClick={() => window.location.href = '/alert-automation/logs'}
-            className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 flex items-center gap-2"
-          >
-            <Clock className="w-4 h-4" />
-            View Logs
-          </button>
-          <button
-            onClick={() => window.location.href = '/alert-automation/rules'}
-            className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 flex items-center gap-2"
-          >
-            <Zap className="w-4 h-4" />
-            Manage Rules
-          </button>
-          <button
-            onClick={handleTriggerMonitoring}
-            disabled={loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            <Zap className="w-4 h-4" />
-            Trigger Monitoring
-          </button>
+        
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-8">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-electric-500 to-electric-600 rounded-2xl flex items-center justify-center shadow-lg shadow-electric-500/30 animate-pulse-slow">
+                <Zap className="w-8 h-8 text-white" strokeWidth={2.5} />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-electric-700 to-gray-900 bg-clip-text text-transparent mb-1">
+                  Alert Automation
+                </h1>
+                <p className="text-gray-600 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-electric-500" />
+                  Review and approve auto-generated alerts
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => window.location.href = '/alert-automation/logs'}
+                className="px-5 py-2.5 bg-white/90 backdrop-blur-sm border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all flex items-center gap-2 shadow-md hover:shadow-lg hover:scale-105 active:scale-95"
+              >
+                <Clock className="w-4 h-4" />
+                <span className="font-semibold">View Logs</span>
+              </button>
+              <button
+                onClick={() => window.location.href = '/alert-automation/rules'}
+                className="px-5 py-2.5 bg-white/90 backdrop-blur-sm border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all flex items-center gap-2 shadow-md hover:shadow-lg hover:scale-105 active:scale-95"
+              >
+                <Activity className="w-4 h-4" />
+                <span className="font-semibold">Manage Rules</span>
+              </button>
+              <button
+                onClick={handleTriggerMonitoring}
+                disabled={loading}
+                className="px-6 py-2.5 bg-gradient-to-r from-electric-500 to-electric-600 text-white rounded-xl hover:from-electric-600 hover:to-electric-700 transition-all flex items-center gap-2 shadow-lg shadow-electric-500/30 hover:shadow-xl hover:shadow-electric-500/40 disabled:opacity-50 font-semibold hover:scale-105 active:scale-95"
+              >
+                <Zap className="w-4 h-4" />
+                <span>Trigger Monitoring</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Pending Approval</CardTitle>
-            <Clock className="w-4 h-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.pending}</div>
-            <p className="text-xs text-gray-600 dark:text-gray-400">Awaiting review</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Approved Today</CardTitle>
-            <CheckCircle className="w-4 h-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.approved}</div>
-            <p className="text-xs text-gray-600 dark:text-gray-400">Sent to users</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Rejected Today</CardTitle>
-            <XCircle className="w-4 h-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.rejected}</div>
-            <p className="text-xs text-gray-600 dark:text-gray-400">Not sent</p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <StatCard
+          title="Pending Approval"
+          value={stats.pending}
+          icon={<Clock className="w-6 h-6" />}
+          gradient="from-warning-500 to-warning-600"
+          subtitle="Awaiting review"
+        />
+        <StatCard
+          title="Approved Today"
+          value={stats.approved}
+          icon={<CheckCircle className="w-6 h-6" />}
+          gradient="from-success-500 to-success-600"
+          subtitle="Sent to users"
+        />
+        <StatCard
+          title="Rejected Today"
+          value={stats.rejected}
+          icon={<XCircle className="w-6 h-6" />}
+          gradient="from-error-500 to-error-600"
+          subtitle="Not sent"
+        />
       </div>
 
       {/* Pending Alerts List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Pending Alerts</CardTitle>
-          <CardDescription>
-            Review auto-generated alerts before sending to users
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 overflow-hidden">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-brand-500 to-brand-600 rounded-xl flex items-center justify-center shadow-md">
+              <Activity className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Pending Alerts</h2>
+              <p className="text-sm text-gray-600">Review auto-generated alerts before sending to users</p>
+            </div>
+          </div>
+        </div>
+        <div className="p-6">
           {loading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Loading alerts...</p>
+            <div className="text-center py-16">
+              <div className="w-16 h-16 border-4 border-electric-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-600 font-medium">Loading alerts...</p>
             </div>
           ) : pendingAlerts.length === 0 ? (
-            <div className="text-center py-12">
-              <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">All caught up!</h3>
-              <p className="text-gray-600 dark:text-gray-400 mt-2">No pending alerts to review</p>
+            <div className="text-center py-16">
+              <div className="w-20 h-20 bg-gradient-to-br from-success-100 to-success-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-10 h-10 text-success-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">All caught up!</h3>
+              <p className="text-gray-600">No pending alerts to review</p>
             </div>
           ) : (
             <div className="space-y-4">
               {pendingAlerts.map((alert) => (
                 <div
                   key={alert.id}
-                  className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow"
+                  className="border border-gray-200 rounded-xl p-6 hover:shadow-lg hover:border-brand-300 transition-all duration-300 bg-white/50 backdrop-blur-sm group"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="text-2xl">{getSourceIcon(alert.source)}</span>
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shadow-md ${getSeverityGradient(alert.severity)}`}>
+                          {getSourceIcon(alert.source)}
+                        </div>
                         <div>
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                          <h3 className="text-lg font-bold text-gray-900 group-hover:text-brand-600 transition-colors">
                             {alert.title}
                           </h3>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${getSeverityColor(alert.severity)}`}>
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${getSeverityColor(alert.severity)}`}>
                               {alert.severity}
                             </span>
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-gray-500 font-medium">
                               {alert.rule_name}
                             </span>
                           </div>
                         </div>
                       </div>
 
-                      <p className="text-gray-700 dark:text-gray-300 mb-3">
+                      <p className="text-gray-700 mb-4 leading-relaxed">
                         {alert.description}
                       </p>
 
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                          <MapPin className="w-4 h-4" />
-                          <span>{alert.affected_areas.join(', ')}</span>
+                      <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                        <div className="flex items-center gap-2 text-gray-600 bg-gray-50 px-3 py-2 rounded-lg">
+                          <MapPin className="w-4 h-4 text-brand-500" />
+                          <span className="font-medium">{alert.affected_areas.join(', ')}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                          <Users className="w-4 h-4" />
-                          <span>{alert.users_targeted} users targeted</span>
+                        <div className="flex items-center gap-2 text-gray-600 bg-gray-50 px-3 py-2 rounded-lg">
+                          <Users className="w-4 h-4 text-brand-500" />
+                          <span className="font-medium">{alert.users_targeted} users targeted</span>
                         </div>
                       </div>
 
                       {alert.trigger_data && (
-                        <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded text-xs">
-                          <strong>Trigger Data:</strong>
+                        <div className="p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl text-sm border border-gray-200">
+                          <strong className="text-gray-900 font-bold">Trigger Data:</strong>
                           {alert.source === 'auto_weather' && alert.trigger_data.weather && (
-                            <div className="mt-1 grid grid-cols-3 gap-2">
-                              <span>🌡️ {alert.trigger_data.weather.temperature}°C</span>
-                              <span>🌧️ {alert.trigger_data.weather.precipitation}mm</span>
-                              <span>💨 {alert.trigger_data.weather.windSpeed}km/h</span>
+                            <div className="mt-2 grid grid-cols-3 gap-3">
+                              <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm">
+                                <span>🌡️</span>
+                                <span className="font-semibold">{alert.trigger_data.weather.temperature}°C</span>
+                              </div>
+                              <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm">
+                                <span>🌧️</span>
+                                <span className="font-semibold">{alert.trigger_data.weather.precipitation}mm</span>
+                              </div>
+                              <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm">
+                                <span>💨</span>
+                                <span className="font-semibold">{alert.trigger_data.weather.windSpeed}km/h</span>
+                              </div>
                             </div>
                           )}
                           {alert.source === 'auto_earthquake' && alert.trigger_data.earthquake && (
-                            <div className="mt-1">
-                              <span>📊 M{alert.trigger_data.earthquake.magnitude.toFixed(1)}</span>
-                              <span className="ml-3">📍 Depth: {alert.trigger_data.earthquake.coordinates.depth.toFixed(1)}km</span>
+                            <div className="mt-2 flex gap-3">
+                              <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm">
+                                <span>📊</span>
+                                <span className="font-semibold">M{alert.trigger_data.earthquake.magnitude.toFixed(1)}</span>
+                              </div>
+                              <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm">
+                                <span>📍</span>
+                                <span className="font-semibold">Depth: {alert.trigger_data.earthquake.coordinates.depth.toFixed(1)}km</span>
+                              </div>
                             </div>
                           )}
                         </div>
                       )}
                     </div>
 
-                    <div className="flex flex-col gap-2 ml-4">
+                    <div className="flex flex-col gap-3 ml-6">
                       <button
                         onClick={() => handleApprove(alert.id)}
                         disabled={processing === alert.id}
-                        className="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 text-sm"
+                        className="px-5 py-2.5 bg-gradient-to-r from-success-500 to-success-600 text-white rounded-xl hover:from-success-600 hover:to-success-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm font-semibold shadow-lg shadow-success-500/30 hover:shadow-xl hover:shadow-success-500/40 transition-all hover:scale-105 active:scale-95"
                       >
                         <CheckCircle className="w-4 h-4" />
                         Approve
@@ -278,7 +330,7 @@ export default function AlertAutomationPage() {
                       <button
                         onClick={() => handleReject(alert.id)}
                         disabled={processing === alert.id}
-                        className="px-3 py-2 border border-red-600 text-red-600 rounded-md hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 text-sm"
+                        className="px-5 py-2.5 border-2 border-error-500 text-error-600 rounded-xl hover:bg-error-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm font-semibold transition-all hover:scale-105 active:scale-95"
                       >
                         <XCircle className="w-4 h-4" />
                         Reject
@@ -289,8 +341,38 @@ export default function AlertAutomationPage() {
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// Stat Card Component with Stunning Visuals
+function StatCard({ title, value, icon, gradient, subtitle }: any) {
+  return (
+    <div className="relative bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-6 border border-white/50 overflow-hidden group cursor-pointer hover:scale-105">
+      {/* Animated Background Gradient */}
+      <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300`}></div>
+      
+      {/* Shine Effect */}
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+      </div>
+      
+      <div className="relative z-10">
+        <div className="flex items-center justify-between mb-4">
+          <div className={`w-14 h-14 bg-gradient-to-br ${gradient} rounded-2xl flex items-center justify-center text-white shadow-xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-300`}>
+            {icon}
+          </div>
+        </div>
+        <h3 className="text-gray-500 text-sm font-semibold mb-2 uppercase tracking-wide">{title}</h3>
+        <p className="text-4xl font-black bg-gradient-to-br from-gray-900 to-gray-600 bg-clip-text text-transparent mb-1">{value}</p>
+        <p className="text-sm text-gray-600 font-medium">{subtitle}</p>
+      </div>
+      
+      {/* Corner Accent */}
+      <div className={`absolute top-0 right-0 w-20 h-20 bg-gradient-to-br ${gradient} opacity-10 rounded-bl-full`}></div>
     </div>
   );
 }

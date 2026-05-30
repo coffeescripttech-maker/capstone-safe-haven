@@ -1,23 +1,25 @@
 "use client";
-import React, { useEffect, useRef, useState,useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
-import { useRole } from "../context/RoleContext";
 import { ProtectedComponent } from "../components/common/ProtectedComponent";
 import {
-  BoxCubeIcon,
-  CalenderIcon,
-  ChevronDownIcon,
-  GridIcon,
-  HorizontaLDots,
-  ListIcon,
-  PageIcon,
-  PieChartIcon,
-  PlugInIcon,
-  TableIcon,
-  UserCircleIcon,
-} from "../icons/index";
+  LayoutDashboard,
+  AlertTriangle,
+  FileText,
+  Building2,
+  Users,
+  Bell,
+  BarChart3,
+  Activity,
+  Zap,
+  Cloud,
+  MessageSquare,
+  FileCheck,
+  ChevronDown,
+  MoreHorizontal
+} from "lucide-react";
 import SidebarWidget from "./SidebarWidget";
 import AppLogo from "@/components/common/AppLogo";
 import { Role } from "@/types/safehaven";
@@ -26,126 +28,70 @@ type NavItem = {
   name: string;
   icon: React.ReactNode;
   path?: string;
-  subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
-  requiredRoles?: Role[]; // Add role-based access control
+  subItems?: { name: string; path: string; badge?: string }[];
+  requiredRoles?: Role[];
 };
 
 const navItems: NavItem[] = [
   {
-    icon: <GridIcon />,
+    icon: <LayoutDashboard className="w-5 h-5" />,
     name: "Dashboard",
     path: "/dashboard"
   },
   {
-    icon: <BoxCubeIcon />,
-    name: "Emergency Alerts",
-    path: "/emergency-alerts",
-    requiredRoles: ['super_admin', 'admin', 'mdrrmo', 'lgu_officer'], // Alert management
+    icon: <AlertTriangle className="w-5 h-5" />,
+    name: "Alerts & SOS",
+    requiredRoles: ['super_admin', 'admin', 'mdrrmo', 'pnp', 'bfp', 'lgu_officer'],
+    subItems: [
+      { name: "Emergency Alerts", path: "/emergency-alerts" },
+      { name: "SOS Alerts", path: "/sos-alerts" },
+      { name: "Alert Automation", path: "/alert-automation" },
+    ],
   },
   {
-    icon: <ListIcon />,
+    icon: <FileText className="w-5 h-5" />,
     name: "Incidents",
     path: "/incidents",
-    requiredRoles: ['super_admin', 'admin', 'mdrrmo', 'pnp', 'bfp', 'lgu_officer'], // Incident management
+    requiredRoles: ['super_admin', 'admin', 'mdrrmo', 'pnp', 'bfp', 'lgu_officer'],
   },
   {
-    icon: <CalenderIcon />,
-    name: "Evacuation Centers",
-    requiredRoles: ['super_admin', 'admin', 'mdrrmo', 'lgu_officer'], // Center management
+    icon: <Building2 className="w-5 h-5" />,
+    name: "Evacuation",
+    requiredRoles: ['super_admin', 'admin', 'mdrrmo', 'lgu_officer'],
     subItems: [
-      { name: "All Centers", path: "/evacuation-centers" },
+      { name: "Centers", path: "/evacuation-centers" },
       { name: "Reservations", path: "/evacuation-centers/reservations" },
     ],
   },
   {
-    icon: <UserCircleIcon />,
-    name: "Users",
-    path: "/users",
-    requiredRoles: ['super_admin', 'admin', 'mdrrmo'], // User management - admin and mdrrmo
+    icon: <Users className="w-5 h-5" />,
+    name: "People",
+    requiredRoles: ['super_admin', 'admin', 'mdrrmo'],
+    subItems: [
+      { name: "Users", path: "/users" },
+      { name: "Emergency Contacts", path: "/emergency-contacts" },
+    ],
   },
   {
-    icon: <PieChartIcon />,
-    name: "SOS Alerts",
-    path: "/sos-alerts",
-    requiredRoles: ['super_admin', 'admin', 'mdrrmo', 'pnp', 'bfp', 'lgu_officer'], // SOS response
-  },
-  {
-    icon: <PageIcon />,
-    name: "Emergency Contacts",
-    path: "/emergency-contacts",
-    requiredRoles: ['super_admin', 'admin', 'mdrrmo'], // Contact management
-  },
-  {
-    icon: <TableIcon />,
-    name: "Analytics",
-    path: "/analytics",
-    requiredRoles: ['super_admin', 'admin', 'mdrrmo'], // Analytics access
-  },
-  {
-    icon: <PieChartIcon />,
-    name: "Monitoring",
-    path: "/monitoring",
-    requiredRoles: ['super_admin', 'admin', 'mdrrmo'], // System monitoring
-  },
-  {
-    icon: <PlugInIcon />,
-    name: "Alert Automation",
-    path: "/alert-automation",
-    requiredRoles: ['super_admin', 'admin', 'mdrrmo'], // Automation management
-  },
-  {
-    icon: <CalenderIcon />,
-    name: "Weather Forecast",
-    path: "/weather-forecast",
-    requiredRoles: ['super_admin', 'admin', 'mdrrmo'], // Weather forecast monitoring
-  },
-  {
-    icon: <PageIcon />,
+    icon: <MessageSquare className="w-5 h-5" />,
     name: "SMS Blast",
     path: "/sms-blast",
-    requiredRoles: ['super_admin', 'admin', 'mdrrmo', 'pnp', 'bfp', 'lgu_officer'], // SMS blast - all roles except citizen
+    requiredRoles: ['super_admin', 'admin', 'mdrrmo', 'pnp', 'bfp', 'lgu_officer'],
   },
-  // {
-  //   icon: <UserCircleIcon />,
-  //   name: "Permissions",
-  //   path: "/permissions",
-  //   requiredRoles: ['super_admin'], // Permission management - super admin only
-  // },
   {
-    icon: <PageIcon />,
-    name: "Audit Logs",
-    path: "/audit-logs",
-    requiredRoles: ['super_admin', 'admin'], // Audit log viewer
+    icon: <Cloud className="w-5 h-5" />,
+    name: "Weather",
+    path: "/weather-forecast",
+    requiredRoles: ['super_admin', 'admin', 'mdrrmo'],
   },
-];
-
-const othersItems: NavItem[] = [
   {
-    icon: <PieChartIcon />,
-    name: "Charts",
+    icon: <BarChart3 className="w-5 h-5" />,
+    name: "Reports",
+    requiredRoles: ['super_admin', 'admin', 'mdrrmo'],
     subItems: [
-      { name: "Line Chart", path: "/line-chart", pro: false },
-      { name: "Bar Chart", path: "/bar-chart", pro: false },
-    ],
-  },
-  {
-    icon: <BoxCubeIcon />,
-    name: "UI Elements",
-    subItems: [
-      { name: "Alerts", path: "/alerts", pro: false },
-      { name: "Avatar", path: "/avatars", pro: false },
-      { name: "Badge", path: "/badge", pro: false },
-      { name: "Buttons", path: "/buttons", pro: false },
-      { name: "Images", path: "/images", pro: false },
-      { name: "Videos", path: "/videos", pro: false },
-    ],
-  },
-  {
-    icon: <PlugInIcon />,
-    name: "Authentication",
-    subItems: [
-      { name: "Sign In", path: "/signin", pro: false },
-      { name: "Sign Up", path: "/signup", pro: false },
+      { name: "Analytics", path: "/analytics" },
+      { name: "Monitoring", path: "/monitoring" },
+      { name: "Audit Logs", path: "/audit-logs" },
     ],
   },
 ];
@@ -154,20 +100,16 @@ const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
 
-  const renderMenuItems = (
-    navItems: NavItem[],
-    menuType: "main" | "others"
-  ) => (
-    <ul className="flex flex-col gap-4">
+  const renderMenuItems = (navItems: NavItem[]) => (
+    <ul className="flex flex-col gap-2">
       {navItems.map((nav, index) => {
-        // Wrap menu item with ProtectedComponent if requiredRoles is specified
         const menuContent = (
           <li key={nav.name}>
             {nav.subItems ? (
               <button
-                onClick={() => handleSubmenuToggle(index, menuType)}
-                className={`menu-item group  ${
-                  openSubmenu?.type === menuType && openSubmenu?.index === index
+                onClick={() => handleSubmenuToggle(index)}
+                className={`menu-item group ${
+                  openSubmenu === index
                     ? "menu-item-active"
                     : "menu-item-inactive"
                 } cursor-pointer ${
@@ -177,8 +119,8 @@ const AppSidebar: React.FC = () => {
                 }`}
               >
                 <span
-                  className={` ${
-                    openSubmenu?.type === menuType && openSubmenu?.index === index
+                  className={`${
+                    openSubmenu === index
                       ? "menu-item-icon-active"
                       : "menu-item-icon-inactive"
                   }`}
@@ -186,17 +128,16 @@ const AppSidebar: React.FC = () => {
                   {nav.icon}
                 </span>
                 {(isExpanded || isHovered || isMobileOpen) && (
-                  <span className={`menu-item-text`}>{nav.name}</span>
-                )}
-                {(isExpanded || isHovered || isMobileOpen) && (
-                  <ChevronDownIcon
-                    className={`ml-auto w-5 h-5 transition-transform duration-200  ${
-                      openSubmenu?.type === menuType &&
-                      openSubmenu?.index === index
-                        ? "rotate-180 text-white"
-                        : "text-white/70"
-                    }`}
-                  />
+                  <>
+                    <span className="menu-item-text flex-1 text-left">{nav.name}</span>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        openSubmenu === index
+                          ? "rotate-180 text-white"
+                          : "text-white/70"
+                      }`}
+                    />
+                  </>
                 )}
               </button>
             ) : (
@@ -217,7 +158,7 @@ const AppSidebar: React.FC = () => {
                     {nav.icon}
                   </span>
                   {(isExpanded || isHovered || isMobileOpen) && (
-                    <span className={`menu-item-text`}>{nav.name}</span>
+                    <span className="menu-item-text">{nav.name}</span>
                   )}
                 </Link>
               )
@@ -225,17 +166,17 @@ const AppSidebar: React.FC = () => {
             {nav.subItems && (isExpanded || isHovered || isMobileOpen) && (
               <div
                 ref={(el) => {
-                  subMenuRefs.current[`${menuType}-${index}`] = el;
+                  subMenuRefs.current[index] = el;
                 }}
                 className="overflow-hidden transition-all duration-300"
                 style={{
                   height:
-                    openSubmenu?.type === menuType && openSubmenu?.index === index
-                      ? `${subMenuHeight[`${menuType}-${index}`]}px`
+                    openSubmenu === index
+                      ? `${subMenuHeight[index]}px`
                       : "0px",
                 }}
               >
-                <ul className="mt-2 space-y-1 ml-9 pl-3 border-l border-white/10">
+                <ul className="mt-1.5 space-y-0.5 ml-9 pl-3 border-l-2 border-white/10">
                   {nav.subItems.map((subItem) => (
                     <li key={subItem.name}>
                       <Link
@@ -246,31 +187,18 @@ const AppSidebar: React.FC = () => {
                             : "menu-dropdown-item-inactive"
                         }`}
                       >
-                        {subItem.name}
-                        <span className="flex items-center gap-1 ml-auto">
-                          {subItem.new && (
-                            <span
-                              className={`ml-auto ${
-                                isActive(subItem.path)
-                                  ? "menu-dropdown-badge-active"
-                                  : "menu-dropdown-badge-inactive"
-                              } menu-dropdown-badge `}
-                            >
-                              new
-                            </span>
-                          )}
-                          {subItem.pro && (
-                            <span
-                              className={`ml-auto ${
-                                isActive(subItem.path)
-                                  ? "menu-dropdown-badge-active"
-                                  : "menu-dropdown-badge-inactive"
-                              } menu-dropdown-badge `}
-                            >
-                              pro
-                            </span>
-                          )}
-                        </span>
+                        <span className="flex-1">{subItem.name}</span>
+                        {subItem.badge && (
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                              isActive(subItem.path)
+                                ? "bg-brand-100 text-brand-700"
+                                : "bg-white/20 text-white/90"
+                            }`}
+                          >
+                            {subItem.badge}
+                          </span>
+                        )}
                       </Link>
                     </li>
                   ))}
@@ -280,7 +208,6 @@ const AppSidebar: React.FC = () => {
           </li>
         );
 
-        // If requiredRoles is specified, wrap with ProtectedComponent
         if (nav.requiredRoles) {
           return (
             <ProtectedComponent key={nav.name} requiredRole={nav.requiredRoles}>
@@ -289,74 +216,48 @@ const AppSidebar: React.FC = () => {
           );
         }
 
-        // Otherwise, render without protection
         return menuContent;
       })}
     </ul>
   );
 
-  const [openSubmenu, setOpenSubmenu] = useState<{
-    type: "main" | "others";
-    index: number;
-  } | null>(null);
-  const [subMenuHeight, setSubMenuHeight] = useState<Record<string, number>>(
-    {}
-  );
-  const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [openSubmenu, setOpenSubmenu] = useState<number | null>(null);
+  const [subMenuHeight, setSubMenuHeight] = useState<Record<number, number>>({});
+  const subMenuRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
-  // const isActive = (path: string) => path === pathname;
-   const isActive = useCallback((path: string) => path === pathname, [pathname]);
+  const isActive = useCallback((path: string) => path === pathname, [pathname]);
 
   useEffect(() => {
-    // Check if the current path matches any submenu item
     let submenuMatched = false;
-    ["main", "others"].forEach((menuType) => {
-      const items = menuType === "main" ? navItems : othersItems;
-      items.forEach((nav, index) => {
-        if (nav.subItems) {
-          nav.subItems.forEach((subItem) => {
-            if (isActive(subItem.path)) {
-              setOpenSubmenu({
-                type: menuType as "main" | "others",
-                index,
-              });
-              submenuMatched = true;
-            }
-          });
-        }
-      });
+    navItems.forEach((nav, index) => {
+      if (nav.subItems) {
+        nav.subItems.forEach((subItem) => {
+          if (isActive(subItem.path)) {
+            setOpenSubmenu(index);
+            submenuMatched = true;
+          }
+        });
+      }
     });
 
-    // If no submenu item matches, close the open submenu
     if (!submenuMatched) {
       setOpenSubmenu(null);
     }
-  }, [pathname,isActive]);
+  }, [pathname, isActive]);
 
   useEffect(() => {
-    // Set the height of the submenu items when the submenu is opened
     if (openSubmenu !== null) {
-      const key = `${openSubmenu.type}-${openSubmenu.index}`;
-      if (subMenuRefs.current[key]) {
+      if (subMenuRefs.current[openSubmenu]) {
         setSubMenuHeight((prevHeights) => ({
           ...prevHeights,
-          [key]: subMenuRefs.current[key]?.scrollHeight || 0,
+          [openSubmenu]: subMenuRefs.current[openSubmenu]?.scrollHeight || 0,
         }));
       }
     }
   }, [openSubmenu]);
 
-  const handleSubmenuToggle = (index: number, menuType: "main" | "others") => {
-    setOpenSubmenu((prevOpenSubmenu) => {
-      if (
-        prevOpenSubmenu &&
-        prevOpenSubmenu.type === menuType &&
-        prevOpenSubmenu.index === index
-      ) {
-        return null;
-      }
-      return { type: menuType, index };
-    });
+  const handleSubmenuToggle = (index: number) => {
+    setOpenSubmenu((prev) => (prev === index ? null : index));
   };
 
   return (
@@ -381,43 +282,22 @@ const AppSidebar: React.FC = () => {
           <AppLogo variant="icon" href="/" />
         )}
       </div>
-      <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
-        <nav className="mb-6">
-          <div className="flex flex-col gap-4">
-            <div>
-              <h2
-                className={`mb-4 text-xs uppercase flex leading-[20px] text-white/50 font-semibold tracking-wider ${
-                  !isExpanded && !isHovered
-                    ? "lg:justify-center"
-                    : "justify-start"
-                }`}
-              >
-                {isExpanded || isHovered || isMobileOpen ? (
-                  "Menu"
-                ) : (
-                  <HorizontaLDots />
-                )}
-              </h2>
-              {renderMenuItems(navItems, "main")}
-            </div>
-
-            {/* <div className="">
-              <h2
-                className={`mb-4 text-xs uppercase flex leading-[20px] text-white/50 font-semibold tracking-wider ${
-                  !isExpanded && !isHovered
-                    ? "lg:justify-center"
-                    : "justify-start"
-                }`}
-              >
-                {isExpanded || isHovered || isMobileOpen ? (
-                  "Others"
-                ) : (
-                  <HorizontaLDots />
-                )}
-              </h2>
-              {renderMenuItems(othersItems, "others")}
-            </div> */}
-          </div>
+      <div className="flex flex-col overflow-y-auto duration-300 ease-linear custom-scrollbar py-6">
+        <nav className="mb-6 px-1">
+          <h2
+            className={`mb-3 text-xs uppercase flex leading-[20px] text-white/50 font-semibold tracking-wider ${
+              !isExpanded && !isHovered
+                ? "lg:justify-center"
+                : "justify-start"
+            }`}
+          >
+            {isExpanded || isHovered || isMobileOpen ? (
+              "Navigation"
+            ) : (
+              <MoreHorizontal className="w-4 h-4" />
+            )}
+          </h2>
+          {renderMenuItems(navItems)}
         </nav>
         {isExpanded || isHovered || isMobileOpen ? <SidebarWidget /> : null}
       </div>

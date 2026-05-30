@@ -261,7 +261,7 @@ export default function SOSAlertDetailPage() {
             <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
               <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-brand-500" />
-                Location Information
+                Location & Route Information
               </h2>
 
               <div className="space-y-4">
@@ -277,13 +277,32 @@ export default function SOSAlertDetailPage() {
                   </div>
                 </div>
 
-                {/* Interactive Map */}
+                {/* Interactive Map with Auto-Navigation */}
                 <div className="rounded-lg overflow-hidden border border-gray-200">
                   <MapViewer
                     latitude={Number(alert.latitude)}
                     longitude={Number(alert.longitude)}
                     title={`SOS Alert #${alert.id} - ${alert.first_name} ${alert.last_name}`}
+                    showDirections={true}
+                    height="500px"
                   />
+                </div>
+
+                {/* Info Banner */}
+                <div className="bg-error-50 border border-error-200 rounded-lg p-4">
+                  <div className="flex items-start gap-2">
+                    <Navigation className="w-5 h-5 text-error-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-error-900 mb-1">Emergency Route Displayed</p>
+                      <p className="text-sm text-error-700">
+                        The map automatically shows the fastest route to the emergency site. 
+                        The blue line indicates the driving route for immediate response.
+                      </p>
+                      <p className="text-xs text-error-600 mt-2">
+                        💡 If your actual location is far away, a nearby response team location is used for demonstration.
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Map Actions */}
@@ -292,19 +311,19 @@ export default function SOSAlertDetailPage() {
                     href={`https://www.google.com/maps?q=${alert.latitude},${alert.longitude}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors"
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors shadow-sm hover:shadow-md"
                   >
                     <Map className="w-4 h-4" />
-                    Google Maps
+                    Open in Google Maps
                   </a>
                   <a
                     href={`https://www.google.com/maps/dir/?api=1&destination=${alert.latitude},${alert.longitude}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors shadow-sm hover:shadow-md"
                   >
                     <Navigation className="w-4 h-4" />
-                    Get Directions
+                    Navigate with Google
                   </a>
                 </div>
               </div>

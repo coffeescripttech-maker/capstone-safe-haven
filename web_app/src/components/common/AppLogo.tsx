@@ -40,7 +40,7 @@ export default function AppLogo({ variant = "full", href = "/", className = "" }
           />
         </div>
         <div className="flex flex-col">
-          <span className="text-2xl font-bold text-white leading-tight">SafeHaven</span>
+          <span className="text-2xl font-bold text-white leading-tight ">SafeHaven</span>
           <span className="text-sm text-white/80 leading-tight tracking-wide">Emergency Response</span>
         </div>
       </div>

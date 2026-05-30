@@ -133,33 +133,45 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      {/* Welcome Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
-              <Shield className="w-8 h-8 text-brand-500" />
-              Welcome back, {user?.firstName || 'Admin'}!
-            </h1>
-            <p className="text-gray-600 flex items-center gap-2">
-              <Activity className="w-4 h-4" />
-              Here's what's happening with SafeHaven today
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-sm text-gray-500 bg-white px-4 py-2 rounded-lg shadow-sm">
-              <Clock className="w-4 h-4" />
-              {lastUpdated.toLocaleTimeString()}
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-brand-50/20 to-gray-50 p-6">
+      {/* Welcome Header with Gradient Background */}
+      <div className="mb-8 relative">
+        {/* Decorative Background Elements */}
+        <div className="absolute inset-0 -z-10 overflow-hidden rounded-3xl">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-brand-500/5 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-electric-500/5 rounded-full blur-3xl"></div>
+        </div>
+        
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-8">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-brand-500 to-brand-700 rounded-2xl flex items-center justify-center shadow-lg shadow-brand-500/30 animate-pulse-slow">
+                <Shield className="w-8 h-8 text-white" strokeWidth={2.5} />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-brand-700 to-gray-900 bg-clip-text text-transparent mb-1">
+                  Welcome back, {user?.firstName || 'Admin'}!
+                </h1>
+                <p className="text-gray-600 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-brand-500" />
+                  Here's what's happening with SafeHaven today
+                </p>
+              </div>
             </div>
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition flex items-center gap-2 shadow-md hover:shadow-lg disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-sm text-gray-600 bg-white/90 backdrop-blur-sm px-4 py-2.5 rounded-xl shadow-md border border-gray-100">
+                <Clock className="w-4 h-4 text-brand-500" />
+                <span className="font-medium">{lastUpdated.toLocaleTimeString()}</span>
+              </div>
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="px-5 py-2.5 bg-gradient-to-r from-brand-500 to-brand-600 text-white rounded-xl hover:from-brand-600 hover:to-brand-700 transition-all flex items-center gap-2 shadow-lg shadow-brand-500/30 hover:shadow-xl hover:shadow-brand-500/40 disabled:opacity-50 hover:scale-105 active:scale-95"
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span className="font-semibold">Refresh</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -374,23 +386,36 @@ export default function DashboardPage() {
   );
 }
 
-// Enhanced Components
+// Enhanced Components with Stunning Visuals
 function StatCard({ title, value, subtitle, icon, gradient, trend, trendUp, href }: any) {
   return (
     <Link href={href} className="block group">
-      <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-200 p-6 border border-gray-100 group-hover:border-brand-300 group-hover:scale-105 cursor-pointer">
-        <div className="flex items-center justify-between mb-4">
-          <div className={`w-14 h-14 bg-gradient-to-br ${gradient} rounded-xl flex items-center justify-center text-white shadow-lg`}>
-            {icon}
-          </div>
-          <div className={`flex items-center gap-1 text-sm font-semibold ${trendUp ? 'text-success-600' : 'text-gray-500'}`}>
-            {trendUp && <TrendingUp className="w-4 h-4" />}
-            <span>{trend}</span>
-          </div>
+      <div className="relative bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-6 border border-white/50 overflow-hidden group-hover:scale-105 cursor-pointer">
+        {/* Animated Background Gradient */}
+        <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300`}></div>
+        
+        {/* Shine Effect */}
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
         </div>
-        <h3 className="text-gray-600 text-sm font-medium mb-1">{title}</h3>
-        <p className="text-3xl font-bold text-gray-900 mb-1">{value}</p>
-        <p className="text-xs text-gray-500">{subtitle}</p>
+        
+        <div className="relative z-10">
+          <div className="flex items-center justify-between mb-4">
+            <div className={`w-16 h-16 bg-gradient-to-br ${gradient} rounded-2xl flex items-center justify-center text-white shadow-xl shadow-${gradient.split('-')[1]}-500/30 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300`}>
+              {icon}
+            </div>
+            <div className={`flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-full ${trendUp ? 'bg-success-50 text-success-700' : 'bg-gray-100 text-gray-600'}`}>
+              {trendUp && <TrendingUp className="w-4 h-4" />}
+              <span>{trend}</span>
+            </div>
+          </div>
+          <h3 className="text-gray-500 text-sm font-semibold mb-2 uppercase tracking-wide">{title}</h3>
+          <p className="text-4xl font-black bg-gradient-to-br from-gray-900 to-gray-600 bg-clip-text text-transparent mb-1">{value}</p>
+          <p className="text-sm text-gray-600 font-medium">{subtitle}</p>
+        </div>
+        
+        {/* Corner Accent */}
+        <div className={`absolute top-0 right-0 w-20 h-20 bg-gradient-to-br ${gradient} opacity-10 rounded-bl-full`}></div>
       </div>
     </Link>
   );
@@ -398,23 +423,28 @@ function StatCard({ title, value, subtitle, icon, gradient, trend, trendUp, href
 
 function InfoCard({ title, icon, iconColor, iconBg, children }: any) {
   return (
-    <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100 transition-all duration-200 hover:shadow-lg">
-      <div className="flex items-center gap-3 mb-4">
-        <div className={`w-10 h-10 ${iconBg} rounded-lg flex items-center justify-center ${iconColor}`}>
-          {icon}
+    <div className="relative bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/50 transition-all duration-300 hover:shadow-xl overflow-hidden group">
+      {/* Decorative Background */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-brand-500/5 to-transparent rounded-bl-full"></div>
+      
+      <div className="relative z-10">
+        <div className="flex items-center gap-3 mb-5">
+          <div className={`w-12 h-12 ${iconBg} rounded-xl flex items-center justify-center ${iconColor} shadow-md group-hover:scale-110 transition-transform duration-300`}>
+            {icon}
+          </div>
+          <h3 className="text-lg font-bold text-gray-900">{title}</h3>
         </div>
-        <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+        {children}
       </div>
-      {children}
     </div>
   );
 }
 
 function StatusRow({ label, value, color, bgColor, prefix = '' }: any) {
   return (
-    <div className="flex justify-between items-center">
-      <span className="text-sm text-gray-600 font-medium">{label}</span>
-      <span className={`${color} font-bold text-lg px-3 py-1 ${bgColor} rounded-lg`}>
+    <div className="flex justify-between items-center group/row hover:bg-gray-50/50 p-2 rounded-lg transition-colors">
+      <span className="text-sm text-gray-700 font-semibold">{label}</span>
+      <span className={`${color} font-black text-lg px-4 py-1.5 ${bgColor} rounded-xl shadow-sm group-hover/row:scale-105 transition-transform`}>
         {prefix}{value}
       </span>
     </div>
@@ -423,15 +453,17 @@ function StatusRow({ label, value, color, bgColor, prefix = '' }: any) {
 
 function ActivityCard({ title, icon, viewAllHref, children }: any) {
   return (
-    <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-          {icon}
+    <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/50 hover:shadow-xl transition-all duration-300">
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-xl font-bold text-gray-900 flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-brand-500 to-brand-600 rounded-xl flex items-center justify-center text-white shadow-md">
+            {icon}
+          </div>
           {title}
         </h2>
         <Link
           href={viewAllHref}
-          className="text-sm text-brand-600 hover:text-brand-700 font-semibold flex items-center gap-1 group"
+          className="text-sm text-brand-600 hover:text-brand-700 font-bold flex items-center gap-1.5 px-4 py-2 rounded-xl hover:bg-brand-50 transition-all group"
         >
           View all
           <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />

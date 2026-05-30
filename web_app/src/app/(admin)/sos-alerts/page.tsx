@@ -182,26 +182,41 @@ export default function SOSAlertsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <AlertOctagon className="w-8 h-8 text-error-500" />
-              SOS Emergency Alerts
-            </h1>
-            <p className="text-gray-600 mt-1">Monitor and respond to emergency SOS alerts in real-time</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => loadAlerts(true)}
-              disabled={isRefreshing}
-              className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm hover:shadow-md disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-error-50/10 to-gray-50 p-6">
+      {/* Header with Glass Morphism */}
+      <div className="mb-8 relative">
+        {/* Decorative Background */}
+        <div className="absolute inset-0 -z-10 overflow-hidden rounded-3xl">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-error-500/5 rounded-full blur-3xl animate-pulse-slow"></div>
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-warning-500/5 rounded-full blur-3xl"></div>
+        </div>
+        
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-8">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-error-500 to-error-700 rounded-2xl flex items-center justify-center shadow-lg shadow-error-500/30 animate-pulse-slow">
+                <AlertOctagon className="w-8 h-8 text-white" strokeWidth={2.5} />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-error-700 to-gray-900 bg-clip-text text-transparent mb-1">
+                  SOS Emergency Alerts
+                </h1>
+                <p className="text-gray-600 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-error-500" />
+                  Monitor and respond to emergency SOS alerts in real-time
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => loadAlerts(true)}
+                disabled={isRefreshing}
+                className="px-5 py-2.5 bg-white/90 backdrop-blur-sm border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all flex items-center gap-2 shadow-md hover:shadow-lg disabled:opacity-50 hover:scale-105 active:scale-95"
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span className="font-semibold">Refresh</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -325,16 +340,18 @@ export default function SOSAlertsPage() {
         </InfoCard>
       </div>
 
-      {/* Filters and Search */}
-      <div className="bg-white rounded-xl shadow-md p-6 mb-6 border border-gray-100">
-        <div className="flex items-center gap-2 mb-4">
-          <Filter className="w-5 h-5 text-gray-500" />
-          <h2 className="text-lg font-bold text-gray-900">Filters</h2>
+      {/* Filters and Search with Glass Morphism */}
+      <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-6 border border-white/50">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-10 h-10 bg-gradient-to-br from-brand-500 to-brand-600 rounded-xl flex items-center justify-center shadow-md">
+            <Filter className="w-5 h-5 text-white" />
+          </div>
+          <h2 className="text-lg font-bold text-gray-900">Filters & Search</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Search */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
               Search Alerts
             </label>
             <div className="relative">
@@ -344,20 +361,20 @@ export default function SOSAlertsPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by name, phone, or message..."
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all bg-white/90 backdrop-blur-sm shadow-sm hover:shadow-md"
               />
             </div>
           </div>
 
           {/* Status Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
               Filter by Status
             </label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all bg-white/90 backdrop-blur-sm shadow-sm hover:shadow-md font-medium"
             >
               <option value="">All Statuses</option>
               <option value="sent">⏱️ Sent</option>
@@ -370,13 +387,13 @@ export default function SOSAlertsPage() {
 
           {/* Priority Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
               Filter by Priority
             </label>
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all bg-white/90 backdrop-blur-sm shadow-sm hover:shadow-md font-medium"
             >
               <option value="">All Priorities</option>
               <option value="low">🟢 Low</option>
@@ -388,13 +405,13 @@ export default function SOSAlertsPage() {
 
           {/* Agency Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
               Filter by Agency
             </label>
             <select
               value={agencyFilter}
               onChange={(e) => setAgencyFilter(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all bg-white/90 backdrop-blur-sm shadow-sm hover:shadow-md font-medium"
             >
               <option value="">All Agencies</option>
               <option value="all">🚨 All Agencies</option>
@@ -408,13 +425,15 @@ export default function SOSAlertsPage() {
         </div>
       </div>
 
-      {/* Alerts List */}
-      <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100">
+      {/* Alerts List with Glass Morphism */}
+      <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden border border-white/50">
         {filteredAlerts.length === 0 ? (
           <div className="text-center py-16">
-            <AlertOctagon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 text-lg font-medium mb-2">No SOS alerts found</p>
-            <p className="text-gray-400 text-sm">
+            <div className="w-20 h-20 bg-gradient-to-br from-gray-200 to-gray-300 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <AlertOctagon className="w-10 h-10 text-gray-400" />
+            </div>
+            <p className="text-gray-600 text-lg font-bold mb-2">No SOS alerts found</p>
+            <p className="text-gray-500 text-sm">
               {searchQuery || statusFilter || priorityFilter
                 ? 'Try adjusting your filters'
                 : 'No emergency SOS alerts at this time'}
@@ -528,7 +547,7 @@ export default function SOSAlertsPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <button
                           onClick={() => router.push(`/sos-alerts/${alert.id}`)}
-                          className="p-2 text-brand-600 hover:bg-brand-50 rounded-lg transition-all inline-flex items-center gap-1"
+                          className="p-2.5 text-brand-600 hover:bg-brand-50 rounded-xl transition-all inline-flex items-center gap-1 hover:scale-110 active:scale-95 shadow-sm hover:shadow-md"
                           title="View Details"
                         >
                           <Eye className="w-4 h-4" />
@@ -554,42 +573,60 @@ export default function SOSAlertsPage() {
   );
 }
 
-// Stat Card Component
+// Stat Card Component with Stunning Visuals
 function StatCard({ title, value, icon, gradient }: any) {
   return (
-    <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100 hover:shadow-lg transition-shadow">
-      <div className="flex items-center justify-between mb-4">
-        <div className={`w-12 h-12 bg-gradient-to-br ${gradient} rounded-xl flex items-center justify-center text-white shadow-lg`}>
-          {icon}
-        </div>
+    <div className="relative bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-6 border border-white/50 overflow-hidden group cursor-pointer hover:scale-105">
+      {/* Animated Background Gradient */}
+      <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300`}></div>
+      
+      {/* Shine Effect */}
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
       </div>
-      <h3 className="text-gray-600 text-sm font-medium mb-1">{title}</h3>
-      <p className="text-3xl font-bold text-gray-900">{value}</p>
+      
+      <div className="relative z-10">
+        <div className="flex items-center justify-between mb-4">
+          <div className={`w-14 h-14 bg-gradient-to-br ${gradient} rounded-2xl flex items-center justify-center text-white shadow-xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-300`}>
+            {icon}
+          </div>
+        </div>
+        <h3 className="text-gray-500 text-sm font-semibold mb-2 uppercase tracking-wide">{title}</h3>
+        <p className="text-4xl font-black bg-gradient-to-br from-gray-900 to-gray-600 bg-clip-text text-transparent">{value}</p>
+      </div>
+      
+      {/* Corner Accent */}
+      <div className={`absolute top-0 right-0 w-20 h-20 bg-gradient-to-br ${gradient} opacity-10 rounded-bl-full`}></div>
     </div>
   );
 }
 
-// Info Card Component
+// Info Card Component with Glass Morphism
 function InfoCard({ title, icon, iconColor, iconBg, children }: any) {
   return (
-    <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
-      <div className="flex items-center gap-3 mb-4">
-        <div className={`w-10 h-10 ${iconBg} rounded-lg flex items-center justify-center ${iconColor}`}>
-          {icon}
+    <div className="relative bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/50 transition-all duration-300 hover:shadow-xl overflow-hidden group">
+      {/* Decorative Background */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-brand-500/5 to-transparent rounded-bl-full"></div>
+      
+      <div className="relative z-10">
+        <div className="flex items-center gap-3 mb-5">
+          <div className={`w-12 h-12 ${iconBg} rounded-xl flex items-center justify-center ${iconColor} shadow-md group-hover:scale-110 transition-transform duration-300`}>
+            {icon}
+          </div>
+          <h3 className="text-lg font-bold text-gray-900">{title}</h3>
         </div>
-        <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+        {children}
       </div>
-      {children}
     </div>
   );
 }
 
-// Status Row Component
+// Status Row Component with Hover Effects
 function StatusRow({ label, value, color, bgColor }: any) {
   return (
-    <div className="flex justify-between items-center">
-      <span className="text-sm text-gray-600 font-medium">{label}</span>
-      <span className={`${color} font-bold text-lg px-3 py-1 ${bgColor} rounded-lg`}>
+    <div className="flex justify-between items-center group/row hover:bg-gray-50/50 p-2 rounded-lg transition-colors">
+      <span className="text-sm text-gray-700 font-semibold">{label}</span>
+      <span className={`${color} font-black text-lg px-4 py-1.5 ${bgColor} rounded-xl shadow-sm group-hover/row:scale-105 transition-transform`}>
         {value}
       </span>
     </div>

@@ -136,6 +136,10 @@ INSERT INTO role_permissions (role, resource, action) VALUES
 -- MDRRMO: Municipal Disaster Risk Reduction and Management Office
 -- ============================================================================
 INSERT INTO role_permissions (role, resource, action) VALUES
+-- User management (can create and update, but NOT delete)
+('mdrrmo', 'users', 'create'),
+('mdrrmo', 'users', 'read'),
+('mdrrmo', 'users', 'update'),
 -- Alerts (full management without approval)
 ('mdrrmo', 'alerts', 'create'),
 ('mdrrmo', 'alerts', 'read'),

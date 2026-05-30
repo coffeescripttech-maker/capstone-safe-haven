@@ -1,7 +1,24 @@
 "use client";
-import { ChevronLeftIcon } from "@/icons";
-import Link from "next/link";
+
+// SafeHaven Password Reset Page - Enhanced Professional Version
+
 import React, { useState } from "react";
+import Link from "next/link";
+import AppLogo from "@/components/common/AppLogo";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Alert } from "@/components/ui/Alert";
+import { Card, CardContent } from "@/components/ui/Card";
+import { 
+  Mail, 
+  ArrowLeft, 
+  CheckCircle2, 
+  Shield, 
+  Lock, 
+  RefreshCw,
+  AlertCircle,
+  Send
+} from "lucide-react";
 
 export default function ResetPasswordPage() {
   const [email, setEmail] = useState("");
@@ -11,6 +28,12 @@ export default function ResetPasswordPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!email) {
+      setError('Please enter your email address');
+      return;
+    }
+
     setIsLoading(true);
     setError("");
 
@@ -36,121 +59,199 @@ export default function ResetPasswordPage() {
     }
   };
 
+  const handleTryAgain = () => {
+    setIsSubmitted(false);
+    setEmail("");
+    setError("");
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 dark:bg-gray-900 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8">
-        <div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-brand-50/30 to-gray-50 px-4 py-12">
+      <div className="w-full max-w-md animate-fade-in">
+        {/* Back Button */}
+        <div className="mb-6">
           <Link
             href="/signin"
-            className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+            className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-brand-600 transition-colors group"
           >
-            <ChevronLeftIcon />
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
             Back to sign in
           </Link>
         </div>
 
-        <div>
-          <h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-            Reset your password
-          </h2>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <div className="mb-4">
+            <AppLogo variant="icon" href="#" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            {isSubmitted ? 'Check Your Email' : 'Reset Password'}
+          </h1>
+          <p className="text-gray-600">
             {isSubmitted
-              ? "Check your email for reset instructions"
-              : "Enter your email address and we'll send you instructions to reset your password"}
+              ? 'We sent you reset instructions'
+              : 'Enter your email to receive reset instructions'}
           </p>
         </div>
 
-        {!isSubmitted ? (
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-            {error && (
-              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
-                {error}
-              </div>
-            )}
-
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Email address
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500 sm:text-sm"
-                placeholder="admin@example.com"
-              />
-            </div>
-
-            <div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="flex w-full justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:focus:ring-offset-gray-900"
-              >
-                {isLoading ? "Sending..." : "Send reset instructions"}
-              </button>
-            </div>
-          </form>
-        ) : (
-          <div className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-900/20">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg
-                  className="h-5 w-5 text-green-400"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-green-800 dark:text-green-400">
-                  Email sent successfully
-                </h3>
-                <div className="mt-2 text-sm text-green-700 dark:text-green-500">
-                  <p>
-                    We've sent password reset instructions to <strong>{email}</strong>. Please check your inbox and
-                    follow the link to reset your password.
-                  </p>
-                  <p className="mt-2">
-                    Didn't receive the email? Check your spam folder or{" "}
-                    <button
-                      onClick={() => setIsSubmitted(false)}
-                      className="font-medium underline hover:text-green-600"
-                    >
-                      try again
-                    </button>
-                    .
-                  </p>
+        {/* Main Card */}
+        <Card variant="elevated" padding="lg" className="backdrop-blur-sm">
+          <CardContent>
+            {!isSubmitted ? (
+              <>
+                {/* Icon */}
+                <div className="flex justify-center mb-6">
+                  <div className="w-16 h-16 bg-gradient-to-br from-brand-500 to-brand-600 rounded-2xl flex items-center justify-center shadow-lg">
+                    <Lock className="w-8 h-8 text-white" />
+                  </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        )}
 
-        <div className="text-center">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+                {/* Error Alert */}
+                {error && (
+                  <div className="mb-6 animate-slide-down">
+                    <Alert
+                      variant="error"
+                      title="Error"
+                      description={error}
+                      dismissible
+                      onDismiss={() => setError('')}
+                    />
+                  </div>
+                )}
+
+                {/* Reset Form */}
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  <Input
+                    label="Email Address"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="admin@safehaven.ph"
+                    leftIcon={<Mail className="w-4 h-4" />}
+                    required
+                    disabled={isLoading}
+                    fullWidth
+                    helperText="We'll send password reset instructions to this email"
+                  />
+
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="lg"
+                    isLoading={isLoading}
+                    rightIcon={!isLoading && <Send className="w-4 h-4" />}
+                    fullWidth
+                    className="mt-6"
+                  >
+                    {isLoading ? 'Sending...' : 'Send Reset Instructions'}
+                  </Button>
+                </form>
+
+                {/* Info Box */}
+                <div className="mt-6 p-4 bg-info-50 border border-info-200 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-info-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <AlertCircle className="w-5 h-5 text-info-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-info-900 mb-1">
+                        Password Reset Process
+                      </p>
+                      <p className="text-xs text-info-700">
+                        You'll receive an email with a secure link to reset your password. The link expires in 1 hour.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Success State */}
+                <div className="text-center">
+                  {/* Success Icon */}
+                  <div className="flex justify-center mb-6">
+                    <div className="w-20 h-20 bg-gradient-to-br from-success-500 to-success-600 rounded-2xl flex items-center justify-center shadow-lg animate-bounce-once">
+                      <CheckCircle2 className="w-10 h-10 text-white" strokeWidth={2.5} />
+                    </div>
+                  </div>
+
+                  {/* Success Message */}
+                  <div className="mb-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">
+                      Email Sent Successfully!
+                    </h3>
+                    <p className="text-gray-600 mb-4">
+                      We've sent password reset instructions to:
+                    </p>
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-brand-50 border border-brand-200 rounded-lg">
+                      <Mail className="w-4 h-4 text-brand-600" />
+                      <span className="font-semibold text-brand-900">{email}</span>
+                    </div>
+                  </div>
+
+                  {/* Instructions */}
+                  <div className="p-4 bg-success-50 border border-success-200 rounded-lg text-left mb-6">
+                    <p className="text-sm text-success-900 font-semibold mb-2">
+                      Next Steps:
+                    </p>
+                    <ol className="text-sm text-success-800 space-y-2 list-decimal list-inside">
+                      <li>Check your email inbox</li>
+                      <li>Click the reset link in the email</li>
+                      <li>Create your new password</li>
+                      <li>Sign in with your new password</li>
+                    </ol>
+                  </div>
+
+                  {/* Didn't Receive */}
+                  <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                    <p className="text-sm text-gray-700 mb-3">
+                      Didn't receive the email?
+                    </p>
+                    <div className="space-y-2 text-xs text-gray-600">
+                      <p>• Check your spam or junk folder</p>
+                      <p>• Make sure you entered the correct email</p>
+                      <p>• Wait a few minutes for the email to arrive</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleTryAgain}
+                      leftIcon={<RefreshCw className="w-4 h-4" />}
+                      fullWidth
+                      className="mt-4"
+                    >
+                      Try Again
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Footer Links */}
+        <div className="mt-6 text-center space-y-3">
+          <p className="text-sm text-gray-600">
             Remember your password?{" "}
-            <Link href="/signin" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
+            <Link 
+              href="/signin" 
+              className="font-semibold text-brand-600 hover:text-brand-700 transition-colors"
+            >
               Sign in
             </Link>
           </p>
+          
+          {/* Security Notice */}
+          <p className="text-xs text-gray-500 flex items-center justify-center gap-2">
+            <Shield className="w-3 h-3" />
+            Secured by SafeHaven • Your data is protected
+          </p>
         </div>
 
-        {/* <div className="mt-6 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
-          <p className="text-xs text-blue-600 dark:text-blue-400">
-            <strong>Note:</strong> Password reset emails are sent via Resend. Make sure your email service is configured in environment variables.
-          </p>
-        </div> */}
+        {/* Copyright */}
+        <p className="text-center text-xs text-gray-500 mt-4">
+          © 2026 SafeHaven. All rights reserved.
+        </p>
       </div>
     </div>
   );

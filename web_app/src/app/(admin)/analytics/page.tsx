@@ -305,46 +305,58 @@ export default function AnalyticsPage() {
   }];
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
-              <BarChart3 className="w-8 h-8 text-brand-500" />
-              Analytics Dashboard
-            </h1>
-            <p className="text-gray-600 flex items-center gap-2">
-              <Activity className="w-4 h-4" />
-              System performance and usage statistics
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            {/* Time Range Selector */}
-            <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-lg shadow-sm">
-              <Calendar className="w-4 h-4 text-gray-500" />
-              <select
-                value={timeRange}
-                onChange={(e) => setTimeRange(e.target.value as '7d' | '30d' | '90d')}
-                className="border-0 bg-transparent text-sm font-medium text-gray-700 focus:ring-0 cursor-pointer"
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-brand-50/10 to-gray-50 p-6">
+      {/* Header with Glass Morphism */}
+      <div className="mb-8 relative">
+        {/* Decorative Background */}
+        <div className="absolute inset-0 -z-10 overflow-hidden rounded-3xl">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-brand-500/5 rounded-full blur-3xl animate-pulse-slow"></div>
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-info-500/5 rounded-full blur-3xl"></div>
+        </div>
+        
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-8">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-brand-500 to-brand-700 rounded-2xl flex items-center justify-center shadow-lg shadow-brand-500/30 animate-pulse-slow">
+                <BarChart3 className="w-8 h-8 text-white" strokeWidth={2.5} />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-brand-700 to-gray-900 bg-clip-text text-transparent mb-1">
+                  Analytics Dashboard
+                </h1>
+                <p className="text-gray-600 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-brand-500" />
+                  System performance and usage statistics
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {/* Time Range Selector */}
+              <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm px-3 py-2 rounded-xl shadow-md border border-white/50">
+                <Calendar className="w-4 h-4 text-gray-500" />
+                <select
+                  value={timeRange}
+                  onChange={(e) => setTimeRange(e.target.value as '7d' | '30d' | '90d')}
+                  className="border-0 bg-transparent text-sm font-semibold text-gray-700 focus:ring-0 cursor-pointer"
+                >
+                  <option value="7d">Last 7 days</option>
+                  <option value="30d">Last 30 days</option>
+                  <option value="90d">Last 90 days</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-600 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-xl shadow-md border border-white/50">
+                <Activity className="w-4 h-4" />
+                <span className="font-semibold">{lastUpdated.toLocaleTimeString()}</span>
+              </div>
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="px-5 py-2.5 bg-gradient-to-r from-brand-500 to-brand-600 text-white rounded-xl hover:from-brand-600 hover:to-brand-700 transition-all flex items-center gap-2 shadow-lg shadow-brand-500/30 hover:shadow-xl hover:shadow-brand-500/40 font-semibold disabled:opacity-50 hover:scale-105 active:scale-95"
               >
-                <option value="7d">Last 7 days</option>
-                <option value="30d">Last 30 days</option>
-                <option value="90d">Last 90 days</option>
-              </select>
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
             </div>
-            <div className="flex items-center gap-2 text-sm text-gray-500 bg-white px-4 py-2 rounded-lg shadow-sm">
-              <Activity className="w-4 h-4" />
-              {lastUpdated.toLocaleTimeString()}
-            </div>
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition flex items-center gap-2 shadow-md hover:shadow-lg disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
           </div>
         </div>
       </div>
@@ -390,7 +402,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Activity Chart */}
-      <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+      <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-8 border border-white/50 hover:shadow-xl transition-all duration-300">
         <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
           <Activity className="w-5 h-5 text-brand-500" />
           Activity Overview
@@ -408,7 +420,7 @@ export default function AnalyticsPage() {
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Alert Severity Distribution */}
-        <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/50 hover:shadow-xl transition-all duration-300">
           <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
             <PieChart className="w-5 h-5 text-brand-500" />
             Alert Severity Distribution
@@ -424,7 +436,7 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Incident Status */}
-        <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/50 hover:shadow-xl transition-all duration-300">
           <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-brand-500" />
             Incident Status
@@ -447,18 +459,28 @@ function MetricCard({ title, value, change, changePositive, icon, gradient, onCl
   return (
     <div 
       onClick={onClick}
-      className="bg-white rounded-xl shadow-md p-6 border border-gray-100 cursor-pointer transition-all duration-200 hover:shadow-xl hover:scale-105 hover:border-brand-300"
+      className="relative bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-6 border border-white/50 overflow-hidden group cursor-pointer hover:scale-105"
     >
-      <div className="flex items-center justify-between mb-4">
-        <div className={`w-14 h-14 bg-gradient-to-br ${gradient} rounded-xl flex items-center justify-center text-white shadow-lg`}>
-          {icon}
-        </div>
+      {/* Shine Effect */}
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
       </div>
-      <h3 className="text-gray-600 text-sm font-medium mb-1">{title}</h3>
-      <p className="text-3xl font-bold text-gray-900 mb-1">{value.toLocaleString()}</p>
-      <p className={`text-xs font-semibold ${changePositive ? 'text-green-600' : 'text-gray-500'}`}>
-        {change}
-      </p>
+      
+      <div className="relative z-10">
+        <div className="flex items-center justify-between mb-4">
+          <div className={`w-14 h-14 bg-gradient-to-br ${gradient} rounded-2xl flex items-center justify-center text-white shadow-xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-300`}>
+            {icon}
+          </div>
+        </div>
+        <h3 className="text-gray-500 text-sm font-semibold mb-2 uppercase tracking-wide">{title}</h3>
+        <p className="text-4xl font-black bg-gradient-to-br from-gray-900 to-gray-600 bg-clip-text text-transparent mb-1">{value.toLocaleString()}</p>
+        <p className={`text-xs font-semibold ${changePositive ? 'text-success-600' : 'text-gray-600'}`}>
+          {change}
+        </p>
+      </div>
+      
+      {/* Corner Accent */}
+      <div className={`absolute top-0 right-0 w-20 h-20 bg-gradient-to-br ${gradient} opacity-10 rounded-bl-full`}></div>
     </div>
   );
 }

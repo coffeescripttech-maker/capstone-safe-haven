@@ -1,41 +1,110 @@
 import React from 'react';
 
-export const Card = ({ children, className = '', ...props }: React.HTMLAttributes<HTMLDivElement>) => {
+interface CardProps {
+  children: React.ReactNode;
+  variant?: 'default' | 'elevated' | 'outlined' | 'ghost';
+  padding?: 'none' | 'sm' | 'md' | 'lg' | 'xl';
+  className?: string;
+  onClick?: () => void;
+}
+
+export function Card({ 
+  children, 
+  variant = 'default', 
+  padding = 'md',
+  className = '',
+  onClick 
+}: CardProps) {
+  const baseStyles = 'rounded-xl transition-all duration-200';
+  
+  const variantStyles = {
+    default: 'bg-white border border-gray-200 dark:bg-gray-900 dark:border-gray-800',
+    elevated: 'bg-white shadow-lg border border-gray-100 hover:shadow-xl dark:bg-gray-900 dark:border-gray-800',
+    outlined: 'bg-transparent border-2 border-gray-300 dark:border-gray-700',
+    ghost: 'bg-gray-50 dark:bg-gray-800/50'
+  };
+
+  const paddingStyles = {
+    none: '',
+    sm: 'p-4',
+    md: 'p-6',
+    lg: 'p-8',
+    xl: 'p-10'
+  };
+
+  const clickableStyles = onClick ? 'cursor-pointer hover:border-brand-300 hover:shadow-md' : '';
+
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-lg shadow ${className}`} {...props}>
+    <div 
+      className={`${baseStyles} ${variantStyles[variant]} ${paddingStyles[padding]} ${clickableStyles} ${className}`}
+      onClick={onClick}
+    >
       {children}
     </div>
   );
-};
+}
 
-export const CardHeader = ({ children, className = '', ...props }: React.HTMLAttributes<HTMLDivElement>) => {
+interface CardContentProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+export function CardContent({ children, className = '' }: CardContentProps) {
   return (
-    <div className={`p-6 ${className}`} {...props}>
+    <div className={className}>
       {children}
     </div>
   );
-};
+}
 
-export const CardTitle = ({ children, className = '', ...props }: React.HTMLAttributes<HTMLHeadingElement>) => {
+interface CardHeaderProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+export function CardHeader({ children, className = '' }: CardHeaderProps) {
   return (
-    <h3 className={`text-lg font-semibold text-gray-900 dark:text-white ${className}`} {...props}>
+    <div className={`mb-4 ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+interface CardTitleProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+export function CardTitle({ children, className = '' }: CardTitleProps) {
+  return (
+    <h3 className={`text-xl font-bold text-gray-900 dark:text-white ${className}`}>
       {children}
     </h3>
   );
-};
+}
 
-export const CardDescription = ({ children, className = '', ...props }: React.HTMLAttributes<HTMLParagraphElement>) => {
+interface CardDescriptionProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+export function CardDescription({ children, className = '' }: CardDescriptionProps) {
   return (
-    <p className={`text-sm text-gray-600 dark:text-gray-400 mt-1 ${className}`} {...props}>
+    <p className={`text-sm text-gray-600 dark:text-gray-400 ${className}`}>
       {children}
     </p>
   );
-};
+}
 
-export const CardContent = ({ children, className = '', ...props }: React.HTMLAttributes<HTMLDivElement>) => {
+interface CardFooterProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+export function CardFooter({ children, className = '' }: CardFooterProps) {
   return (
-    <div className={`p-6 pt-0 ${className}`} {...props}>
+    <div className={`mt-6 pt-4 border-t border-gray-200 dark:border-gray-800 ${className}`}>
       {children}
     </div>
   );
-};
+}

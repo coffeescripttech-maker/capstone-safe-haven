@@ -161,24 +161,30 @@ export default function IncidentDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 p-6">
       {/* Header */}
       <div className="mb-6">
         <button
           onClick={() => router.push('/incidents')}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+          className="flex items-center gap-2 text-gray-600 hover:text-brand-600 mb-4 transition-colors group"
         >
-          <ArrowLeft className="w-5 h-5" />
-          Back to Incidents
+          <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+          <span className="font-medium">Back to Incidents</span>
         </button>
         
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <FileText className="w-8 h-8 text-orange-500" />
-              Incident Report #{incident.id}
-            </h1>
-            <p className="text-gray-600 mt-1">View and manage incident details</p>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg">
+                <FileText className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">
+                  Incident Report #{incident.id}
+                </h1>
+                <p className="text-gray-600 mt-1">Detailed incident information and response management</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -187,22 +193,26 @@ export default function IncidentDetailPage() {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Incident Info Card */}
-          <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
+          <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
             <div className="flex items-start justify-between mb-6">
-              <div className="flex items-start gap-4">
-                <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${getSeverityColor(incident.severity)}`}>
+              <div className="flex items-start gap-4 flex-1">
+                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-sm ${getSeverityColor(incident.severity)}`}>
                   {getTypeIcon(incident.incidentType)}
                 </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">{incident.title}</h2>
-                  <div className="flex items-center gap-3">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-full border ${getSeverityColor(incident.severity)}`}>
+                <div className="flex-1">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-3">{incident.title}</h2>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-full border shadow-sm ${getSeverityColor(incident.severity)}`}>
                       <AlertTriangle className="w-4 h-4" />
-                      {incident.severity}
+                      {incident.severity.toUpperCase()}
                     </span>
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-full border ${getStatusColor(incident.status)}`}>
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-full border shadow-sm ${getStatusColor(incident.status)}`}>
                       {getStatusIcon(incident.status)}
-                      {incident.status.replace('_', ' ')}
+                      {incident.status.replace('_', ' ').toUpperCase()}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full bg-gray-100 text-gray-700 border border-gray-200">
+                      {getTypeIcon(incident.incidentType)}
+                      {incident.incidentType.replace('_', ' ')}
                     </span>
                   </div>
                 </div>
@@ -210,22 +220,29 @@ export default function IncidentDetailPage() {
             </div>
 
             <div className="space-y-4">
-              <div>
+              <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-4 border border-gray-100">
                 <h3 className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
+                  <FileText className="w-4 h-4 text-orange-500" />
                   Description
                 </h3>
-                <p className="text-gray-600 leading-relaxed">{incident.description}</p>
+                <p className="text-gray-700 leading-relaxed">{incident.description}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">Incident Type</p>
-                  <p className="text-gray-900 font-medium capitalize">{incident.incidentType.replace('_', ' ')}</p>
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
+                <div className="bg-gradient-to-br from-blue-50 to-white rounded-xl p-4 border border-blue-100">
+                  <p className="text-sm text-blue-600 mb-1 font-medium flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5" />
+                    Incident Type
+                  </p>
+                  <p className="text-gray-900 font-semibold capitalize">{incident.incidentType.replace('_', ' ')}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">Reported</p>
-                  <p className="text-gray-900 font-medium">{format(new Date(incident.createdAt), 'MMM d, yyyy h:mm a')}</p>
+                <div className="bg-gradient-to-br from-purple-50 to-white rounded-xl p-4 border border-purple-100">
+                  <p className="text-sm text-purple-600 mb-1 font-medium flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5" />
+                    Reported
+                  </p>
+                  <p className="text-gray-900 font-semibold">{format(new Date(incident.createdAt), 'MMM d, yyyy')}</p>
+                  <p className="text-xs text-gray-500">{format(new Date(incident.createdAt), 'h:mm a')}</p>
                 </div>
               </div>
             </div>
@@ -233,13 +250,15 @@ export default function IncidentDetailPage() {
 
           {/* Map Card */}
           {incident.latitude && incident.longitude && (
-            <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
-              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-orange-500" />
-                Incident Location
+            <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
+              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
+                  <MapPin className="w-4 h-4 text-white" />
+                </div>
+                Incident Location & Route
               </h3>
               
-              <div className="mb-4">
+              <div className="mb-4 rounded-xl overflow-hidden border border-gray-200 shadow-sm">
                 <MapViewer
                   latitude={Number(incident.latitude)}
                   longitude={Number(incident.longitude)}
@@ -252,35 +271,57 @@ export default function IncidentDetailPage() {
                       color: '#f97316'
                     }
                   ]}
-                  height="400px"
+                  showDirections={true}
+                  height="500px"
                 />
               </div>
 
               {incident.address && (
-                <div className="flex items-start gap-2 text-gray-600 mb-4">
-                  <MapPin className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
-                  <p>{incident.address}</p>
+                <div className="flex items-start gap-3 text-gray-600 mb-4 p-4 bg-gradient-to-br from-gray-50 to-white rounded-xl border border-gray-100">
+                  <MapPin className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 mb-1">Incident Address</p>
+                    <p className="text-gray-900">{incident.address}</p>
+                  </div>
                 </div>
               )}
 
-              <div className="flex gap-3">
+              <div className="bg-gradient-to-br from-info-50 to-blue-50 border border-info-200 rounded-xl p-4 mb-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-info-600 flex items-center justify-center flex-shrink-0">
+                    <Navigation className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-info-900 mb-1">Auto-Navigation Enabled</p>
+                    <p className="text-sm text-info-700">
+                      The map automatically shows the fastest route to the incident site. 
+                      The blue line indicates the driving route for quick response.
+                    </p>
+                    <p className="text-xs text-info-600 mt-2">
+                      💡 If your actual location is far away, a nearby response team location is used for demonstration.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <a
                   href={`https://www.google.com/maps?q=${incident.latitude},${incident.longitude}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-brand-600 to-brand-700 text-white rounded-xl hover:from-brand-700 hover:to-brand-800 transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg font-medium"
                 >
                   <ExternalLink className="w-4 h-4" />
-                  Google Maps
+                  Open in Google Maps
                 </a>
                 <a
                   href={`https://www.google.com/maps/dir/?api=1&destination=${incident.latitude},${incident.longitude}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
+                  className="flex-1 px-4 py-3 bg-white border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-md font-medium"
                 >
                   <Navigation className="w-4 h-4" />
-                  Get Directions
+                  Navigate with Google
                 </a>
               </div>
             </div>
@@ -288,19 +329,26 @@ export default function IncidentDetailPage() {
 
           {/* Photos Card */}
           {incident.photos && incident.photos.length > 0 && (
-            <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
-              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <ImageIcon className="w-5 h-5 text-orange-500" />
-                Photos ({incident.photos.length})
+            <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
+              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
+                  <ImageIcon className="w-4 h-4 text-white" />
+                </div>
+                Incident Photos ({incident.photos.length})
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {incident.photos.map((photo, index) => (
-                  <div key={index} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200">
+                  <div key={index} className="relative aspect-square rounded-xl overflow-hidden border-2 border-gray-200 hover:border-orange-400 transition-all shadow-sm hover:shadow-lg group">
                     <img
                       src={photo}
                       alt={`Incident photo ${index + 1}`}
-                      className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute bottom-2 left-2 text-white text-sm font-medium">
+                        Photo {index + 1}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -311,24 +359,28 @@ export default function IncidentDetailPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Reporter Info Card */}
-          <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
+          <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <User className="w-5 h-5 text-orange-500" />
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
+                <User className="w-4 h-4 text-white" />
+              </div>
               Reporter Information
             </h3>
             <div className="space-y-4">
-              <div>
-                <p className="text-sm text-gray-500 mb-1">Name</p>
-                <p className="text-gray-900 font-medium">{incident.userName || 'Unknown'}</p>
+              <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-4 border border-gray-100">
+                <p className="text-xs text-gray-500 mb-1 uppercase tracking-wide font-medium">Name</p>
+                <p className="text-gray-900 font-semibold text-lg">{incident.userName || 'Unknown'}</p>
               </div>
               {incident.userPhone && (
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">Phone</p>
+                <div className="bg-gradient-to-br from-blue-50 to-white rounded-xl p-4 border border-blue-100">
+                  <p className="text-xs text-blue-600 mb-2 uppercase tracking-wide font-medium">Phone Number</p>
                   <a
                     href={`tel:${incident.userPhone}`}
-                    className="text-brand-600 hover:text-brand-700 font-medium flex items-center gap-2"
+                    className="text-brand-600 hover:text-brand-700 font-semibold flex items-center gap-2 group"
                   >
-                    <Phone className="w-4 h-4" />
+                    <div className="w-8 h-8 rounded-lg bg-brand-100 flex items-center justify-center group-hover:bg-brand-200 transition-colors">
+                      <Phone className="w-4 h-4 text-brand-600" />
+                    </div>
                     {incident.userPhone}
                   </a>
                 </div>
@@ -337,20 +389,22 @@ export default function IncidentDetailPage() {
           </div>
 
           {/* Status Update Card */}
-          <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
+          <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-orange-500" />
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
+                <TrendingUp className="w-4 h-4 text-white" />
+              </div>
               Update Status
             </h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-bold text-gray-700 mb-2">
                   Change Status
                 </label>
                 <select
                   value={newStatus}
                   onChange={(e) => setNewStatus(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all font-medium"
                 >
                   <option value="pending">⏳ Pending</option>
                   <option value="in_progress">🔄 In Progress</option>
@@ -361,16 +415,16 @@ export default function IncidentDetailPage() {
               <button
                 onClick={handleUpdateStatus}
                 disabled={isUpdating || newStatus === incident.status}
-                className="w-full px-4 py-2.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
+                className="w-full px-4 py-3 bg-gradient-to-r from-brand-600 to-brand-700 text-white rounded-xl hover:from-brand-700 hover:to-brand-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md hover:shadow-lg font-semibold"
               >
                 {isUpdating ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-5 h-5 animate-spin" />
                     Updating...
                   </>
                 ) : (
                   <>
-                    <CheckCircle2 className="w-4 h-4" />
+                    <CheckCircle2 className="w-5 h-5" />
                     Update Status
                   </>
                 )}
@@ -379,29 +433,33 @@ export default function IncidentDetailPage() {
           </div>
 
           {/* Timeline Card */}
-          <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
+          <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-orange-500" />
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
+                <Calendar className="w-4 h-4 text-white" />
+              </div>
               Timeline
             </h3>
             <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-success-100 flex items-center justify-center flex-shrink-0">
-                  <Clock className="w-4 h-4 text-success-600" />
+              <div className="flex items-start gap-3 p-3 bg-gradient-to-br from-success-50 to-green-50 rounded-xl border border-success-200">
+                <div className="w-10 h-10 rounded-xl bg-success-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <Clock className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-900">Incident Reported</p>
-                  <p className="text-sm text-gray-500">{format(new Date(incident.createdAt), 'MMM d, yyyy h:mm a')}</p>
+                  <p className="text-sm font-bold text-success-900">Incident Reported</p>
+                  <p className="text-sm text-success-700 font-medium">{format(new Date(incident.createdAt), 'MMM d, yyyy')}</p>
+                  <p className="text-xs text-success-600">{format(new Date(incident.createdAt), 'h:mm a')}</p>
                 </div>
               </div>
               {incident.updatedAt !== incident.createdAt && (
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-info-100 flex items-center justify-center flex-shrink-0">
-                    <TrendingUp className="w-4 h-4 text-info-600" />
+                <div className="flex items-start gap-3 p-3 bg-gradient-to-br from-info-50 to-blue-50 rounded-xl border border-info-200">
+                  <div className="w-10 h-10 rounded-xl bg-info-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                    <TrendingUp className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">Last Updated</p>
-                    <p className="text-sm text-gray-500">{format(new Date(incident.updatedAt), 'MMM d, yyyy h:mm a')}</p>
+                    <p className="text-sm font-bold text-info-900">Last Updated</p>
+                    <p className="text-sm text-info-700 font-medium">{format(new Date(incident.updatedAt), 'MMM d, yyyy')}</p>
+                    <p className="text-xs text-info-600">{format(new Date(incident.updatedAt), 'h:mm a')}</p>
                   </div>
                 </div>
               )}
