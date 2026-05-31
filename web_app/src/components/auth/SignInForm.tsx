@@ -4,10 +4,7 @@ import React, { useState } from "react";
 import { signIn } from "next-auth/react";
 import { Shield, Mail, Lock, ArrowRight, Eye, EyeOff, Zap, Users, ChevronLeft } from "lucide-react";
 import AppLogo from "@/components/common/AppLogo";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Alert } from "@/components/ui/Alert";
-import { Card, CardContent } from "@/components/ui";
+import { Button, Input, Alert, Card, CardContent } from "@/components/ui";
 
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);

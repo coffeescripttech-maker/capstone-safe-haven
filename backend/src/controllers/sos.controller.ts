@@ -19,7 +19,7 @@ export class SOSController {
         return;
       }
 
-      const { latitude, longitude, message, userInfo, targetAgency } = req.body;
+      const { latitude, longitude, message, userInfo, targetAgency, incidentTypeId, incidentDescription } = req.body;
 
       // Validation
       if (!message) {
@@ -55,7 +55,9 @@ export class SOSController {
         longitude,
         message,
         userInfo,
-        targetAgency: targetAgency || 'all'
+        targetAgency: targetAgency || 'all',
+        incidentTypeId,
+        incidentDescription
       });
 
       logger.info(`SOS alert created by user ${userId}: ${sosAlert.id}, target: ${targetAgency || 'all'}`);

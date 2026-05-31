@@ -18,6 +18,7 @@ import locationRoutes from './location.routes';
 import notificationRoutes from './notifications.routes';
 import smsWebhookRoutes from './smsWebhook.routes';
 import reservationRoutes from './reservation.routes';
+import incidentTypesRoutes from './incidentTypes';
 
 const router = Router();
 
@@ -27,6 +28,7 @@ router.use('/evacuation-centers', evacuationRoutes);
 router.use('/emergency-contacts', emergencyContactRoutes);
 router.use('/sos', sosRoutes);
 router.use('/incidents', incidentRoutes);
+router.use('/incident-types', incidentTypesRoutes);
 router.use('/groups', groupRoutes);
 router.use('/bulletin', bulletinRoutes);
 router.use('/guides', guideRoutes);

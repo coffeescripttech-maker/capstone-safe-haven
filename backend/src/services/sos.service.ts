@@ -31,6 +31,8 @@ export interface CreateSOSRequest {
   message: string;
   targetAgency: 'barangay' | 'lgu' | 'bfp' | 'pnp' | 'mdrrmo' | 'all';
   source?: 'api' | 'sms'; // Track how SOS was sent
+  incidentTypeId?: number; // NEW: Link to incident type
+  incidentDescription?: string; // NEW: Description from incident type
   userInfo: {
     name: string;
     phone: string;
@@ -57,8 +59,8 @@ class SOSService {
 
       // Insert SOS alert
       const [result] = await connection.query<ResultSetHeader>(
-        `INSERT INTO sos_alerts (user_id, latitude, longitude, message, user_info, status, priority, target_agency, source)
-         VALUES (?, ?, ?, ?, ?, 'sent', 'high', ?, ?)`,
+        `INSERT INTO sos_alerts (user_id, latitude, longitude, message, user_info, status, priority, target_agency, source, incident_type_id, incident_description)
+         VALUES (?, ?, ?, ?, ?, 'sent', 'high', ?, ?, ?, ?)`,
         [
           data.userId,
           data.latitude || null,
@@ -66,7 +68,9 @@ class SOSService {
           data.message,
           JSON.stringify(data.userInfo),
           data.targetAgency,
-          data.source || 'api'
+          data.source || 'api',
+          data.incidentTypeId || null,
+          data.incidentDescription || null
         ]
       );
 

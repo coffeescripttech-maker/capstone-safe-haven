@@ -5,10 +5,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import AppLogo from "@/components/common/AppLogo";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Alert } from "@/components/ui/Alert";
-import { Card, CardContent } from "@/components/ui";
+import { Button, Input, Alert, Card, CardContent } from "@/components/ui";
 import { 
   Mail, 
   ArrowLeft, 

@@ -9,6 +9,9 @@ import { COLORS } from '../constants/colors';
 import { HomeScreen } from '../screens/home/HomeScreen';
 import { AlertsListScreen } from '../screens/alerts/AlertsListScreen';
 import { AlertDetailsScreen } from '../screens/alerts/AlertDetailsScreen';
+import IncidentTypeListScreen from '../screens/sos/IncidentTypeListScreen';
+import IncidentTypeDetailScreen from '../screens/sos/IncidentTypeDetailScreen';
+import SOSConfirmationScreen from '../screens/sos/SOSConfirmationScreen';
 import { CentersMapScreen } from '../screens/centers/CentersMapScreen';
 import { CentersListScreen } from '../screens/centers/CentersListScreen';
 import { CenterDetailsScreen } from '../screens/centers/CenterDetailsScreen';
@@ -41,6 +44,33 @@ const IncidentsStack = createNativeStackNavigator<IncidentsStackParamList>();
 const FamilyStack = createNativeStackNavigator<FamilyStackParamList>();
 const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
 const WeatherStack = createNativeStackNavigator<WeatherStackParamList>();
+const SOSStack = createNativeStackNavigator();
+
+// SOS Stack Navigator
+const SOSNavigator: React.FC = () => {
+  return (
+    <SOSStack.Navigator>
+      <SOSStack.Screen
+        name="IncidentTypeList"
+        component={IncidentTypeListScreen}
+        options={{ title: 'Select Incident Type' }}
+      />
+      <SOSStack.Screen
+        name="IncidentTypeDetail"
+        component={IncidentTypeDetailScreen}
+        options={{ title: 'Incident Details' }}
+      />
+      <SOSStack.Screen
+        name="SOSConfirmation"
+        component={SOSConfirmationScreen}
+        options={{ 
+          title: 'Alert Sent',
+          headerLeft: () => null, // Prevent going back
+        }}
+      />
+    </SOSStack.Navigator>
+  );
+};
 
 // Alerts Stack Navigator
 const AlertsNavigator: React.FC = () => {
@@ -238,7 +268,7 @@ export const MainNavigator: React.FC = () => {
       />
       <Tab.Screen
         name="SOS"
-        component={SOSPlaceholder}
+        component={SOSNavigator}
         options={{
           tabBarLabel: 'SOS',
           tabBarButton: () => null, // Hide the tab button, we'll use custom SOS button

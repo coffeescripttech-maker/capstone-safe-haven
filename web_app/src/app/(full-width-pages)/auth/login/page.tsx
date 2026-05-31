@@ -6,10 +6,7 @@ import React, { useState } from 'react';
 import { useSafeHavenAuth } from '@/context/SafeHavenAuthContext';
 import Link from 'next/link';
 import AppLogo from '@/components/common/AppLogo';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Alert } from '@/components/ui/Alert';
-import { Card, CardContent } from '@/components/ui/Card';
+import { Button, Input, Alert, Card, CardContent } from '@/components/ui';
 import { Mail, Lock, ArrowRight, Eye, EyeOff, Shield, Zap, Users } from 'lucide-react';
 
 export default function LoginPage() {
