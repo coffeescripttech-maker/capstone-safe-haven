@@ -69,6 +69,14 @@ export const CenterDetailsScreen: React.FC = () => {
     };
   }, [centerId]);
 
+  // Auto-load route when center is loaded
+  useEffect(() => {
+    if (center?.latitude && center?.longitude) {
+      console.log('🗺️ Center loaded, auto-loading route...');
+      autoLoadRoute();
+    }
+  }, [center]);
+
   const loadCenter = async () => {
     try {
       setLoading(true);
@@ -140,6 +148,68 @@ export const CenterDetailsScreen: React.FC = () => {
     setRefreshing(true);
     await Promise.all([loadCenter(), loadCenterStatus()]);
     setRefreshing(false);
+  };
+
+  const autoLoadRoute = async () => {
+    if (!center?.latitude || !center?.longitude) {
+      return;
+    }
+
+    try {
+      setLoadingRoute(true);
+
+      // Request location permission
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('⚠️ Location permission not granted, skipping auto-route');
+        return;
+      }
+
+      // Get current location
+      console.log('📍 Getting current location for auto-route...');
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      setUserLocation(location);
+      console.log('✅ Current location:', location.coords);
+
+      // Fetch route from Mapbox
+      console.log('🗺️ Fetching route automatically...');
+      const route = await getDirections(
+        {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        },
+        {
+          latitude: center.latitude,
+          longitude: center.longitude,
+        }
+      );
+
+      if (route) {
+        setRouteData(route);
+        console.log('✅ Route loaded automatically');
+        console.log(`   Distance: ${formatDistance(route.distance)}`);
+        console.log(`   Duration: ${formatDuration(route.duration)}`);
+        
+        // Fit map to show entire route
+        if (mapRef.current && route.coordinates.length > 0) {
+          setTimeout(() => {
+            mapRef.current?.fitToCoordinates(route.coordinates, {
+              edgePadding: { top: 100, right: 50, bottom: 50, left: 50 },
+              animated: true,
+            });
+          }, 500);
+        }
+      } else {
+        console.log('⚠️ No route found');
+      }
+    } catch (error) {
+      console.error('❌ Error auto-loading route:', error);
+      // Silently fail - user can still manually get directions
+    } finally {
+      setLoadingRoute(false);
+    }
   };
 
   const handleReserveSlot = () => {
@@ -387,6 +457,7 @@ export const CenterDetailsScreen: React.FC = () => {
       {center.latitude && center.longitude && !isNaN(center.latitude) && !isNaN(center.longitude) && (
         <View style={styles.mapContainer}>
           <MapView
+            ref={mapRef}
             style={styles.map}
             provider={PROVIDER_GOOGLE}
             initialRegion={{
@@ -395,8 +466,8 @@ export const CenterDetailsScreen: React.FC = () => {
               latitudeDelta: 0.01,
               longitudeDelta: 0.01,
             }}
-            scrollEnabled={false}
-            zoomEnabled={false}
+            scrollEnabled={true}
+            zoomEnabled={true}
           >
             {/* Destination Marker */}
             <Marker
@@ -430,23 +501,51 @@ export const CenterDetailsScreen: React.FC = () => {
             )}
           </MapView>
 
+          {/* Loading Indicator */}
+          {loadingRoute && (
+            <View style={styles.loadingOverlay}>
+              <View style={styles.loadingCard}>
+                <ActivityIndicator size="small" color={COLORS.primary} />
+                <Text style={styles.loadingText}>Loading route...</Text>
+              </View>
+            </View>
+          )}
+
           {/* Route Info Overlay */}
           {routeData && (
             <View style={styles.routeInfoOverlay}>
               <View style={styles.routeInfoCard}>
-                <View style={styles.routeInfoItem}>
-                  <Ionicons name="navigate" size={16} color={COLORS.primary} />
-                  <Text style={styles.routeInfoText}>
-                    {formatDistance(routeData.distance)}
-                  </Text>
+                <View style={styles.routeInfoHeader}>
+                  <Ionicons name="navigate" size={16} color="#3B82F6" />
+                  <Text style={styles.routeInfoHeaderText}>Auto-Navigation</Text>
                 </View>
-                <View style={styles.routeInfoDivider} />
-                <View style={styles.routeInfoItem}>
-                  <Ionicons name="time" size={16} color={COLORS.primary} />
-                  <Text style={styles.routeInfoText}>
-                    {formatDuration(routeData.duration)}
-                  </Text>
+                <View style={styles.routeInfoRow}>
+                  <View style={styles.routeInfoItem}>
+                    <Ionicons name="navigate" size={14} color={COLORS.textSecondary} />
+                    <Text style={styles.routeInfoText}>
+                      {formatDistance(routeData.distance)}
+                    </Text>
+                  </View>
+                  <View style={styles.routeInfoDivider} />
+                  <View style={styles.routeInfoItem}>
+                    <Ionicons name="time" size={14} color={COLORS.textSecondary} />
+                    <Text style={styles.routeInfoText}>
+                      {formatDuration(routeData.duration)}
+                    </Text>
+                  </View>
                 </View>
+              </View>
+            </View>
+          )}
+
+          {/* No Route Message */}
+          {!loadingRoute && !routeData && userLocation && (
+            <View style={styles.routeInfoOverlay}>
+              <View style={[styles.routeInfoCard, styles.noRouteCard]}>
+                <Ionicons name="information-circle" size={16} color="#F59E0B" />
+                <Text style={styles.noRouteText}>
+                  Tap "Get Directions" to view route
+                </Text>
               </View>
             </View>
           )}
@@ -683,12 +782,40 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   mapContainer: {
-    height: 200,
+    height: 300,
     backgroundColor: '#E5E7EB',
     position: 'relative',
   },
   map: {
     flex: 1,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingCard: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 12,
+    padding: SPACING.md,
+    alignItems: 'center',
+    gap: SPACING.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  loadingText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
   },
   routeInfoOverlay: {
     position: 'absolute',
@@ -697,17 +824,31 @@ const styles = StyleSheet.create({
     right: SPACING.md,
   },
   routeInfoCard: {
-    flexDirection: 'row',
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 12,
     padding: SPACING.md,
-    alignItems: 'center',
-    justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
+  },
+  routeInfoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    marginBottom: SPACING.xs,
+  },
+  routeInfoHeaderText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#3B82F6',
+    textTransform: 'uppercase',
+  },
+  routeInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   routeInfoItem: {
     flexDirection: 'row',
@@ -724,6 +865,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: COLORS.text,
+  },
+  noRouteCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    backgroundColor: 'rgba(254, 243, 199, 0.95)',
+  },
+  noRouteText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#92400E',
   },
   header: {
     padding: SPACING.lg,

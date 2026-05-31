@@ -145,6 +145,14 @@ export const CentersListScreen: React.FC = () => {
     </View>
   );
 
+  // Count unique barangays
+  const uniqueBarangays = new Set(
+    centers
+      .filter(c => c.barangay)
+      .map(c => c.barangay)
+  );
+  const barangayCount = uniqueBarangays.size;
+
   if (isLoading && centers.length === 0) {
     return <Loading fullScreen message="Loading centers..." />;
   }
@@ -160,6 +168,23 @@ export const CentersListScreen: React.FC = () => {
       {isOnline && lastUpdate && (
         <View style={styles.updateIndicator}>
           <Text style={styles.updateText}>🕐 Last updated {lastUpdate}</Text>
+        </View>
+      )}
+
+      {/* Barangay Coverage Summary */}
+      {barangayCount > 0 && (
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryContent}>
+            <View style={styles.summaryIcon}>
+              <Text style={styles.summaryIconText}>📍</Text>
+            </View>
+            <View style={styles.summaryText}>
+              <Text style={styles.summaryTitle}>Coverage Area</Text>
+              <Text style={styles.summarySubtitle}>
+                {barangayCount} {barangayCount === 1 ? 'Barangay' : 'Barangays'} • {centers.length} {centers.length === 1 ? 'Center' : 'Centers'}
+              </Text>
+            </View>
+          </View>
         </View>
       )}
 
@@ -281,5 +306,50 @@ const styles = StyleSheet.create({
   reservationsSubtitle: {
     fontSize: TYPOGRAPHY.sizes.sm,
     color: COLORS.textSecondary,
+  },
+  summaryCard: {
+    backgroundColor: '#EFF6FF',
+    marginHorizontal: SPACING.md,
+    marginTop: SPACING.md,
+    marginBottom: SPACING.sm,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#BFDBFE',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  summaryContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: SPACING.md,
+  },
+  summaryIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#3B82F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.md,
+  },
+  summaryIconText: {
+    fontSize: 24,
+  },
+  summaryText: {
+    flex: 1,
+  },
+  summaryTitle: {
+    fontSize: TYPOGRAPHY.sizes.md,
+    fontWeight: TYPOGRAPHY.weights.bold,
+    color: '#1E40AF',
+    marginBottom: 2,
+  },
+  summarySubtitle: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: '#1E40AF',
+    fontWeight: TYPOGRAPHY.weights.semibold,
   },
 });

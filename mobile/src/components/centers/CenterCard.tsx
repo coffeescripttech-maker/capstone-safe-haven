@@ -46,8 +46,14 @@ export const CenterCard: React.FC<CenterCardProps> = ({ center, onPress }) => {
           <Text style={styles.icon}>🏢</Text>
           <View style={styles.headerText}>
             <Text style={styles.name} numberOfLines={2}>{center.name || 'Unnamed Center'}</Text>
+            {center.barangay && (
+              <View style={styles.barangayBadge}>
+                <Text style={styles.barangayIcon}>📍</Text>
+                <Text style={styles.barangayText}>Brgy. {center.barangay}</Text>
+              </View>
+            )}
             <Text style={styles.address} numberOfLines={1}>
-              📍 {center.city || 'Unknown'}, {center.province || 'Unknown'}
+              {center.city || 'Unknown'}, {center.province || 'Unknown'}
             </Text>
           </View>
         </View>
@@ -147,6 +153,25 @@ const styles = StyleSheet.create({
     fontWeight: TYPOGRAPHY.weights.bold,
     color: COLORS.text,
     marginBottom: SPACING.xs,
+  },
+  barangayBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginBottom: SPACING.xs,
+  },
+  barangayIcon: {
+    fontSize: 12,
+    marginRight: 4,
+  },
+  barangayText: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    fontWeight: TYPOGRAPHY.weights.bold,
+    color: '#1E40AF',
   },
   address: {
     fontSize: TYPOGRAPHY.sizes.xs,
