@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
 import { adminApi } from '@/lib/safehaven-api';
 import { Plus, Edit, Trash2, Power, PowerOff, ArrowLeft, AlertTriangle } from '@/components/ui/icons';
 

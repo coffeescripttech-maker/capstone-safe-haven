@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
 import { adminApi } from '@/lib/safehaven-api';
 import { ArrowLeft, AlertTriangle } from '@/components/ui/icons';
 
