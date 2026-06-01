@@ -20,6 +20,8 @@ export interface SOSData {
     name: string;
     phone: string;
   };
+  incidentTypeId?: number;
+  incidentTypeName?: string;
 }
 
 /**
@@ -39,7 +41,7 @@ export async function sendSOSviaSMS(
   gatewayNumber: string = '09923150633'
 ): Promise<boolean> {
   try {
-    // Format SMS message: "SOS|AGENCY|LAT,LNG|USERID|NAME|PHONE"
+    // Format SMS message: "SOS|AGENCY|LAT,LNG|USERID|NAME|PHONE|INCIDENT_TYPE_ID|INCIDENT_TYPE_NAME"
     const lat = sosData.latitude?.toFixed(6) || '0';
     const lng = sosData.longitude?.toFixed(6) || '0';
     const agency = sosData.targetAgency.toUpperCase();
@@ -47,10 +49,17 @@ export async function sendSOSviaSMS(
     const name = sosData.userInfo.name;
     const phone = sosData.userInfo.phone;
     
-    const smsMessage = `SOS|${agency}|${lat},${lng}|${userId}|${name}|${phone}`;
+    // Build message with optional incident type
+    let smsMessage = `SOS|${agency}|${lat},${lng}|${userId}|${name}|${phone}`;
+    
+    // Add incident type if provided
+    if (sosData.incidentTypeId && sosData.incidentTypeName) {
+      smsMessage += `|${sosData.incidentTypeId}|${sosData.incidentTypeName}`;
+    }
     
     console.log('📱 Preparing SMS to gateway:', gatewayNumber);
     console.log('📱 Message:', smsMessage);
+    console.log('📱 Has incident type:', !!(sosData.incidentTypeId && sosData.incidentTypeName));
     console.log('📱 Message length:', smsMessage.length, 'characters');
 
     // TRY SILENT SMS FIRST (Android only)

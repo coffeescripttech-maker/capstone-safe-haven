@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AlertTriangle } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
 import { COLORS } from '../../constants/colors';
 import { SPACING } from '../../constants/spacing';
 import { useAuth } from '../../store/AuthContext';
@@ -33,7 +34,9 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ onSOSSent }) => {
   const { user } = useAuth();
   const { location } = useLocation();
   const { isOnline } = useNetwork();
+  const navigation = useNavigation<any>();
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
   const [sending, setSending] = useState(false);
   const [countdown, setCountdown] = useState(1);
   const [pulseAnim] = useState(new Animated.Value(1));
@@ -146,7 +149,17 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ onSOSSent }) => {
   const handleSOSPress = async () => {
     // Vibrate for haptic feedback
     Vibration.vibrate(100);
+    setShowOptions(true);
+  };
+
+  const handleQuickSOS = () => {
+    setShowOptions(false);
     setShowConfirm(true);
+  };
+
+  const handleReportIncident = () => {
+    setShowOptions(false);
+    navigation.navigate('SOS', { screen: 'IncidentTypeList' });
   };
 
   const handleConfirm = async () => {
@@ -340,6 +353,59 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ onSOSSent }) => {
           </View>
         </TouchableOpacity>
       </Animated.View>
+
+      {/* Options Modal */}
+      <Modal
+        visible={showOptions}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowOptions(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Ionicons name="warning" size={64} color="#DC2626" />
+            <Text style={styles.modalTitle}>Emergency Options</Text>
+            <Text style={styles.modalMessage}>
+              Choose how to report your emergency
+            </Text>
+
+            <View style={styles.optionsContainer}>
+              <TouchableOpacity
+                style={styles.optionCard}
+                onPress={handleQuickSOS}
+              >
+                <View style={styles.optionIconContainer}>
+                  <Text style={styles.optionIcon}>🚨</Text>
+                </View>
+                <Text style={styles.optionTitle}>Quick SOS</Text>
+                <Text style={styles.optionDescription}>
+                  Send immediate emergency alert to all agencies
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.optionCard}
+                onPress={handleReportIncident}
+              >
+                <View style={styles.optionIconContainer}>
+                  <Text style={styles.optionIcon}>📋</Text>
+                </View>
+                <Text style={styles.optionTitle}>Report Incident</Text>
+                <Text style={styles.optionDescription}>
+                  Select specific incident type for targeted response
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={styles.modalCancelButton}
+              onPress={() => setShowOptions(false)}
+            >
+              <Text style={styles.modalCancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Confirmation Modal */}
       <Modal
@@ -617,5 +683,47 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontSize: 16,
     fontWeight: '600',
+  },
+  optionsContainer: {
+    width: '100%',
+    gap: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  optionCard: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: SPACING.md,
+    alignItems: 'center',
+  },
+  optionIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  optionIcon: {
+    fontSize: 32,
+  },
+  optionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: SPACING.xs,
+  },
+  optionDescription: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

@@ -10,15 +10,20 @@ import {
   Alert,
   ActivityIndicator,
   SafeAreaView,
+  Vibration,
 } from 'react-native';
 import * as Location from 'expo-location';
 import { IncidentType } from '../../types/incidentTypes';
 import sosService from '../../services/sos.service';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../store/AuthContext';
+import { useNetwork } from '../../store/NetworkContext';
+import { sendSOSviaSMS } from '../../services/sms';
+
 
 export const IncidentTypeDetailScreen = ({ route, navigation }: any) => {
   const { incidentType } = route.params as { incidentType: IncidentType };
   const { user } = useAuth();
+  const { isOnline } = useNetwork();
   const [sending, setSending] = useState(false);
 
   const getPriorityColor = () => {
@@ -70,28 +75,142 @@ export const IncidentTypeDetailScreen = ({ route, navigation }: any) => {
         ? primaryResponder.agency.toLowerCase()
         : 'all';
 
-      // Send SOS with incident type
-      await sosService.createSOS({
+      // Build user name
+      const userName = user?.firstName && user?.lastName 
+        ? `${user.firstName} ${user.lastName}`
+        : user?.email || 'SafeHaven User';
+
+      const sosData = {
         incidentTypeId: incidentType.id,
         incidentDescription: incidentType.description,
         latitude: location.latitude,
         longitude: location.longitude,
         message: `${incidentType.name} - ${incidentType.description}`,
         userInfo: {
-          name: user?.firstName + ' ' + user?.lastName || 'Unknown',
+          name: userName,
           phone: user?.phone || '',
         },
         targetAgency: targetAgency as any,
+      };
+
+      console.log('📡 Sending SOS with incident type...', { 
+        isOnline, 
+        incidentType: incidentType.name,
+        incidentTypeId: incidentType.id 
       });
 
-      // Navigate to confirmation screen
-      navigation.replace('SOSConfirmation', { incidentType });
-    } catch (error: any) {
-      console.error('Error sending SOS:', error);
+      // TRY API FIRST (if online)
+      if (isOnline) {
+        try {
+          console.log('📡 Attempting API send (online)...');
+          await sosService.createSOS(sosData);
+
+          // Success vibration
+          Vibration.vibrate([100, 50, 100, 50, 100]);
+
+          // Navigate to confirmation screen
+          navigation.replace('SOSConfirmation', { incidentType });
+          return; // Success, exit
+        } catch (apiError: any) {
+          console.error('❌ API send failed, trying SMS fallback...', apiError);
+          
+          // Show warning that falling back to SMS
+          console.log('⚠️ Internet connection failed, switching to SMS...');
+          // Continue to SMS fallback
+        }
+      }
+
+      // FALLBACK TO SMS (offline or API failed)
+      console.log('📱 Opening SMS app with incident type data (offline fallback)...');
+      
+      const smsGatewayNumber = process.env.EXPO_PUBLIC_SMS_GATEWAY_NUMBER || '09923150633';
+      
+      // Send SMS with incident type data
+      await sendSOSviaSMS({
+        latitude: location.latitude,
+        longitude: location.longitude,
+        targetAgency: targetAgency,
+        userInfo: {
+          userId: user?.id || 0,
+          name: userName,
+          phone: user?.phone || 'Not provided',
+        },
+        incidentTypeId: incidentType.id,
+        incidentTypeName: incidentType.name,
+      }, smsGatewayNumber);
+
+      // Success vibration
+      Vibration.vibrate([100, 50, 100, 50, 100]);
+
+      // Show brief instruction before SMS app opens
       Alert.alert(
-        'Error',
-        error.message || 'Failed to send SOS alert. Please try again.',
-        [{ text: 'OK' }]
+        '📱 Opening SMS App',
+        `Your emergency SMS for "${incidentType.name}" is ready!\n\n` +
+        `📱 To: ${smsGatewayNumber}\n` +
+        `📍 Location: Included\n` +
+        `👤 Your info: ${userName}\n` +
+        `🚨 Incident: ${incidentType.name}\n\n` +
+        `⚠️ IMPORTANT: Press SEND in the SMS app to complete your emergency alert.`,
+        [{ 
+          text: 'OK', 
+          style: 'default',
+          onPress: () => {
+            // Navigate to confirmation screen
+            navigation.replace('SOSConfirmation', { incidentType });
+          }
+        }]
+      );
+
+    } catch (error: any) {
+      console.error('❌ Error sending SOS:', error);
+      
+      // Error vibration
+      Vibration.vibrate([100, 100, 100]);
+
+      // Determine specific error message
+      let errorTitle = '❌ SOS Send Failed';
+      let errorMessage = '';
+
+      if (error.message?.includes('cancelled by user')) {
+        errorTitle = '⚠️ SMS Cancelled';
+        errorMessage = 
+          'You cancelled the SMS send.\n\n' +
+          'Your emergency alert was NOT sent. If you need help, please try again or call 911 directly.';
+      } else if (error.message?.includes('SMS not available')) {
+        errorTitle = '❌ SMS Not Available';
+        errorMessage = 'Your device does not support SMS sending. Please call emergency services directly at 911.';
+      } else if (error.message?.includes('SMS') && !isOnline) {
+        errorTitle = '❌ SMS Failed';
+        errorMessage = 
+          'Failed to open SMS app. Possible reasons:\n\n' +
+          '• No SIM card inserted\n' +
+          '• SMS app not available\n' +
+          '• Device restrictions\n\n' +
+          'Please call emergency services directly at 911.';
+      } else if (!isOnline) {
+        errorTitle = '❌ No Connection';
+        errorMessage = 
+          'Cannot send SOS alert:\n\n' +
+          '• No internet connection\n' +
+          '• SMS app failed to open\n\n' +
+          'Please try again or call 911 directly.';
+      } else {
+        errorTitle = '❌ SOS Send Failed';
+        errorMessage = 
+          'Failed to send emergency alert. Please try again or call emergency services directly at 911.\n\n' +
+          `Error: ${error.message || 'Unknown error'}`;
+      }
+
+      Alert.alert(
+        errorTitle,
+        errorMessage,
+        [
+          { text: 'Try Again', style: 'default', onPress: confirmSendSOS },
+          { text: 'Call 911', style: 'destructive', onPress: () => {
+            console.log('User chose to call 911');
+          }},
+          { text: 'Cancel', style: 'cancel' }
+        ]
       );
     } finally {
       setSending(false);

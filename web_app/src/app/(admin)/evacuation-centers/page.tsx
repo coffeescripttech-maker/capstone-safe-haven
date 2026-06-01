@@ -29,18 +29,21 @@ interface Center {
   latitude: number;
   longitude: number;
   capacity: number;
-  current_occupancy: number;
+  currentOccupancy: number;
+  occupancyPercentage: number;
+  isFull: boolean;
   facilities: string[] | string;
-  contact_person: string;
-  contact_number: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  contactPerson: string;
+  contactNumber: string;
+  isActive: boolean | number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export default function CentersListPage() {
   const router = useRouter();
   const [centers, setCenters] = useState<Center[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -57,13 +60,15 @@ export default function CentersListPage() {
       } else {
         setIsRefreshing(true);
       }
-      const response = await centersApi.getAll();
+      const response = await centersApi.getAll({ limit: 100 });
       
       if (response.status === 'success') {
-        const centersData = response.data?.centers || response.data || [];
+        const centersData = response.data?.data || response.data?.centers || response.data || [];
+        const total = response.data?.total || 0;
 
-        console.log({centersData});
+        console.log({centersData, total});
         setCenters(Array.isArray(centersData) ? centersData : []);
+        setTotalCount(total);
       }
     } catch (error) {
       console.error('Error loading centers:', error);
@@ -93,19 +98,20 @@ export default function CentersListPage() {
     const matchesSearch = center.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       center.address.toLowerCase().includes(searchTerm.toLowerCase());
     
+    const isActive = typeof center.isActive === 'boolean' ? center.isActive : center.isActive === 1;
     const matchesStatus = statusFilter === 'all' || 
-      (statusFilter === 'active' && center.is_active) ||
-      (statusFilter === 'inactive' && !center.is_active);
+      (statusFilter === 'active' && isActive) ||
+      (statusFilter === 'inactive' && !isActive);
     
     return matchesSearch && matchesStatus;
   });
 
   const stats = {
-    total: centers.length,
-    active: centers.filter(c => c.is_active).length,
-    inactive: centers.filter(c => !c.is_active).length,
+    total: totalCount || centers.length,
+    active: centers.filter(c => typeof c.isActive === 'boolean' ? c.isActive : c.isActive === 1).length,
+    inactive: centers.filter(c => typeof c.isActive === 'boolean' ? !c.isActive : c.isActive === 0).length,
     totalCapacity: centers.reduce((sum, c) => sum + c.capacity, 0),
-    totalOccupancy: centers.reduce((sum, c) => sum + (c.current_occupancy || 0), 0),
+    totalOccupancy: centers.reduce((sum, c) => sum + (c.currentOccupancy || 0), 0),
   };
 
   const occupancyRate = stats.totalCapacity > 0 
@@ -306,7 +312,7 @@ export default function CentersListPage() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredCenters.map((center) => {
                   const occupancyPercent = center.capacity > 0 
-                    ? ((center.current_occupancy || 0) / center.capacity * 100).toFixed(0)
+                    ? ((center.currentOccupancy || 0) / center.capacity * 100).toFixed(0)
                     : '0';
                   
                   const facilitiesText = Array.isArray(center.facilities) 
@@ -350,9 +356,9 @@ export default function CentersListPage() {
                           <Users className="w-4 h-4 text-gray-400" />
                           <div>
                             <div className="text-sm font-semibold text-gray-900">
-                              {center.current_occupancy || 0} / {center.capacity}
+                              {center.currentOccupancy || 0} / {center.capacity}
                             </div>
-                            <div className={`text-xs font-medium px-2 py-0.5 rounded-full inline-block mt-1 ${getOccupancyColor(center.current_occupancy || 0, center.capacity)}`}>
+                            <div className={`text-xs font-medium px-2 py-0.5 rounded-full inline-block mt-1 ${getOccupancyColor(center.currentOccupancy || 0, center.capacity)}`}>
                               {occupancyPercent}% full
                             </div>
                           </div>
@@ -362,18 +368,18 @@ export default function CentersListPage() {
                         <div className="flex items-start gap-2">
                           <Phone className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
                           <div>
-                            <div className="text-sm text-gray-900">{center.contact_person || '-'}</div>
-                            <div className="text-xs text-gray-500 mt-1">{center.contact_number || '-'}</div>
+                            <div className="text-sm text-gray-900">{center.contactPerson || '-'}</div>
+                            <div className="text-xs text-gray-500 mt-1">{center.contactNumber || '-'}</div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full border ${
-                          center.is_active 
+                          (typeof center.isActive === 'boolean' ? center.isActive : center.isActive === 1)
                             ? 'bg-success-100 text-success-700 border-success-200' 
                             : 'bg-gray-100 text-gray-700 border-gray-200'
                         }`}>
-                          {center.is_active ? (
+                          {(typeof center.isActive === 'boolean' ? center.isActive : center.isActive === 1) ? (
                             <>
                               <CheckCircle2 className="w-3 h-3" />
                               Active
@@ -424,7 +430,7 @@ export default function CentersListPage() {
       {filteredCenters.length > 0 && (
         <div className="mt-4 text-center text-sm text-gray-600">
           Showing <span className="font-semibold text-gray-900">{filteredCenters.length}</span> of{' '}
-          <span className="font-semibold text-gray-900">{centers.length}</span> centers
+          <span className="font-semibold text-gray-900">{totalCount || centers.length}</span> centers
         </div>
       )}
     </div>

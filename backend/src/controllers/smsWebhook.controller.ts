@@ -64,7 +64,7 @@ export class SMSWebhookController {
         time_received: time_received
       });
 
-      // Parse SMS message format: "SOS|AGENCY|LAT,LNG|USERID|NAME|PHONE"
+      // Parse SMS message format: "SOS|AGENCY|LAT,LNG|USERID|NAME|PHONE|INCIDENT_TYPE_ID|INCIDENT_TYPE_NAME"
       const parts = message.trim().split('|');
       
       logger.info('🔍 Parsing SMS message:', {
@@ -77,7 +77,7 @@ export class SMSWebhookController {
         logger.warn('❌ Invalid SMS format:', {
           message: message,
           parts: parts,
-          expectedFormat: 'SOS|AGENCY|LAT,LNG|USERID|NAME|PHONE'
+          expectedFormat: 'SOS|AGENCY|LAT,LNG|USERID|NAME|PHONE or SOS|AGENCY|LAT,LNG|USERID|NAME|PHONE|INCIDENT_TYPE_ID|INCIDENT_TYPE_NAME'
         });
         
         res.status(400).json({
@@ -88,18 +88,26 @@ export class SMSWebhookController {
         return;
       }
 
-      const [_, targetAgency, coordinates, userIdStr, userName, userPhone] = parts;
+      const [_, targetAgency, coordinates, userIdStr, userName, userPhone, incidentTypeIdStr, incidentTypeName] = parts;
       const [latStr, lngStr] = coordinates.split(',');
       const latitude = parseFloat(latStr);
       const longitude = parseFloat(lngStr);
       const userId = parseInt(userIdStr);
+      
+      // Parse incident type if provided (optional)
+      const incidentTypeId = incidentTypeIdStr ? parseInt(incidentTypeIdStr) : undefined;
+      const hasIncidentType = !!(incidentTypeId && incidentTypeName);
 
       logger.info('📊 Parsed SOS data:', {
         targetAgency,
         coordinates: { latitude, longitude },
         userId,
         userName,
-        userPhone
+        userPhone,
+        incidentType: hasIncidentType ? {
+          id: incidentTypeId,
+          name: incidentTypeName
+        } : 'None (Quick SOS)'
       });
 
       // Validate target agency
@@ -159,7 +167,9 @@ export class SMSWebhookController {
         userId: user.id,
         latitude: isNaN(latitude) ? undefined : latitude,
         longitude: isNaN(longitude) ? undefined : longitude,
-        message: 'Emergency! I need help! (Sent via SMS)',
+        message: hasIncidentType 
+          ? `${incidentTypeName} - Emergency! (Sent via SMS)`
+          : 'Emergency! I need help! (Sent via SMS)',
         source: 'sms', // Mark as SMS-originated
         userInfo: {
           userId: user.id,
@@ -171,7 +181,9 @@ export class SMSWebhookController {
           smsHour: hour,
           smsTimeReceived: time_received
         },
-        targetAgency: agency as any
+        targetAgency: agency as any,
+        incidentTypeId: incidentTypeId,
+        incidentDescription: hasIncidentType ? incidentTypeName : undefined
       });
 
       const processingTime = Date.now() - startTime;
@@ -181,6 +193,10 @@ export class SMSWebhookController {
         userId: user.id,
         agency: agency,
         location: { latitude, longitude },
+        incidentType: hasIncidentType ? {
+          id: incidentTypeId,
+          name: incidentTypeName
+        } : 'None',
         processingTimeMs: processingTime,
         smsGuid: guid
       });
@@ -310,7 +326,7 @@ export class SMSWebhookController {
         date: 'YYYY-MM-DD',
         hour: 'HH:MM:SS',
         time_received: 'timestamp',
-        message: 'SOS|AGENCY|LAT,LNG|USERID|NAME|PHONE',
+        message: 'SOS|AGENCY|LAT,LNG|USERID|NAME|PHONE or SOS|AGENCY|LAT,LNG|USERID|NAME|PHONE|INCIDENT_TYPE_ID|INCIDENT_TYPE_NAME',
         number: '639XXXXXXXXX',
         guid: 'unique-id'
       }

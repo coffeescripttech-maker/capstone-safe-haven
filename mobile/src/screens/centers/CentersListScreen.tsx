@@ -97,7 +97,7 @@ export const CentersListScreen: React.FC = () => {
         fetchedCenters = await centersService.getNearby({
           lat: location.latitude,
           lng: location.longitude,
-          radius: 50,
+          radius: 500, // Increased to 500km to show all centers in the Philippines
         });
       } else {
         const { centers: allCenters } = await centersService.getCenters();
